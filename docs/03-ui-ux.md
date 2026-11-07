@@ -354,8 +354,9 @@ Each screen uses QueryState plus the states in sec. 7.
       840 px, a row list below, "Showing 25 of 248" and **Load more**. A row expands to its details and the
       before/after JSON as plain text.
 11. **Metrics** `/metrics`
-    - Stat cards as plain bordered panels: agreement %, overrides, AI failure %, p50 latency, tokens and cost (24 h
-      and 7 d).
+    - Stat cards as plain bordered panels: agreement %, overrides, AI failure %, **auto-cleared, then revisited**
+      (the rate as the value; the detail line gives "n of m auto-cleared cases later reported or reopened" and the
+      muted explanation that auto-clear skips the human queue), p50 latency, tokens and cost (24 h and 7 d).
     - Simple bar lists in the accent colour on a hairline track: override reasons, AI failures by reason, cost by
       day. No chart library.
 12. **Status** `/status` (public, a 56 px white bar with a bottom hairline, the product name and **Sign in**)

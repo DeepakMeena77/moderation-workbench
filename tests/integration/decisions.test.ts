@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST as decideRoute } from '@/app/api/cases/[id]/decisions/route';
 import { getDb } from '@/server/db';
 import { runPendingJobs } from '@/server/jobs/runner';
+import { createAppeal, resolveAppeal } from '@/server/services/appeals';
 import { requestReanalysis } from '@/server/services/cases';
 import { createPost } from '@/server/services/content';
 import { setVisibility } from '@/server/services/visibility';
@@ -257,6 +258,61 @@ describe('setVisibility and the database guards', () => {
       getDb().content.update({ where: { id: c.contentId }, data: { visibility: 'removed' } }),
     ).rejects.toThrow(/HUM-1/);
     expect(await visibilityOf(c.contentId)).toBe('visible');
+  });
+
+  /** A raw UPDATE in a transaction that sets the human flag and (optionally) app.actor_id, bypassing setVisibility. */
+  function rawChangeAs(contentId: string, actorId: string | null) {
+    return getDb().$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT set_config('app.actor_type', 'human', true)`;
+      if (actorId !== null) await tx.$queryRaw`SELECT set_config('app.actor_id', ${actorId}, true)`;
+      await tx.$executeRaw`UPDATE "Content" SET "visibility" = 'removed' WHERE "id" = ${contentId}`;
+    });
+  }
+
+  it("[HUM-1] the human flag with an author's id, an admin's id or no id is refused by the database", async () => {
+    const c = await caseFor('You are a worthless idiot');
+    const author = await createUser('author');
+    const admin = await createUser('admin');
+    await expect(rawChangeAs(c.contentId, null)).rejects.toThrow(/HUM-1: content visibility change names no actor/);
+    for (const id of [author.id, admin.id, 'no-such-user']) {
+      await expect(rawChangeAs(c.contentId, id)).rejects.toThrow(
+        /HUM-1: only a moderator or senior moderator can change content visibility/,
+      );
+    }
+    expect(await visibilityOf(c.contentId)).toBe('visible');
+  });
+
+  it("[HUM-1] the human flag with a senior moderator's id passes the database's role check", async () => {
+    const c = await caseFor('You are a worthless idiot');
+    const senior = await createUser('senior_moderator');
+    await rawChangeAs(c.contentId, senior.id);
+    expect(await visibilityOf(c.contentId)).toBe('removed');
+  });
+
+  it('[APP-5] an appeal resolution still changes visibility through the role-checked trigger', async () => {
+    const author = await createUser('author');
+    const created = await createPost(actorFor(author), { body: 'Hey you worthless idiot' }, 'req-decide-0002');
+    await runPendingJobs();
+    const kase = await getDb().case.findUniqueOrThrow({ where: { id: created.caseId } });
+    const decided = await decideAs(moderatorCookie, kase.id, { kind: 'approve', analysisId: kase.currentAnalysisId });
+    const { data } = await readJson<DecisionBody>(decided);
+    expect(await visibilityOf(created.id)).toBe('labeled');
+
+    const { appealId } = await createAppeal(
+      actorFor(author),
+      data.decisionId,
+      { statement: 'It was a joke between two friends, nobody was hurt.', evidenceLinks: [], evidenceNote: null },
+      'req-appeal-0001',
+    );
+    const senior = await createUser('senior_moderator');
+    const resolved = await resolveAppeal(
+      actorFor(senior),
+      appealId,
+      { outcome: 'overturn', rationale: 'Context shows friendly banter.' },
+      'req-appeal-0002',
+    );
+    expect(resolved).toMatchObject({ finalAction: 'none', visibility: 'visible' });
+    expect(await visibilityOf(created.id)).toBe('visible');
   });
 
   it('[AUD-2] decisions are insert-only: UPDATE and DELETE are rejected by the database', async () => {

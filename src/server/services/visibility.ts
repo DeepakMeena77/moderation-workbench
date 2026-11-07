@@ -7,8 +7,9 @@ import { append, type Tx } from './audit';
 // The only writer of Content.visibility (HUM-1, docs/02-system-design.md sec. 8). Callers: decisions.decide()
 // and appeals.resolve(). Code under src/server/{ai,rules,moderation,jobs} may not import this file
 // (ESLint no-restricted-imports plus tests/unit/boundaries.test.ts). The database trigger
-// "Content_visibility_human_only" refuses any visibility change in a transaction that did not pass through
-// here, so the rule holds even if this check were bypassed.
+// "Content_visibility_human_only" refuses any visibility change unless the transaction set app.actor_type = 'human'
+// and app.actor_id to a user whose role is moderator or senior_moderator, so the rule holds even if this check were
+// bypassed.
 
 /** Action -> visibility (02 sec. 8). */
 export const ACTION_VISIBILITY: Record<ModAction, Visibility> = {
@@ -58,9 +59,10 @@ export async function setVisibility(tx: Tx, input: SetVisibilityInput): Promise<
     return { before: content.visibility, after: content.visibility, changed: false };
   }
 
-  // Transaction-local (is_local = true): the flag ends with this transaction and never leaks to another
-  // request that later reuses the pooled connection.
-  await tx.$queryRaw`SELECT set_config('app.actor_type', 'human', true)`;
+  // Both settings are transaction-local (is_local = true): they end with this transaction and never leak to another
+  // request that later reuses the pooled connection. The database trigger checks the flag and looks up the role of
+  // app.actor_id itself, so the flag alone (or an author's id) opens nothing (HUM-1).
+  await tx.$queryRaw`SELECT set_config('app.actor_type', 'human', true), set_config('app.actor_id', ${actor.id}, true)`;
   await tx.content.update({ where: { id: input.contentId }, data: { visibility: input.visibility } });
   await append(tx, {
     actorId: actor.id,

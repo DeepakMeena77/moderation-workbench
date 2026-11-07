@@ -121,7 +121,7 @@ const GRID = {
 } as const;
 
 function Report({ metrics }: { metrics: Metrics }) {
-  const { agreement, overrides, aiFailures, latency, usage } = metrics;
+  const { agreement, overrides, aiFailures, latency, usage, autoClear } = metrics;
   const days = `${metrics.windowDays} d`;
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
@@ -140,6 +140,16 @@ function Report({ metrics }: { metrics: Metrics }) {
           title="AI failure rate"
           value={percent(aiFailures.rate)}
           detail={`${count(aiFailures.failed)} of ${plural(aiFailures.runs, 'run')} (${days})`}
+        />
+        <StatCard
+          title="Auto-cleared, then revisited"
+          value={percent(autoClear.rate)}
+          detail={
+            autoClear.cleared === 0
+              ? `No auto-cleared cases in ${days}. Auto-clear skips the human queue.`
+              : `${count(autoClear.revisited)} of ${plural(autoClear.cleared, 'auto-cleared case')} later reported or ` +
+                `reopened (${days}). Auto-clear skips the human queue; these came back to it.`
+          }
         />
         <StatCard
           title="Median latency (p50)"

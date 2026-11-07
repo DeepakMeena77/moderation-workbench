@@ -40,6 +40,7 @@ test('[OPS-6] stat cards and the three bar lists are shown', async ({ page }) =>
     'AI and human agreement',
     'Overrides',
     'AI failure rate',
+    'Auto-cleared, then revisited',
     'Median latency (p50)',
     'Tokens (24 h)',
     'Cost (24 h)',
