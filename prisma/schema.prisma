@@ -26,8 +26,9 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  content Content[]
-  reports Report[]
+  content   Content[]
+  reports   Report[]
+  decisions Decision[]
 }
 
 // Fixed-window counters for database-backed rate limits (SEC-4), so limits hold across serverless instances.
@@ -121,7 +122,8 @@ model Policy {
   publishedAt   DateTime     @default(now())
 }
 
-// The text is immutable after creation. Only services/visibility.ts (S4) may change `visibility` (HUM-1).
+// The text is immutable after creation. Only services/visibility.ts may change `visibility` (HUM-1); a database
+// trigger refuses the change unless that function set app.actor_type = 'human' in the transaction.
 model Content {
   id         String      @id @default(cuid())
   type       ContentType
@@ -163,13 +165,16 @@ model Case {
   status            CaseStatus
   trigger           CaseTrigger
   priority          Int         @default(0)
-  currentAnalysisId String?
+  currentAnalysisId String?     @unique
   reportCount       Int         @default(0)
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
-  content  Content    @relation(fields: [contentId], references: [id])
-  analyses Analysis[]
+  content         Content    @relation(fields: [contentId], references: [id])
+  analyses        Analysis[]
+  // The analysis a decision must be made on (HUM-6). One analysis is current for at most one case.
+  currentAnalysis Analysis?  @relation("CurrentAnalysis", fields: [currentAnalysisId], references: [id])
+  decisions       Decision[]
 
   @@index([status, priority(sort: Desc), createdAt])
 }
@@ -189,7 +194,9 @@ model Analysis {
   aiRunId        String?
   createdAt      DateTime @default(now())
 
-  case Case @relation(fields: [caseId], references: [id])
+  case       Case       @relation(fields: [caseId], references: [id])
+  currentFor Case?      @relation("CurrentAnalysis")
+  decisions  Decision[]
 
   @@unique([caseId, seq])
 }
@@ -230,4 +237,53 @@ model AuditEvent {
 
   @@index([entityType, entityId])
   @@index([at])
+}
+
+// --- S4: human decisions (docs/02-system-design.md sec. 3 and sec. 8) ---
+
+// Ordered by strength: none < label < limit < remove.
+enum ModAction {
+  none
+  label
+  limit
+  remove
+}
+
+enum DecisionKind {
+  approve
+  reject
+  modify
+}
+
+enum ReasonCategory {
+  false_positive
+  missing_context
+  wrong_clause
+  severity_too_high
+  severity_too_low
+  policy_gap
+  other
+}
+
+// Insert-only (AUD-2: a trigger rejects UPDATE and DELETE). It keeps the AI suggestion (recommendedAction) and
+// the human outcome (finalAction) side by side, with the analysis and policy version they were based on (HUM-5).
+model Decision {
+  id                String          @id @default(cuid())
+  caseId            String
+  analysisId        String
+  policyVersion     Int
+  deciderId         String
+  kind              DecisionKind
+  recommendedAction ModAction
+  finalAction       ModAction
+  clauseCodes       String[]
+  reasonCategory    ReasonCategory?
+  rationale         String?
+  createdAt         DateTime        @default(now())
+
+  case     Case     @relation(fields: [caseId], references: [id])
+  analysis Analysis @relation(fields: [analysisId], references: [id])
+  decider  User     @relation(fields: [deciderId], references: [id])
+
+  @@index([caseId, createdAt])
 }

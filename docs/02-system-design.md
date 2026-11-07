@@ -153,7 +153,7 @@ model Report    { id String @id @default(cuid()); contentId String; reporterId S
                   createdAt DateTime @default(now()); @@unique([contentId, reporterId]) }      [CNT-3]
 
 model Case      { id String @id @default(cuid()); contentId String @unique; status CaseStatus; trigger CaseTrigger
-                  priority Int @default(0); currentAnalysisId String?; reportCount Int @default(0)
+                  priority Int @default(0); currentAnalysisId String? @unique; reportCount Int @default(0)
                   createdAt DateTime @default(now()); updatedAt DateTime @updatedAt }
 
 model Analysis  { id String @id @default(cuid()); caseId String; seq Int; policyVersion Int
@@ -198,11 +198,12 @@ model RateLimit { key String; windowStart DateTime; count Int @default(0); @@id(
 **SQL migrations added by hand:**
 
 1. A partial unique index `ON policy(status) WHERE status = 'active'`.
-2. A trigger `forbid_mutation()` on `AuditEvent`, `Decision`, `Analysis` and `AiRun`: `BEFORE UPDATE OR DELETE ->
+2. A trigger function `forbid_mutation()` (created with `CREATE OR REPLACE` in S4, reused by later migrations) on `AuditEvent`, `Decision`, `Analysis` and `AiRun`: `BEFORE UPDATE OR DELETE ->
    RAISE EXCEPTION` [AUD-2].
 3. A trigger on `Content`: `BEFORE UPDATE OF visibility` requires `current_setting('app.actor_type', true) =
    'human'`. This is defence in depth for HUM-1. `setVisibility` runs `set_config('app.actor_type','human', true)`
-   inside its transaction. Nothing else does.
+   inside its transaction. Nothing else does. The same trigger refuses an `INSERT` with a visibility other than
+   `visible`, and the flag is transaction-local, so it never outlives the decision that set it.
 4. Indexes: `Case(status, priority DESC, createdAt)`, `Job(status, runAfter)`, `AuditEvent(entityType, entityId)`,
    `AuditEvent(at)`.
 
@@ -445,7 +446,7 @@ Lists use `?cursor=&limit=`.
 | GET `/api/me/content` | author | content | Status, decision and appeal deadline |
 | GET `/api/cases`, GET `/api/cases/:id` | moderator, senior, admin | cases | Filters and search [Q-1] |
 | POST `/api/cases/:id/decisions` | moderator, senior | decisions | Body `{analysisId, kind, finalAction?, clauseCodes?, reasonCategory?, rationale?}` [HUM-2..6] |
-| POST `/api/cases/:id/reanalyze`, POST `/api/cases/:id/reopen` | moderator, senior | cases | [Q-4] |
+| POST `/api/cases/:id/reanalyze`, POST `/api/cases/:id/reopen` | moderator, senior | cases | [Q-4] Re-analyse: `pending_analysis`, `awaiting_review` or `appealed` only (the job skips other statuses), 10 per minute per moderator. Reopen: `auto_cleared` only. Otherwise 409 `INVALID_TRANSITION` |
 | POST `/api/decisions/:id/appeals` | the content author | appeals | [APP-1, 2] |
 | GET `/api/appeals`, GET `/api/appeals/:id` | senior, admin (and moderator read) | appeals | [APP-4] |
 | POST `/api/appeals/:id/resolve` | senior != decider | appeals | 403 `SAME_REVIEWER` [APP-3, 5] |
@@ -465,7 +466,7 @@ Lists use `?cursor=&limit=`.
 | 401 | `UNAUTHENTICATED` |
 | 403 | `FORBIDDEN`, `SAME_REVIEWER`, `HUMAN_REQUIRED` |
 | 404 | `NOT_FOUND` |
-| 409 | `ALREADY_REPORTED`, `ALREADY_DECIDED`, `STALE_ANALYSIS`, `ALREADY_APPEALED`, `APPEAL_WINDOW_CLOSED`, `POLICY_UNCHANGED` |
+| 409 | `ALREADY_REPORTED`, `ALREADY_DECIDED`, `STALE_ANALYSIS`, `ALREADY_APPEALED`, `APPEAL_WINDOW_CLOSED`, `POLICY_UNCHANGED`, `INVALID_TRANSITION` |
 | 413 | `PAYLOAD_TOO_LARGE` |
 | 422 | `NOT_APPEALABLE`, `ACTION_NOT_ALLOWED` |
 | 429 | `RATE_LIMITED` |
@@ -525,7 +526,7 @@ Lists use `?cursor=&limit=`.
   - `content.created`
   - `report.created`
   - `case.opened`, `case.reopened`
-  - `analysis.created`
+  - `analysis.created`, `analysis.requested` (a moderator asked for a re-analysis)
   - `decision.created`
   - `visibility.changed`
   - `appeal.created`, `appeal.assigned`, `appeal.resolved`
@@ -579,8 +580,8 @@ Lists use `?cursor=&limit=`.
 - logs `http.request` with method, route, status, duration, user ID and request ID
 
 **Rate limits** are database-backed fixed windows (they work on serverless): count the user's recent rows (posts
-and comments in the last minute, re-analyses), and for sign-in the `RateLimit` table keyed by IP (the first
-`x-forwarded-for` entry), one atomic upsert per attempt. Every password attempt counts, successful or not.
+and comments in the last minute), and the `RateLimit` table for re-analyses (keyed by moderator) and sign-in (keyed
+by IP, the first `x-forwarded-for` entry), one atomic upsert per attempt. Every password attempt counts, successful or not.
 Demo sign-in is not limited: it takes no credentials.
 
 **Log redaction:** cookies, authorisation headers, passwords, keys. Content is logged as `{len, sha256}` only.

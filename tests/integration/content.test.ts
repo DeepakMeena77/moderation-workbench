@@ -6,7 +6,7 @@ import { getDb } from '@/server/db';
 import { runPendingJobs } from '@/server/jobs/runner';
 import { loadAnalysisContext } from '@/server/services/analysis';
 import type { FeedPage } from '@/server/services/content';
-import { installPolicy } from './helpers/moderation';
+import { installPolicy, setVisibilityAs } from './helpers/moderation';
 import { apiRequest, createUser, readJson, sessionCookieFor } from './helpers/users';
 
 // Posts, comments, reports and the feed through their routes (CNT-1..3, CNT-5, SEC-4, AUD-1).
@@ -368,10 +368,9 @@ describe('feed visibility', () => {
     const kept = await createPostAs(author.cookie, 'kept');
     const removed = await createPostAs(author.cookie, 'removed one');
     const labeled = await createPostAs(author.cookie, 'labeled one');
-    // Test fixture: the app has no visibility writer until S4 (decisions); the database is set directly.
-    const db = getDb();
-    await db.content.update({ where: { id: removed.id }, data: { visibility: 'removed' } });
-    await db.content.update({ where: { id: labeled.id }, data: { visibility: 'labeled' } });
+    // Through the one visibility writer (HUM-1); a direct UPDATE is refused by the database trigger.
+    await setVisibilityAs(moderator.user, removed.id, 'removed');
+    await setVisibilityAs(moderator.user, labeled.id, 'labeled');
 
     expect((await feedFor(other.cookie)).items.map((i) => i.id).sort()).toEqual([kept.id, labeled.id].sort());
     const own = await feedFor(author.cookie);
