@@ -12,6 +12,17 @@
 - Metrics show how many auto-cleared cases were later reported or reopened.
 - The evaluation reports exact action agreement; E12 is stricter; three live runs are kept (19/21 each).
 
+Post-deploy checks for `240523c`, 2026-11-07 23:24 UTC (8 Nov in India):
+
+| Check | Result |
+| --- | --- |
+| Release live | `/api/health` reports `240523c...`, database connected |
+| Status page | All six checks operational |
+| Trigger with the role check, on a real decision | A moderator modified Gemini's "label" to "limit" on a new post; the post's visibility became `limited` |
+| Audit chain | `intact: true`, 48 events; the latest is event 48, `decision.created` at 23:23:53 UTC |
+| AI runs and the new auto-clear metric | 13 runs, 0 failures, p50 3.4 s, p90 4.8 s; 7 cases auto-cleared, 1 later revisited |
+| CI on the release commit | GitHub Actions run 42424929012 succeeded |
+
 ## 1.0.1 (2026-11-08)
 
 - A finding that verification had to drop, or a proposed action lowered to what the cited clauses allow, is now a
