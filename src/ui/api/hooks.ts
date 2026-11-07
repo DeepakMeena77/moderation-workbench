@@ -455,3 +455,271 @@ export function useReopen(caseId: string) {
     api.post<{ status: CaseStatus }>(`/api/cases/${encodeURIComponent(caseId)}/reopen`),
   );
 }
+
+// --- My content, history and appeals (S5) ---
+
+export type AppealStatus = 'pending' | 'resolved';
+export type AppealOutcome = 'uphold' | 'overturn' | 'modify';
+
+export interface Appealability {
+  canAppeal: boolean;
+  until: string | null;
+  reason: string | null;
+}
+
+export interface MyContentItem {
+  id: string;
+  type: 'post' | 'comment';
+  body: string;
+  createdAt: string;
+  visibility: Visibility;
+  caseStatus: CaseStatus | null;
+  decision: {
+    id: string;
+    finalAction: ModAction;
+    clauses: Array<{ code: string; title: string | null }>;
+    decidedAt: string;
+    summary: string;
+  } | null;
+  appeal: {
+    id: string;
+    status: AppealStatus;
+    outcome: AppealOutcome | null;
+    finalAction: ModAction | null;
+    createdAt: string;
+    resolvedAt: string | null;
+    summary: string;
+  } | null;
+  appealability: Appealability | null;
+}
+
+export interface MyContentPage {
+  items: MyContentItem[];
+  nextCursor: string | null;
+}
+
+const MY_CONTENT_KEY = ['my-content'] as const;
+
+function anyChecking(data: InfiniteData<MyContentPage> | undefined): boolean {
+  return data?.pages.some((page) => page.items.some((item) => item.caseStatus === 'pending_analysis')) ?? false;
+}
+
+export function useMyContent() {
+  return useInfiniteQuery({
+    queryKey: MY_CONTENT_KEY,
+    queryFn: ({ pageParam }) =>
+      api.get<MyContentPage>(pageParam ? `/api/me/content?cursor=${encodeURIComponent(pageParam)}` : '/api/me/content'),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.nextCursor,
+    refetchInterval: (query) => (anyChecking(query.state.data) ? FEED_POLL_MS : false),
+  });
+}
+
+export interface AppealRequest {
+  statement: string;
+  evidenceLinks: string[];
+  evidenceNote?: string;
+}
+
+export interface CreatedAppeal {
+  appealId: string;
+  status: AppealStatus;
+  assigned: boolean;
+  deadline: string;
+}
+
+export function useCreateAppeal(decisionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AppealRequest) =>
+      api.post<CreatedAppeal>(`/api/decisions/${encodeURIComponent(decisionId)}/appeals`, input),
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: MY_CONTENT_KEY }),
+        queryClient.invalidateQueries({ queryKey: FEED_KEY }),
+        queryClient.invalidateQueries({ queryKey: ['history'] }),
+      ]);
+    },
+  });
+}
+
+export type HistoryEventKind =
+  | 'created'
+  | 'reported'
+  | 'analysis'
+  | 'decision'
+  | 'appeal'
+  | 'appeal_assigned'
+  | 'appeal_brief'
+  | 'appeal_resolved'
+  | 'visibility';
+
+export interface HistoryEvent {
+  id: string;
+  at: string;
+  kind: HistoryEventKind;
+  title: string;
+  lines: string[];
+  action: ModAction | null;
+  policyVersion: number | null;
+  facts?: Array<{ label: string; value: string }>;
+}
+
+export interface ContentHistory {
+  view: 'author' | 'staff';
+  content: {
+    id: string;
+    type: 'post' | 'comment';
+    body: string;
+    createdAt: string;
+    visibility: Visibility;
+    authorName: string | null;
+  };
+  caseStatus: CaseStatus | null;
+  events: HistoryEvent[];
+  auditEvents?: Array<{
+    id: string;
+    at: string;
+    action: string;
+    actorType: 'human' | 'system' | 'ai';
+    actorName: string | null;
+    entityType: string;
+  }>;
+}
+
+export function useHistory(contentId: string) {
+  return useQuery({
+    queryKey: ['history', contentId],
+    queryFn: () => api.get<ContentHistory>(`/api/content/${encodeURIComponent(contentId)}/history`),
+  });
+}
+
+export interface AppealRow {
+  id: string;
+  status: AppealStatus;
+  outcome: AppealOutcome | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  assignedToMe: boolean;
+  assignedReviewer: { id: string; name: string } | null;
+  ownDecision: boolean;
+  content: { id: string; type: 'post' | 'comment'; excerpt: string; authorName: string };
+  decision: { finalAction: ModAction; clauseCodes: string[]; deciderName: string };
+}
+
+export interface AppealListPage {
+  items: AppealRow[];
+  total: number;
+  unassigned: number;
+}
+
+export type AppealBriefView =
+  | { state: 'pending' }
+  | { state: 'unavailable'; reason: string }
+  | {
+      state: 'ready';
+      summary: string;
+      newPoints: string[];
+      disputedFindings: Array<{ clauseCode: string; authorClaim: string }>;
+      droppedClauses: string[];
+      model: string | null;
+      costUsd: number | null;
+    };
+
+export interface AppealDetail {
+  id: string;
+  status: AppealStatus;
+  createdAt: string;
+  caseId: string;
+  caseStatus: CaseStatus;
+  content: {
+    id: string;
+    type: 'post' | 'comment';
+    body: string;
+    createdAt: string;
+    visibility: Visibility;
+    author: { id: string; name: string };
+  };
+  original: {
+    decisionId: string;
+    kind: 'approve' | 'reject' | 'modify';
+    finalAction: ModAction;
+    recommendedAction: ModAction;
+    clauseCodes: string[];
+    reasonCategory: string | null;
+    rationale: string | null;
+    decider: { id: string; name: string };
+    policyVersion: number;
+    analysisSeq: number;
+    createdAt: string;
+    findings: Finding[];
+  };
+  evidence: { statement: string; links: string[]; note: string | null };
+  brief: AppealBriefView;
+  outcome: {
+    outcome: AppealOutcome;
+    finalAction: ModAction;
+    rationale: string;
+    resolver: { id: string; name: string };
+    resolvedAt: string;
+  } | null;
+  assignedReviewer: { id: string; name: string } | null;
+  policyChangedSinceDecision: boolean;
+  activePolicyVersion: number | null;
+  newerAnalysis: {
+    seq: number;
+    policyVersion: number;
+    reason: string;
+    action: ModAction;
+    clauseCodes: string[];
+  } | null;
+  clauses: Clause[];
+  permissions: { canResolve: boolean; isOriginalDecider: boolean; readOnly: boolean };
+}
+
+export type ResolveRequest =
+  | { outcome: 'uphold'; rationale: string }
+  | { outcome: 'overturn'; rationale: string }
+  | { outcome: 'modify'; finalAction: ModAction; rationale: string };
+
+export interface ResolvedAppeal {
+  appealId: string;
+  outcome: AppealOutcome;
+  originalAction: ModAction;
+  finalAction: ModAction;
+  visibility: Visibility;
+}
+
+const APPEALS_KEY = ['appeals'] as const;
+
+export function useAppeals(status: AppealStatus) {
+  return useQuery({
+    queryKey: [...APPEALS_KEY, status],
+    queryFn: () => api.get<AppealListPage>(status === 'pending' ? '/api/appeals' : '/api/appeals?status=resolved'),
+    refetchInterval: QUEUE_REFRESH_MS,
+  });
+}
+
+export function useAppeal(appealId: string | null) {
+  return useQuery({
+    queryKey: ['appeal', appealId],
+    queryFn: () => api.get<AppealDetail>(`/api/appeals/${encodeURIComponent(appealId ?? '')}`),
+    enabled: appealId !== null,
+    // While the AI brief is being written the page polls; nothing else on it changes by itself.
+    refetchInterval: (query) => (query.state.data?.brief.state === 'pending' ? CASE_POLL_MS : false),
+  });
+}
+
+export function useResolveAppeal(appealId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ResolveRequest) =>
+      api.post<ResolvedAppeal>(`/api/appeals/${encodeURIComponent(appealId)}/resolve`, input),
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['appeal', appealId] }),
+        queryClient.invalidateQueries({ queryKey: APPEALS_KEY }),
+      ]);
+    },
+  });
+}

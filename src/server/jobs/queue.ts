@@ -38,6 +38,11 @@ export function analyzeDedupeKey(
   return `analyze:${caseId}:${reason}:${policyVersion ?? 'none'}:${triggerId}`;
 }
 
+/** One brief per appeal (AI-12): appeal_brief:{appealId}. */
+export function appealBriefDedupeKey(appealId: string): string {
+  return `appeal_brief:${appealId}`;
+}
+
 /**
  * Idempotent: a second enqueue with the same dedupeKey is a no-op. Every queue timestamp (runAfter,
  * lockedUntil) comes from the database clock: Prisma would fill @default(now()) from the app server's

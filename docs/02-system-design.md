@@ -102,8 +102,8 @@ src/
     ai/        aiConfig.ts types.ts provider.ts gemini.ts mock.ts prompts.ts parse.ts output.ts verify.ts
                budget.ts cost.ts aiRun.ts pipeline.ts classify.ts appealBrief.ts
     moderation/ combine.ts priority.ts
-    services/  content.ts reports.ts cases.ts analysis.ts decisions.ts visibility.ts appeals.ts
-               policy.ts reevaluation.ts audit.ts metrics.ts status.ts rateLimit.ts auth.ts
+    services/  content.ts reports.ts cases.ts analysis.ts decisions.ts visibility.ts appeals.ts appealBriefs.ts
+               history.ts policy.ts reevaluation.ts audit.ts metrics.ts status.ts rateLimit.ts auth.ts
     jobs/      queue.ts runner.ts handlers.ts
   ui/
     theme/     tokens.ts theme.ts
@@ -208,6 +208,11 @@ model RateLimit { key String; windowStart DateTime; count Int @default(0); @@id(
    `AuditEvent(at)`.
 5. S7: `audit_canonical_json(jsonb)` and `audit_event_hash(prevHash, "AuditEvent")`, which chained the existing
    events once (sec. 9); the `forbid_mutation()` trigger is attached to `AuditEvent` after that backfill.
+6. On `Appeal` (S5, APP-5): a CHECK that a `resolved` appeal has its outcome, final action, rationale and
+   `resolvedAt` and a `pending` one has none of them; and a trigger (`keep_appeal_resolution()`, a separate
+   function, so `forbid_mutation()` is untouched) that refuses `DELETE` and any change to the outcome fields once
+   the appeal is resolved. `brief` and `briefAiRunId` stay writable, because the brief can land after the
+   resolution.
 
 ---
 
@@ -386,7 +391,14 @@ priority   = Q-2 formula
 - **Input:** original findings and decision, the appeal statement and evidence (escaped).
 - **Output:** `{summary, newPoints[], disputedFindings:[{clauseCode, authorClaim}]}`. There is no outcome field.
 - The same bounds, ladder and AiRun logging apply.
-- `policyChangedSinceDecision` comes from the database.
+- `policyChangedSinceDecision` comes from the database (the active policy version differs from the decision's);
+  it is computed when the appeal is read and never asked of the model.
+- **Verify:** a disputed finding must name a clause cited by the original findings or the decision; others are
+  dropped (`droppedClauses`). Only the clauses the decision cited go into the prompt.
+- **Storage:** the `appeal_brief` job (`jobs/handlers.ts#runAppealBriefJob`) writes `Appeal.brief` =
+  `{aiStatus, unavailableReason, summary, newPoints, disputedFindings, droppedClauses}` and `briefAiRunId` once,
+  through `services/appealBriefs.ts`, with the `appeal.brief_created` audit event (actor type `ai`). An AI failure
+  is a successful job: the brief records the status and the page says the summary is unavailable.
 
 ---
 
@@ -458,7 +470,7 @@ Lists use `?cursor=&limit=`.
 | POST `/api/auth/sign-in`, POST `/api/auth/sign-out`, GET `/api/auth/me` | public, any, any | auth | Sign-in body `{email, password}`, limited per IP [SEC-4]. `POST /api/auth/demo` body `{account}` (`author`, `author2`, `moderator`, `senior`, `senior2`, `admin`), public, not limited, 404 unless `DEMO_MODE=true` [UX-5] |
 | GET `/api/posts`, POST `/api/posts`, POST `/api/posts/:id/comments` | any, author, author | content | Feed respects visibility [CNT-1, 2, 5] |
 | POST `/api/content/:id/reports` | any (not own) | reports | 409 `ALREADY_REPORTED` [CNT-3] |
-| GET `/api/content/:id/history` | the author, or staff | cases | Plain view for the author [CNT-4, SEC-2] |
+| GET `/api/content/:id/history` | the author, or staff | history | Plain view for the author, built on the server (no AI internals, staff names or reporters); another author gets 403 [CNT-4, SEC-2] |
 | GET `/api/me/content` | author | content | Status, decision and appeal deadline |
 | GET `/api/cases`, GET `/api/cases/:id` | moderator, senior, admin | cases | Filters and search [Q-1] |
 | POST `/api/cases/:id/decisions` | moderator, senior | decisions | Body `{analysisId, kind, finalAction?, clauseCodes?, reasonCategory?, rationale?}` [HUM-2..6] |
@@ -514,18 +526,24 @@ Lists use `?cursor=&limit=`.
   6. `setVisibility`
   7. set the case to `resolved`
   8. write the audit event
-- **Appeal create:**
-  1. check the author owns the content, the action is not `none`, there is no earlier appeal, and the request is
-     within `APPEAL_WINDOW_DAYS`
-  2. insert the Appeal
-  3. assign the least-loaded `senior_moderator` who is not the decider
+- **Appeal create** (one transaction, the case row locked):
+  1. check, in this order: the author owns the content (403 `FORBIDDEN`), there is no earlier appeal (409
+     `ALREADY_APPEALED`), the action is not `none` (422 `NOT_APPEALABLE`), the request is within
+     `APPEAL_WINDOW_DAYS` of the decision (409 `APPEAL_WINDOW_CLOSED` with `details.deadline`), and the decision is
+     the case's latest with the case `resolved` (a report reopened it: 409 `INVALID_TRANSITION`)
+  2. insert the Appeal (statement 20-2,000 characters; up to 3 `http(s)` links; a note of up to 1,000)
+  3. assign the least-loaded `senior_moderator` who is not the decider (fewest pending assigned appeals, then the
+     oldest account); none eligible -> unassigned
   4. set the case to `appealed`
   5. enqueue `appeal_brief`
-  6. write the audit event
-- **Appeal resolve:**
-  1. check the actor is a senior and not the decider (otherwise `SAME_REVIEWER`)
-  2. resolve by outcome: uphold keeps the action; overturn sets the action to `none`; modify sets a new action
-  3. call `setVisibility`
+  6. write the audit events (`appeal.created`, then `appeal.assigned`)
+- **Appeal resolve** (one transaction, the case row locked):
+  1. check the actor is a senior and not the decider (otherwise `SAME_REVIEWER`), then that the appeal is pending
+     (otherwise 409 `ALREADY_DECIDED`)
+  2. resolve by outcome: uphold keeps the action; overturn sets the action to `none`; modify sets a new action that
+     differs from the original, is not `none` (that is an overturn) and is allowed by one of the decision's clauses
+     (otherwise 422 `ACTION_NOT_ALLOWED`)
+  3. call `setVisibility` (its audit event carries the `appealId`)
   4. set the case to `appeal_resolved`
   5. write the audit event
 - **Admins** have no decision routes (403) [HUM-7].
@@ -562,9 +580,10 @@ Lists use `?cursor=&limit=`.
   - `analysis.created`, `analysis.requested` (a moderator asked for a re-analysis)
   - `decision.created`
   - `visibility.changed`
-  - `appeal.created`, `appeal.assigned`, `appeal.resolved`
+  - `appeal.created`, `appeal.assigned` (actor type `system`), `appeal.brief_created` (actor type `ai`),
+    `appeal.resolved`
   - `policy.published`
-  - `reevaluation.started`, `reevaluation.retried`, `reevaluation.finished`
+  - `reevaluation.started`, `reevaluation.retried`
   - `job.failed`
   - `access.denied`
 

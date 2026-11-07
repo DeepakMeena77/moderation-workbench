@@ -1,10 +1,12 @@
+import type { AppealBrief } from './appealBrief';
 import type { AiFinding, ClassifyOutput } from './output';
 import { unescapeFromPrompt } from './prompts';
 import { ProviderError, type AiProvider, type GenerateJsonRequest, type GenerateJsonResponse } from './provider';
 import { strongerAction, maxSeverity, type ModAction, type Severity } from './types';
 
 // Deterministic mock provider (docs/02-system-design.md sec. 11). Keyword heuristics stand in for the model, and
-// markers in the content force each failure path. It is deliberately naive about prompt injection: it behaves like a
+// markers in the content force each failure path. Appeal brief requests (AI-12) are answered too; for those the
+// markers are read from the appeal statement, so a post that made classify fail does not also fail its brief. It is deliberately naive about prompt injection: it behaves like a
 // model that was fooled, so tests prove the server still routes such content to a human (AI-8).
 
 export const MOCK_MARKERS = [
@@ -161,6 +163,43 @@ export function mockClassify(content: string, clauses: Set<string>, markers: Set
   };
 }
 
+function extractAppeal(user: string): { statement: string; disputed: string[]; links: number; note: boolean } | null {
+  const statement = /<appeal_statement>\n([\s\S]*?)\n<\/appeal_statement>/.exec(user)?.[1];
+  if (statement === undefined) return null;
+  const disputed = [...new Set([...user.matchAll(/<finding clause="([^"]+)"/g)].map((m) => m[1] as string))];
+  const links = /<evidence_links>\n([\s\S]*?)\n<\/evidence_links>/.exec(user)?.[1] ?? 'none';
+  const note = /<evidence_note>\n([\s\S]*?)\n<\/evidence_note>/.exec(user)?.[1] ?? 'none';
+  return {
+    statement: unescapeFromPrompt(statement),
+    disputed,
+    links: links === 'none' ? 0 : links.split('\n').length,
+    note: note !== 'none',
+  };
+}
+
+/** A neutral brief built from the request: it restates the appeal and never names an outcome (AI-12). */
+export function mockAppealBrief(
+  appeal: NonNullable<ReturnType<typeof extractAppeal>>,
+  markers: Set<MockMarker>,
+): AppealBrief {
+  const firstSentence = appeal.statement.split(/(?<=[.!?])\s/)[0]?.slice(0, 200) ?? '';
+  const newPoints: string[] = [`The author states: ${firstSentence}`];
+  if (appeal.links > 0) newPoints.push(`Adds ${appeal.links} evidence link${appeal.links === 1 ? '' : 's'}.`);
+  if (appeal.note) newPoints.push('Adds a note with more context.');
+  const disputedFindings = appeal.disputed.map((code) => ({
+    clauseCode: code,
+    authorClaim: `The author says the content does not break ${code}.`,
+  }));
+  if (markers.has('badclause')) {
+    disputedFindings.push({ clauseCode: 'XYZ-9', authorClaim: 'Disputes a clause that was never cited.' });
+  }
+  return {
+    summary: `The author appeals the decision${appeal.disputed.length > 0 ? ` under ${appeal.disputed.join(', ')}` : ''} and gives their reasons.`,
+    newPoints: newPoints.slice(0, 5),
+    disputedFindings,
+  };
+}
+
 // Valid JSON that breaks the contract in several places; it also carries keys the contract strips.
 const INVALID_OUTPUT = JSON.stringify({
   findings: 'many',
@@ -182,8 +221,9 @@ export class MockProvider implements AiProvider {
 
   async generateJson(request: GenerateJsonRequest): Promise<GenerateJsonResponse> {
     this.requests.push(request);
+    const appeal = extractAppeal(request.user);
     const { content, clauses } = extract(request.user);
-    const markers = readMarkers(content);
+    const markers = readMarkers(appeal ? appeal.statement : content);
     const isRepair = request.user.includes('<validation_errors>');
 
     // Never settles and ignores the abort signal: the pipeline's own timer must end the wait.
@@ -193,7 +233,7 @@ export class MockProvider implements AiProvider {
       throw new ProviderError('not_found', `Mock model ${request.model} is retired`, { status: 404 });
     }
 
-    const json = JSON.stringify(mockClassify(content, clauses, markers));
+    const json = JSON.stringify(appeal ? mockAppealBrief(appeal, markers) : mockClassify(content, clauses, markers));
     let text = json;
     let finishReason = 'STOP';
     if (markers.has('invalid') || (markers.has('repair') && !isRepair)) text = INVALID_OUTPUT;

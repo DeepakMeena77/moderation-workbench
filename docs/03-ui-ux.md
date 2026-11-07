@@ -271,7 +271,9 @@ Each screen uses QueryState plus the states in sec. 7.
      for its author until the analysis finishes.
 3. **My content** `/me`
    - A list of your items with StatusTag and ActionTag, the decision summary in plain words, and a tonal
-     **Appeal** button with "until 21 Nov".
+     **Appeal** button with "until 21 Nov". The status tag uses the author's words, not the queue's: Being
+     checked, Waiting for review, No issues found, Reviewed, Appeal pending, Appeal resolved. A **History** text
+     button opens the item's timeline.
    - The appeal form is a full-screen dialog on compact: statement (counter 20-2000), up to 3 evidence links as
      input chips, and a note.
    - Appeal state and outcome are shown inline.

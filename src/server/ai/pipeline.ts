@@ -1,6 +1,8 @@
 import type { Logger } from 'pino';
 import type { z } from 'zod';
-import type { AiBounds } from './aiConfig';
+import type { AiBounds, AiPrices } from './aiConfig';
+import { sanitizeErrorMessage, type AiRunRecord } from './aiRun';
+import { estimateCostUsd } from './cost';
 import { formatIssues } from './output';
 import { parseModelJson, type ParseStrategy } from './parse';
 import {
@@ -15,7 +17,7 @@ import {
 } from './provider';
 import type { AiStatus } from './types';
 
-// The bounded pipeline shared by classify and (later) the appeal brief (docs/02-system-design.md sec. 5.3, AI-9):
+// The bounded pipeline shared by classify and the appeal brief (docs/02-system-design.md sec. 5.3, AI-9):
 // deadline -> daily budget -> pacing -> one call with a hard timeout -> retry transient errors with back-off ->
 // fallback model -> parse ladder -> Zod -> at most one repair on the same model -> stop.
 
@@ -91,6 +93,54 @@ export class RunState {
     this.startedAt = clock.now();
     this.deadlineAt = this.startedAt + deadlineMs;
   }
+}
+
+/** How a run ended: ok, or the status and code of the bound that stopped it. */
+export interface RunOutcome {
+  status: AiStatus;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+/**
+ * The AiRun row for one finished run (AI-10): usage, attempts, models and flags come from the run state, so
+ * classify and the appeal brief record runs the same way. A run that made no call has 0 tokens and 0 attempts.
+ */
+export function buildRunRecord(input: {
+  purpose: AiRunRecord['purpose'];
+  provider: string;
+  primaryModel: string;
+  prompt: { version: string; sha256: string };
+  policyVersion: number | null;
+  state: RunState;
+  prices: AiPrices;
+  now: number;
+  trimmedContext: boolean;
+  outcome: RunOutcome;
+}): AiRunRecord {
+  const { state, outcome } = input;
+  return {
+    purpose: input.purpose,
+    provider: input.provider,
+    model: state.lastModel ?? input.primaryModel,
+    modelsTried: state.modelsTried,
+    promptVersion: input.prompt.version,
+    promptHash: input.prompt.sha256,
+    policyVersion: input.policyVersion,
+    inputTokens: state.usage.input,
+    outputTokens: state.usage.output,
+    thinkingTokens: state.usage.thinking,
+    costUsd: estimateCostUsd(state.usage, input.prices),
+    latencyMs: input.now - state.startedAt,
+    attempts: state.attempts,
+    repairUsed: state.repairUsed,
+    fallbackUsed: state.fallbackUsed,
+    parseStrategy: state.parseStrategy,
+    trimmedContext: input.trimmedContext,
+    status: outcome.status,
+    errorCode: outcome.errorCode,
+    errorMessage: outcome.errorMessage === null ? null : sanitizeErrorMessage(outcome.errorMessage),
+  };
 }
 
 /**

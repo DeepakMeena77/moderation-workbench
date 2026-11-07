@@ -26,9 +26,12 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  content   Content[]
-  reports   Report[]
-  decisions Decision[]
+  content         Content[]
+  reports         Report[]
+  decisions       Decision[]
+  appeals         Appeal[]   @relation("AppealAuthor")
+  assignedAppeals Appeal[]   @relation("AppealReviewer")
+  resolvedAppeals Appeal[]   @relation("AppealResolver")
 }
 
 // Fixed-window counters for database-backed rate limits (SEC-4), so limits hold across serverless instances.
@@ -175,6 +178,7 @@ model Case {
   // The analysis a decision must be made on (HUM-6). One analysis is current for at most one case.
   currentAnalysis Analysis?  @relation("CurrentAnalysis", fields: [currentAnalysisId], references: [id])
   decisions       Decision[]
+  appeals         Appeal[]
 
   @@index([status, priority(sort: Desc), createdAt])
 }
@@ -230,7 +234,8 @@ model AiRun {
   errorMessage   String?
   createdAt      DateTime @default(now())
 
-  analyses Analysis[]
+  analyses     Analysis[]
+  appealBriefs Appeal[]
 
   @@index([createdAt])
 }
@@ -337,6 +342,54 @@ model Decision {
   case     Case     @relation(fields: [caseId], references: [id])
   analysis Analysis @relation(fields: [analysisId], references: [id])
   decider  User     @relation(fields: [deciderId], references: [id])
+  appeal   Appeal?
 
   @@index([caseId, createdAt])
+}
+
+// --- S5: appeals and the second review (docs/02-system-design.md sec. 3, sec. 5.7 and sec. 8) ---
+
+enum AppealStatus {
+  pending
+  resolved
+}
+
+enum AppealOutcome {
+  uphold
+  overturn
+  modify
+}
+
+// One appeal per decision (APP-1: decisionId is unique). The assigned reviewer is a routing hint: any senior
+// moderator other than the original decider may resolve (APP-3). `brief` and `briefAiRunId` are written only by
+// services/appealBriefs.ts (the appeal_brief job, AI-12); the outcome fields only by services/appeals.ts#resolve.
+model Appeal {
+  id                 String         @id @default(cuid())
+  decisionId         String         @unique
+  caseId             String
+  authorId           String
+  statement          String
+  evidenceLinks      String[]
+  evidenceNote       String?
+  status             AppealStatus   @default(pending)
+  assignedReviewerId String?
+  brief              Json?
+  briefAiRunId       String?
+  outcome            AppealOutcome?
+  finalAction        ModAction?
+  resolverId         String?
+  rationale          String?
+  createdAt          DateTime       @default(now())
+  resolvedAt         DateTime?
+
+  decision         Decision @relation(fields: [decisionId], references: [id])
+  case             Case     @relation(fields: [caseId], references: [id])
+  author           User     @relation("AppealAuthor", fields: [authorId], references: [id])
+  assignedReviewer User?    @relation("AppealReviewer", fields: [assignedReviewerId], references: [id])
+  resolver         User?    @relation("AppealResolver", fields: [resolverId], references: [id])
+  briefAiRun       AiRun?   @relation(fields: [briefAiRunId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([assignedReviewerId, status])
+  @@index([caseId])
 }
