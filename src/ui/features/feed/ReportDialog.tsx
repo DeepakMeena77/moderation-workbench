@@ -1,7 +1,6 @@
 'use client';
 
 import CheckRounded from '@mui/icons-material/CheckRounded';
-import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
@@ -13,6 +12,7 @@ import { useTheme, type Theme } from '@mui/material/styles';
 import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { ApiError } from '../../api/client';
 import { REPORT_REASONS, useReportContent, type ReportReason } from '../../api/hooks';
+import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { useSnackbar } from '../../components/SnackbarProvider';
 import { m3 } from '../../theme/theme';
@@ -240,22 +240,9 @@ function ReportForm({ target, titleId, onDone }: { target: ReportTarget; titleId
       />
 
       {formError ? (
-        <Box
-          role="alert"
-          data-ui="section"
-          sx={(t) => ({
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 3,
-            p: 4,
-            borderRadius: '12px',
-            backgroundColor: m3(t).errorContainer,
-            color: m3(t).onErrorContainer,
-          })}
-        >
-          <ErrorOutlineRounded aria-hidden sx={{ fontSize: 20 }} />
-          <Typography variant="body2">{formError}</Typography>
-        </Box>
+        <Banner tone="error" role="alert">
+          {formError}
+        </Banner>
       ) : null}
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>

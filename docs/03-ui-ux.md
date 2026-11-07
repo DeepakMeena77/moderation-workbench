@@ -328,9 +328,12 @@ Each screen uses QueryState plus the states in sec. 7.
      re-analysed under v2") -> 4 Confirm dialog.
    - Then a re-evaluation progress card (linear progress, done/failed counts, **Retry failed**).
 10. **Audit** `/audit`
-    - An integrity banner ("Audit chain intact, 248 events verified").
-    - Filters: actor, action, entity, date range. Search. Table or list. A row expands to before/after JSON
-      (monospace, plain text).
+    - An integrity banner ("Audit chain intact, 248 events verified"; when broken, the first broken event and a
+      **Show event** button that searches for it).
+    - Filters (in the URL): actor type chips (People, System, AI), action and entity selects, a from/to date
+      range. Search covers a person's name or email, the entity, the request ID and `#<event>`. A table from
+      840 px, a list below, "Showing 25 of 248" and **Load more**. A row expands to its details and the
+      before/after JSON as plain text in the theme font (the style audit allows only Roboto).
 11. **Metrics** `/metrics`
     - Stat cards: agreement %, overrides, AI failure %, p50 latency, tokens and cost (24 h and 7 d).
     - Simple CSS bar lists: override reasons, AI failures by reason, cost by day. No chart library.

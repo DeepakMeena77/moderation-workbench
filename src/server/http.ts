@@ -5,6 +5,7 @@ import { z, type ZodTypeAny } from 'zod';
 import { getActor, type Actor } from './auth/session';
 import { AppError } from './errors';
 import { getLogger } from './logger';
+import { recordAccessDenied } from './services/audit';
 
 // The wrapper every route handler uses (docs/02-system-design.md sec. 10): request ID, CSRF check on
 // mutations, authentication and role check, body size limit, Zod parsing, error mapping and the
@@ -67,6 +68,7 @@ export function handle<
     const requestId = incomingId && REQUEST_ID_PATTERN.test(incomingId) ? incomingId : randomUUID();
     const log = getLogger().child({ requestId });
     let actor: Actor | null = null;
+    let failure: unknown = null;
     let response: Response;
 
     try {
@@ -75,7 +77,8 @@ export function handle<
         throw new AppError('FORBIDDEN', 'Cross-site requests are not allowed.');
       }
       if (options.auth !== 'public') {
-        actor = await authorize(req, options.auth, options.route, log);
+        actor = await authenticate(req);
+        requireRole(actor, options.auth, options.route, log);
       }
       const body = (options.body ? await readBody(req, options.body) : await rejectOversizedBody(req)) as Infer<TBody>;
       const query = (options.query ? parseQuery(req, options.query) : undefined) as Infer<TQuery>;
@@ -83,7 +86,20 @@ export function handle<
       const result = await handler({ req, requestId, actor: actor as ActorFor<TAuth>, body, query, params, log });
       response = result instanceof Response ? result : json({ data: result }, 200);
     } catch (error) {
+      failure = error;
       response = errorResponse(error, requestId, log, options.route);
+    }
+
+    // AUD-4: a signed-in caller refused a protected action leaves an audit event (a 403 from the role check or
+    // from a service rule such as SAME_REVIEWER). Requests without a known actor (cross-site, no session) are
+    // only logged, so anonymous traffic cannot fill the audit trail.
+    if (response.status === 403 && actor) {
+      await recordAccessDenied(
+        actor,
+        { route: options.route, method: req.method, code: failure instanceof AppError ? failure.code : 'FORBIDDEN' },
+        requestId,
+        log,
+      );
     }
 
     response.headers.set('x-request-id', requestId);
@@ -99,19 +115,17 @@ export function handle<
   };
 }
 
-async function authorize(
-  req: Request,
-  required: 'signed-in' | readonly Role[],
-  route: string,
-  log: Logger,
-): Promise<Actor> {
+async function authenticate(req: Request): Promise<Actor> {
   const actor = await getActor(req);
   if (!actor) throw new AppError('UNAUTHENTICATED', 'Sign in to continue.');
+  return actor;
+}
+
+function requireRole(actor: Actor, required: 'signed-in' | readonly Role[], route: string, log: Logger): void {
   if (required !== 'signed-in' && !required.includes(actor.role)) {
     log.warn({ event: 'access.denied', route, userId: actor.id, role: actor.role, required });
     throw new AppError('FORBIDDEN', "You don't have access to this.");
   }
-  return actor;
 }
 
 // SEC-5 (CSRF): a mutation must come from our own pages. Browsers send Sec-Fetch-Site and Origin and page

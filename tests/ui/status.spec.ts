@@ -36,6 +36,16 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 }
 
+test('[OPS-1] timestamps read as local times ("7 Nov, 19:13") and keep the ISO value in the title', async ({
+  page,
+}) => {
+  await openStatus(page, 1280);
+  const checked = page.locator('time').first();
+  await expect(checked).toHaveText(/^\d{1,2} [A-Z][a-z]{2}, \d{2}:\d{2}$/);
+  await expect(checked).toHaveAttribute('title', /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  await expect(page.getByText(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/)).toHaveCount(0);
+});
+
 test('[UX-3] /status has one main landmark and exactly one h1', async ({ page }) => {
   await openStatus(page, 1280);
   await expect(page.getByRole('main')).toHaveCount(1);
