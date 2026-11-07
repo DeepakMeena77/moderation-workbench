@@ -1,0 +1,17 @@
+# Prose is not machine-formatted. The repository guards and git hooks are maintained separately and keep
+# their own formatting.
+*.md
+docs/
+scripts/
+.githooks/
+.vscode/
+prisma/migrations/
+package-lock.json
+
+# Generated output
+.next/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+next-env.d.ts

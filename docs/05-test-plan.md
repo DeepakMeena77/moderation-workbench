@@ -27,8 +27,8 @@ evidence for each criterion, and the README evidence table is built from its out
 | 13 | Manual exploratory | What automation misses: real feel, screen reader, real phone | Checklist sec. 9 | - | S8, S9 | - |
 | 14 | Post-deploy smoke | The live URL works end to end with real Gemini | Checklist sec. 10 | - | After each deploy | - |
 
-**`npm run verify`** = `check:repo`, `check:ascii`, `check:ui`, `lint`, `typecheck`, `test`. The agent runs it after every
-step. You run it before every commit. The pre-commit hook (`.githooks/pre-commit`) runs the repo guard, the staged secret scan, the ASCII check and the UI rules on every commit; `.githooks/pre-push` adds the history secret scan and `npm run verify`.
+**`npm run verify`** = `check:repo`, `check:ascii`, `check:ui`, `lint`, `typecheck`, `test`. Run it after every step and before every
+commit. The pre-commit hook (`.githooks/pre-commit`) runs the repo guard, the staged secret scan, the ASCII check and the UI rules on every commit; `.githooks/pre-push` adds the history secret scan and `npm run verify`.
 
 ---
 
@@ -90,6 +90,9 @@ URLs with a password, and `SESSION_SECRET=` with a value. It must find nothing.
 **Database for tests.**
 
 - Integration files run serially (`pool: 'forks'`, single fork).
+- The integration setup loads only `.env.test` (Node's built-in `process.loadEnvFile`, never `.env`) and refuses
+  to run unless `TEST_DATABASE=true`, so a mis-pointed URL can never be truncated. CI sets the variables in the
+  workflow instead.
 - `beforeEach` runs `TRUNCATE ... RESTART IDENTITY CASCADE` on every table. TRUNCATE does not fire the
   row-level insert-only triggers, so cleanup still works.
 - Seed helpers create only what each test needs.
@@ -117,7 +120,8 @@ URLs with a password, and `SESSION_SECRET=` with a value. It must find nothing.
 | APP-1..5 | integration | `tests/integration/appeals.test.ts` |
 | POL-1..5 | unit + integration | `tests/unit/policy.test.ts`, `tests/integration/policy.test.ts` |
 | AUD-1..5 | integration | `tests/integration/audit.test.ts` |
-| SEC-1, SEC-2, SEC-5 | integration | `tests/integration/authz.test.ts` |
+| SEC-1, SEC-2 | integration | `tests/integration/authz.test.ts` |
+| SEC-5 | unit | `tests/unit/logger.test.ts` (redaction, content fingerprint), `tests/unit/http.test.ts` (Origin check, request log) |
 | SEC-3 | component + UI rules check | `tests/components/HighlightedText.test.tsx` |
 | OPS-1, OPS-2, OPS-4 | integration | `tests/integration/status.test.ts`, `tests/integration/jobs.test.ts` |
 | OPS-6 | integration | `tests/integration/metrics.test.ts` |
@@ -226,7 +230,7 @@ A Playwright helper walks the visible elements and reads `getComputedStyle`:
 | Tag shape | `data-ui="tag"`: radius 6, height 24 |
 | Search bar | `data-ui="search"`: height 56, full radius |
 | Dialogs | Radius 28 |
-| Typography | `font-family` starts with Roboto. `font-size/line-height` pairs are in the M3 scale: 11/16, 12/16, 14/20, 16/24, 22/28, 24/32, 28/36, 32/40, 36/44. |
+| Typography | The first `font-family` name contains "Roboto" (`next/font` names the face `__Roboto_<hash>`). `font-size/line-height` pairs are in the M3 scale: 11/16, 12/16, 14/20, 16/24, 22/28, 24/32, 28/36, 32/40, 36/44. |
 | Spacing | For elements marked `data-ui` (our layout primitives: page, section, card, stack): padding, margin and gap are multiples of 4 px. MUI internals are skipped, because some use 25 px or 1 px values by design. |
 | Colours | Backgrounds of `data-ui` surfaces are one of the defined surface tokens for the active theme |
 
@@ -365,7 +369,7 @@ The mock run in CI checks that the pipeline and the report work. The live run is
 ```text
 job verify  (from S0): services postgres:16
                        npm ci -> prisma migrate deploy -> npm run verify
-job browser (from S0): needs verify; npx playwright install --with-deps -> build -> seed (mock AI)
+job browser (from S0): needs verify; npx playwright install --with-deps -> build -> seed (from S1, mock AI)
                        -> npm run test:ui (S0: /status only; each UI slice adds its pages)
                        -> upload the Playwright report and screenshots
 added in S8:           npm run eval -- --mock (verify job), npm run test:e2e (browser job)

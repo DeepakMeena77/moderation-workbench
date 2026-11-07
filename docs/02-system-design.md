@@ -19,7 +19,7 @@ one lives.
 | Logs | pino (JSON to stdout, read in Vercel logs) | Structured, with redaction |
 | Tests | Vitest (unit, integration, components with Testing Library and jsdom), Playwright (e2e and screenshots) | Fast; one runner |
 | CI | GitHub Actions with a Postgres service container | lint, typecheck, test, mock eval |
-| Hosting | **Vercel + Neon** in the same region (e.g. Vercel `sin1` with Neon Singapore, or `bom1` with Mumbai) | No cold-start sleep; persistent database |
+| Hosting | **Vercel + Neon** in the same region: Vercel `sin1` with Neon Singapore (`aws-ap-southeast-1`) | No cold-start sleep; persistent database |
 
 **Allowed runtime dependencies:**
 
@@ -527,7 +527,10 @@ Lists use `?cursor=&limit=`.
 **`http.ts` handler wrapper**, applied to every route:
 
 - assigns a `requestId`
-- checks `Origin` on mutations (CSRF)
+- checks the origin of mutations (CSRF): a POST, PUT, PATCH or DELETE is accepted only with
+  `Sec-Fetch-Site: same-origin` or an `Origin` equal to the app's own origin (or the `x-forwarded-host`
+  origin behind the proxy). Anything else, including a request with neither header, gets 403 `FORBIDDEN`.
+  GET, HEAD and OPTIONS are not checked
 - enforces the 100 kB body limit
 - parses input with Zod
 - checks the role
@@ -552,6 +555,7 @@ and comments in the last minute, re-analyses), and for sign-in a small table key
 | Moderation | `AUTO_CLEAR_ENABLED`, `AUTO_CLEAR_MIN_CONFIDENCE`, `HUMAN_CONFIDENCE_THRESHOLD`, `APPEAL_WINDOW_DAYS` |
 | Jobs | `JOB_LEASE_MS`, `JOB_BUDGET_MS`, `CRON_SECRET` |
 | Logging | `LOG_LEVEL` |
+| Tests | `TEST_DATABASE` (`true` only in `.env.test`; integration tests refuse to run without it) |
 
 **Startup checks:**
 
