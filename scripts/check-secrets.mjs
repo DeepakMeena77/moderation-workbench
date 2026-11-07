@@ -16,6 +16,7 @@ const PLACEHOLDER = /^(<[^>]*>|\$\{?[A-Z_]+\}?|PASSWORD|password|pass|USER|user|
 
 const RULES = [
   { name: 'Google API key', re: /AIza[0-9A-Za-z_-]{35}/g },
+  { name: 'Google API key (AQ format)', re: /\bAQ\.[A-Za-z0-9_-]{40,}/g },
   { name: 'Neon password', re: /npg_[A-Za-z0-9]{10,}/g },
   { name: 'GitHub token', re: /gh[pousr]_[A-Za-z0-9]{36,}/g },
   { name: 'OpenAI-style key', re: /\bsk-[A-Za-z0-9_-]{20,}/g },

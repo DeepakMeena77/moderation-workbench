@@ -36,6 +36,7 @@ npm run dev          # http://localhost:3000
 | `npm run test:ui` | UI quality suite (Playwright + axe); run `npm run build` first |
 | `npm run check:trace -- --slice S0` | Which acceptance criteria of a slice have tests |
 | `npm run db:migrate` | Prisma migrate (development) |
+| `npm run db:seed` | Seed the six demo users (idempotent; needs `DEMO_PASSWORD`, at least 12 characters) |
 
 ## Documentation
 

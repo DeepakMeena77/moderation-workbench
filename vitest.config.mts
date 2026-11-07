@@ -1,12 +1,14 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
-// Test levels: docs/05-test-plan.md sec. 3. The component project (jsdom) joins in S1.
+// Test levels: docs/05-test-plan.md sec. 3: unit, integration and component (jsdom).
 // The "@/" alias mirrors tsconfig.json paths; it is set here directly so no extra plugin is needed.
 export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
+  // tsconfig.json keeps JSX for Next.js ("preserve"); tests need it compiled with the React 17+ runtime.
+  esbuild: { jsx: 'automatic' },
   test: {
     projects: [
       {
@@ -15,8 +17,12 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['tests/unit/**/*.test.ts'],
-          // Unit tests never connect to a database; the URL only satisfies config validation.
-          env: { DATABASE_URL: 'postgresql://user:password@localhost:5432/unit', LOG_LEVEL: 'silent' },
+          // Unit tests never connect to a database; the URL and the secret only satisfy config validation.
+          env: {
+            DATABASE_URL: 'postgresql://user:password@localhost:5432/unit',
+            SESSION_SECRET: 'unit-test-session-secret-placeholder-000',
+            LOG_LEVEL: 'silent',
+          },
         },
       },
       {
@@ -31,6 +37,15 @@ export default defineConfig({
           poolOptions: { forks: { singleFork: true } },
           testTimeout: 30_000,
           hookTimeout: 30_000,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'components',
+          environment: 'jsdom',
+          include: ['tests/components/**/*.test.tsx'],
+          setupFiles: ['tests/components/setup.ts'],
         },
       },
     ],

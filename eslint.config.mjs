@@ -42,6 +42,25 @@ const eslintConfig = [
     },
   },
   {
+    // The one exception (docs/02-system-design.md sec. 2): layouts and pages check the session and role on
+    // the server before they render (SEC-1), through @/server/auth/guards and nothing else.
+    files: ['src/app/**/page.tsx', 'src/app/**/layout.tsx'],
+    ignores: ['src/app/api/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(?:@|\\.\\.?(?:/\\.\\.)*)/server(?:/(?!auth/guards$).*)?$',
+              message: 'Layouts and pages may import only @/server/auth/guards from src/server.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: [
       'src/server/ai/**/*.ts',
       'src/server/rules/**/*.ts',

@@ -99,7 +99,7 @@ function Report({ report }: { report: StatusReport }) {
   );
 }
 
-export function StatusView() {
+export function StatusView({ signedIn }: { signedIn: boolean }) {
   const query = useStatus();
   return (
     <Box component="main" id="content" sx={{ minHeight: '100dvh', px: { xs: 4, sm: 6 }, py: 6 }}>
@@ -111,14 +111,20 @@ export function StatusView() {
             </Typography>
             <Typography variant="h1">System status</Typography>
           </Box>
-          <Button
-            variant="tonal"
-            startIcon={<RefreshRounded />}
-            onClick={() => void query.refetch()}
-            loading={query.isFetching}
-          >
-            Refresh
-          </Button>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            <Button
+              variant="tonal"
+              startIcon={<RefreshRounded />}
+              onClick={() => void query.refetch()}
+              loading={query.isFetching}
+            >
+              Refresh
+            </Button>
+            {/* The public page's only way into the app (03 sec. 6.12). */}
+            <Button variant="text" href={signedIn ? '/' : '/sign-in'}>
+              {signedIn ? 'Back to the app' : 'Sign in'}
+            </Button>
+          </Box>
         </Box>
         <QueryState query={query} loadingLabel="Loading system status">
           {(report) => <Report report={report} />}
