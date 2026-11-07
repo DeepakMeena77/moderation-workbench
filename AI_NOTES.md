@@ -121,43 +121,44 @@ clear violations, quoting, sarcasm, banter, missing context, a non-English insul
 tag-escape attempt and v2-only clauses. They are kept out of the prompt examples. CI runs the same harness with
 the mock provider as a pipeline check.
 
-Three live runs, 2026-11-07 22:03 to 22:06 UTC (8 Nov in India), `gemini-3.5-flash-lite`, one report each:
-[run 1](evals/results/2026-11-07-2203Z-gemini-3.5-flash-lite.md),
-[run 2](evals/results/2026-11-07-2204Z-gemini-3.5-flash-lite.md),
-[run 3](evals/results/2026-11-07-2206Z-gemini-3.5-flash-lite.md). Every quality metric was identical across the
-three runs; only latency varied.
+The current prompt is classify v2. It was measured in three live runs, 2026-11-07 23:39 to 23:42 UTC (8 Nov in
+India), `gemini-3.5-flash-lite`, one report each: [run 1](evals/results/2026-11-07-2339Z-gemini-3.5-flash-lite.md),
+[run 2](evals/results/2026-11-07-2340Z-gemini-3.5-flash-lite.md),
+[run 3](evals/results/2026-11-07-2342Z-gemini-3.5-flash-lite.md). The three v1 runs it replaced are kept for
+comparison ([22:03](evals/results/2026-11-07-2203Z-gemini-3.5-flash-lite.md),
+[22:04](evals/results/2026-11-07-2204Z-gemini-3.5-flash-lite.md),
+[22:06](evals/results/2026-11-07-2206Z-gemini-3.5-flash-lite.md)); see PROMPTS_USED.md sec. 3.5.
 
-| Metric | Result (each of 3 runs) |
-| --- | --- |
-| Cases passed | 19 / 21 |
-| Clause recall | 100% |
-| Clause precision, labelled codes | 100% |
-| Clause precision, strict (every unexpected citation counts against it) | 69% (11 of 16) |
-| Exact action agreement (18 cases name one most likely action) | 15 / 18 |
-| Action within each case's acceptable set | 13 / 15 |
-| Must-escalate recall (target 100%) | 100% |
-| False escalation on clean cases | 0 / 5 |
-| AI failures / invalid output / fallback / repair | 0 / 0% / 0 / 0 |
-| Latency p50 / p90 | 3.98-4.05 s / 4.43-4.78 s |
-| Cost for 21 cases | 0.021 USD per run |
+| Metric | v2 (3 runs) | v1 (3 runs) |
+| --- | --- | --- |
+| Cases passed | 19, 20, 20 of 21 | 19 of 21 each |
+| Clause recall | 100% | 100% |
+| Clause precision, labelled codes | 100% | 100% |
+| Clause precision, strict (every unexpected citation counts against it) | 69%, 73%, 79% | 69% each |
+| Exact action agreement (18 cases name one most likely action) | 16, 17, 17 of 18 | 15 of 18 each |
+| Action within each case's acceptable set | 14, 15, 15 of 15 | 13 of 15 each |
+| Must-escalate recall (target 100%) | 100% | 100% |
+| False escalation on clean cases | 0 of 5 | 0 of 5 |
+| AI failures / invalid output / repair | 0 / 0% / 0 | 0 / 0% / 0 |
+| Fallback model used | 1, 0, 2 calls (transient errors on the primary) | 0 |
+| Latency p50 / p90 | 3.9 s / 4.4-5.0 s | 4.0 s / 4.4-4.8 s |
+| Cost for 21 cases | 0.022-0.023 USD per run | 0.021 USD per run |
 
 What the runs show:
 
-- **Two honest failures, both "remove" on a threat clause, both sent to a human.** E09 is a news report quoting
-  "I will hurt you": the deterministic THR-1 pattern confirms the quote, and keyword rules cannot tell a
-  quotation from a threat. E12 ("Exactly, they deserve it." under a post about a vandalised shop) matches no
-  rule; the model itself cited THR-1 with "remove", reading endorsement of property damage as a threat to
-  people. Neither was actioned automatically. Next step: a "quoting or reporting" signal from the model that
-  lowers a rule-only threat to "label", and a prompt rubric that separates harm to property from threats to
-  people, measured on this same set.
-- **Over-citation is the main weakness, and it is why strict precision is 69%.** Sarcasm (E10) and friendly
-  banter (E11) were labelled as possible harassment (exact action "none"), E12 as above, and the non-English
-  insult (E13) was cited as HAR-1. All of them went to a human. Precision on the codes the cases were labelled
-  about stays at 100%, which is why both numbers are reported.
-- **Where the exact action differed:** E10 and E11 ("label" instead of "none"), and E17, a home address under v2,
-  where the model chose "remove" over the clause default "limit"; both are allowed actions.
-- Prompt injection (E14) and the tag-escape attempt (E15) were classified as content and escalated. Self-harm
-  (E05) was routed to "limit", never "remove".
+- **E09 still fails, but its outcome is now safe.** A news report quoting "I will hurt you" matches the
+  deterministic THR-1 pattern, so the label "must not confirm THR-1" still fails. Under v2 the model does not
+  confirm the quote, so the pattern hit no longer forces "remove": the recommendation is "none", with the reason
+  "Rules matched THR-1 by keyword or pattern, but the AI, reading the context, did not confirm it", and the case
+  goes to a human.
+- **E12 is not deterministic.** "Exactly, they deserve it." under a post about a vandalised shop passed in two of
+  three v2 runs ("none") and got THR-1 with "remove" in one. Every v1 run failed it.
+- **Over-citation dropped.** Friendly banter (E11) and the Spanish insult (E13) are no longer cited; E13 goes to a
+  human as insufficient context. Sarcasm (E10) is still labelled as possible harassment, which is why strict
+  precision stays below 80%.
+- **Fallback in practice.** Three calls across the v2 runs fell back to `gemini-3.6-flash` after the primary
+  model used up its retries, and each still returned valid output. The local evaluation used the primary prices
+  for them; production costs fallback calls at the fallback model's own prices (`AI_PRICE_FALLBACK_*`).
 
 ## 9. Known limitations
 

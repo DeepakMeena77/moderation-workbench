@@ -7,7 +7,7 @@ The prompts used to *build* the app with coding agents are in [AGENT_USAGE.md](A
 
 | Prompt | Version | Model and settings | Output schema | Purpose |
 | --- | --- | --- | --- | --- |
-| [`classify`](prompts/classify.v1.md) | v1 | `gemini-3.5-flash-lite` (fallback `gemini-3.6-flash`), JSON mode with a response schema, minimal thinking, max 2,048 output tokens | `src/server/ai/output.ts` (Zod) | Findings with cited clauses, confirmed evidence vs interpretation, action, severity, confidence, human-review reasons |
+| [`classify`](prompts/classify.v2.md) (v1 kept: [classify.v1.md](prompts/classify.v1.md)) | v2 | `gemini-3.5-flash-lite` (fallback `gemini-3.6-flash`), JSON mode with a response schema, minimal thinking, max 2,048 output tokens | `src/server/ai/output.ts` (Zod) | Findings with cited clauses, confirmed evidence vs interpretation, action, severity, confidence, human-review reasons |
 | [`appeal-brief`](prompts/appeal-brief.v1.md) | v1 | same | no outcome or recommendation field | Neutral summary of an appeal for the second reviewer |
 | Repair message (`src/server/ai/pipeline.ts`) | - | same model, second call only | same as the first call | Fix invalid output using the exact validation errors |
 
@@ -71,15 +71,35 @@ traced to the exact prompt that produced it.
   independently detects injection signals and adds a needs-human reason, whatever the model says.
 - **Evidence:** `tests/integration/analysis.test.ts` `[AI-8]`; live evaluation E14 and E15 were escalated.
 
-### 3.5 Next refinement, from the evaluation (not yet made)
+### 3.5 Prompt v2: context rules, measured over three runs
 
-- E09 (a news report quoting a threat) is confirmed as THR-1 by the deterministic pattern; E12 ("Exactly, they
-  deserve it." under a post about a vandalised shop) is cited as THR-1 with "remove" by the model itself; E10 and
-  E11 (sarcasm, banter) are labelled as possible harassment. All of them go to a human, so nothing is removed
-  automatically. The planned prompt v2 adds a "quoting or reporting" signal that lets combine lower a rule-only
-  threat to "label", and a rubric line separating harm to property from threats to people. It will be measured
-  with the same three-run evaluation, and kept only if strict precision rises without losing must-escalate
-  recall.
+- **Before (v1):** E09 (a news report quoting "I will hurt you") got "remove" from the deterministic THR-1
+  pattern; E12 ("Exactly, they deserve it." under a post about a vandalised shop) was cited as THR-1 with "remove"
+  by the model; E10 and E11 (sarcasm, banter) were labelled as harassment; E13 (Spanish insult) was cited as HAR-1.
+  Three runs: 19/21, strict precision 69%, exact action agreement 15/18, every run identical.
+- **After (v2,** [prompts/classify.v2.md](prompts/classify.v2.md)**):** a new "Context" section: a quotation or
+  report is not the author's own threat and is never `confirmed`; threat clauses are about people, not property;
+  clearly friendly banter is not harassment; content not in English gets no findings and goes to a human. With it,
+  `combine` stops a keyword or pattern hit that the model, reading the context, did not confirm from forcing its
+  default action (the hit still shows and still sends the case to a human; without the AI, or for counted rules,
+  nothing changes).
+- **Evidence:** three runs each ([v1 runs](evals/results/2026-11-07-2203Z-gemini-3.5-flash-lite.md),
+  [v2 run 1](evals/results/2026-11-07-2339Z-gemini-3.5-flash-lite.md),
+  [v2 run 2](evals/results/2026-11-07-2340Z-gemini-3.5-flash-lite.md),
+  [v2 run 3](evals/results/2026-11-07-2342Z-gemini-3.5-flash-lite.md)):
+
+  | Metric | v1 (3 runs) | v2 (3 runs) |
+  | --- | --- | --- |
+  | Cases passed | 19, 19, 19 | 19, 20, 20 |
+  | Strict clause precision | 69%, 69%, 69% | 69%, 73%, 79% |
+  | Exact action agreement | 15, 15, 15 of 18 | 16, 17, 17 of 18 |
+  | Must-escalate recall | 100% | 100% |
+  | False escalation on clean cases | 0 of 5 | 0 of 5 |
+
+- **Kept**, because strict precision and action agreement rose without losing must-escalate recall. E09 still
+  fails its "must not confirm THR-1" label, because the deterministic pattern matches the quoted words, but its
+  recommendation moved from "remove" to "none" with a plain reason for the human. E12 passed in two of three
+  runs: the model is not fully deterministic on it.
 
 ## 4. How malformed output is handled
 

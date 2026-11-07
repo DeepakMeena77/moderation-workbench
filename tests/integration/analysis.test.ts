@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getAiConfig, type AiConfig } from '@/server/ai/aiConfig';
 import { getConfig } from '@/server/config';
+import { CLASSIFY_PROMPT } from '@/server/ai/classify';
 import { loadPrompt } from '@/server/ai/prompts';
 import { MockProvider } from '@/server/ai/mock';
 import type { AiProvider } from '@/server/ai/provider';
@@ -82,8 +83,8 @@ describe('analysis with the mock AI', () => {
       provider: 'mock',
       model: getAiConfig().primaryModel,
       modelsTried: [getAiConfig().primaryModel],
-      promptVersion: 'classify.v1',
-      promptHash: loadPrompt('classify', 1).sha256,
+      promptVersion: `classify.v${CLASSIFY_PROMPT.version}`,
+      promptHash: loadPrompt('classify', CLASSIFY_PROMPT.version).sha256,
       policyVersion: 1,
       attempts: 1,
       status: 'ok',

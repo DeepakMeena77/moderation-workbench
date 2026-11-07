@@ -34,7 +34,7 @@ import { verifyOutput, type VerificationReport, type VerifiedOutput } from './ve
 // It returns findings for a human to review and an AiRun record. It never decides, changes visibility or resolves
 // anything: those paths are not reachable from here (HUM-1).
 
-export const CLASSIFY_PROMPT = { name: 'classify', version: 1 } as const;
+export const CLASSIFY_PROMPT = { name: 'classify', version: 2 } as const;
 
 export interface ClassifyInput extends ClassifyContext {
   policy: PolicyView;

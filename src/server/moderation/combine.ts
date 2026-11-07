@@ -70,9 +70,20 @@ export function combine(input: CombineInput): Recommendation {
   const clauses = codes.map((code) => clauseByCode.get(code)).filter((c): c is PolicyClauseView => c !== undefined);
 
   // Action: the stronger of the (already lowered) AI action and each rule-hit clause's default, never above allowed.
+  // A keyword or pattern match cannot see quoting, reporting or context. When the AI ran and did not confirm that
+  // clause itself, the match still shows and still sends the case to a human, but its default action is not applied
+  // (DET-5). Without the AI, and for counted rules (links, contact details, repeats), the default always applies.
+  const aiConfirmed = new Set(aiFindings.filter((f) => f.evidenceType === 'confirmed').map((f) => f.clauseCode));
+  const contextBlind = new Set<RuleFinding['ruleId']>(['keyword', 'pattern']);
+  const unconfirmedRuleCodes = new Set<string>();
   let action: ModAction = aiOk && ai.output ? ai.output.proposedAction : 'none';
-  for (const f of ruleFindings)
+  for (const f of ruleFindings) {
+    if (aiOk && contextBlind.has(f.ruleId) && !aiConfirmed.has(f.clauseCode)) {
+      unconfirmedRuleCodes.add(f.clauseCode);
+      continue;
+    }
     action = strongerAction(action, clauseByCode.get(f.clauseCode)?.defaultAction ?? 'none');
+  }
   const cap = strongestAllowed(clauses);
   if (actionRank(action) > actionRank(cap)) action = cap;
 
@@ -131,6 +142,11 @@ export function combine(input: CombineInput): Recommendation {
   const lowered = ai.verification?.actionLowered ?? null;
   if (lowered) {
     reasons.push(`AI proposed "${lowered.from}", more than the cited clauses allow; lowered to "${lowered.to}".`);
+  }
+  if (unconfirmedRuleCodes.size > 0) {
+    reasons.push(
+      `Rules matched ${[...unconfirmedRuleCodes].sort().join(', ')} by keyword or pattern, but the AI, reading the context, did not confirm it; the rule's default action is not applied.`,
+    );
   }
   if (input.reportCount > 0)
     reasons.push(`Reported by ${input.reportCount} ${input.reportCount === 1 ? 'user' : 'users'}.`);

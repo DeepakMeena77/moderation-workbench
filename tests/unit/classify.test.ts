@@ -1,7 +1,7 @@
 import { ApiError, ThinkingLevel } from '@google/genai';
 import { describe, expect, it } from 'vitest';
 import { parseAiConfig } from '@/server/ai/aiConfig';
-import { buildRepairUserMessage, createAiProvider } from '@/server/ai/classify';
+import { CLASSIFY_PROMPT, buildRepairUserMessage, createAiProvider } from '@/server/ai/classify';
 import { thinkingConfigFor, toProviderError } from '@/server/ai/gemini';
 import { MockProvider } from '@/server/ai/mock';
 import { Pacer, backoffDelayMs, realClock } from '@/server/ai/pipeline';
@@ -53,13 +53,13 @@ describe('classify: result and AiRun (AI-1, AI-10)', () => {
 
   it('[AI-10] the AiRun records provider, models, prompt version and hash, policy, tokens, cost and outcome', async () => {
     const { result } = await runClassify('You are a worthless idiot');
-    const prompt = loadPrompt('classify', 1);
+    const prompt = loadPrompt('classify', CLASSIFY_PROMPT.version);
     expect(result.aiRun).toMatchObject({
       purpose: 'classify',
       provider: 'mock',
       model: PRIMARY,
       modelsTried: [PRIMARY],
-      promptVersion: 'classify.v1',
+      promptVersion: `classify.v${CLASSIFY_PROMPT.version}`,
       promptHash: prompt.sha256,
       policyVersion: 1,
       attempts: 1,
@@ -82,7 +82,7 @@ describe('classify: result and AiRun (AI-1, AI-10)', () => {
     const request = (provider as MockProvider).requests[0];
     expect(request?.maxOutputTokens).toBe(2048);
     expect(request?.schema).toHaveProperty('properties.findings');
-    expect(request?.system).toBe(loadPrompt('classify', 1).text);
+    expect(request?.system).toBe(loadPrompt('classify', CLASSIFY_PROMPT.version).text);
     expect(request?.user).toContain('<policy version="1">');
   });
 });

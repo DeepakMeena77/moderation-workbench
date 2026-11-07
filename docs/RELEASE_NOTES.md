@@ -1,5 +1,19 @@
 # Release notes
 
+## 1.0.3 (2026-11-08)
+
+- Classify prompt v2 (`prompts/classify.v2.md`): quotations and reports are not the author's own threat, threat
+  clauses are about people, friendly banter is not harassment, and content not in English goes to a human. v1 is
+  kept. Three live runs each: strict precision 69% to 69-79%, exact action agreement 15 to 16-17 of 18,
+  must-escalate recall 100% in both.
+- A keyword or pattern hit that the AI ran on but did not confirm no longer forces its default action; it still
+  shows and still sends the case to a human (15 needs-human reasons).
+- The appeal brief's outcome-language check covers more phrasings and skips sentences that report the author's
+  own position.
+- `.env.example` and production set Google's published gemini-3.6-flash prices for fallback calls.
+
+No database migration.
+
 ## 1.0.2 (2026-11-08)
 
 - The visibility trigger also checks the actor: a change needs `app.actor_id` naming a user whose stored role is

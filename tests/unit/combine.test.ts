@@ -180,11 +180,45 @@ describe('combine: needs human (AI-6)', () => {
 describe('combine: action, severity, auto-clear', () => {
   it('[AI-6] the action is the stronger of the AI action and each rule-hit clause default', () => {
     const rec = run({
-      ruleFindings: [rule('PII-1', 'medium')],
+      // Contact details are a counted rule, so its default applies whatever the AI said.
+      ruleFindings: [{ ...rule('PII-1', 'medium'), ruleId: 'contact' }],
       ai: aiOk({ findings: [aiFinding()], proposedAction: 'label' }),
     });
     expect(rec.action).toBe('limit');
     expect(rec.clauseCodes).toEqual(['HAR-1', 'PII-1']);
+  });
+
+  it('[DET-5] a pattern hit the AI confirmed keeps its default action', () => {
+    const rec = run({
+      ruleFindings: [{ ...rule('THR-1', 'high'), ruleId: 'pattern' }],
+      ai: aiOk({
+        findings: [aiFinding({ clauseCode: 'THR-1', severity: 'high' })],
+        proposedAction: 'remove',
+      }),
+    });
+    expect(rec.action).toBe('remove');
+  });
+
+  it('[DET-5] a pattern hit the AI did not confirm (a quotation) shows, goes to a human, and adds no action', () => {
+    const rec = run({
+      ruleFindings: [{ ...rule('THR-1', 'high'), ruleId: 'pattern' }],
+      ai: aiOk({
+        findings: [aiFinding({ clauseCode: 'THR-1', evidenceType: 'interpretation', quotes: [], severity: 'low' })],
+        proposedAction: 'none',
+      }),
+    });
+    expect(rec.action).toBe('none');
+    expect(rec.clauseCodes).toContain('THR-1');
+    expect(rec.needsHuman).toBe(true);
+    expect(rec.autoClear).toBe(false);
+    expect(rec.reasons).toContain(
+      "Rules matched THR-1 by keyword or pattern, but the AI, reading the context, did not confirm it; the rule's default action is not applied.",
+    );
+  });
+
+  it('[DET-5] without the AI, a pattern hit keeps its default action', () => {
+    const rec = run({ ruleFindings: [{ ...rule('THR-1', 'high'), ruleId: 'pattern' }], ai: aiDown() });
+    expect(rec.action).toBe('remove');
   });
 
   it('[AI-4] the combined action is never above what the cited clauses allow', () => {

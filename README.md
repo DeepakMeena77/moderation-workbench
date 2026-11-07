@@ -40,7 +40,7 @@ Demo accounts: `author@`, `author2@`, `moderator@`, `senior@`, `senior2@`, `admi
   exact character offsets.
 - **AI review (Gemini):** cites the exact clause behind every finding, separates confirmed evidence (verbatim
   quotes, verified by code) from interpretation, proposes an action, explains severity and confidence, and says
-  when human judgement is needed. The **server** makes the final "needs a human" call from 14 explicit reasons.
+  when human judgement is needed. The **server** makes the final "needs a human" call from 15 explicit reasons.
 - **Human decisions:** approve, reject or modify the recommendation, with the policy version stored on every
   decision and protection against deciding on an outdated analysis (409).
 - **Appeals:** author only, once, within 14 days; routed to a senior moderator who did not make the decision; the
@@ -122,11 +122,11 @@ See [AI_NOTES.md](AI_NOTES.md) for the model choice, every safeguard with its fi
 and the evaluation results, and [PROMPTS_USED.md](PROMPTS_USED.md) for the runtime prompts and how they were
 refined.
 
-Evaluation (`npm run eval`, 21 labelled cases, live `gemini-3.5-flash-lite`, three runs with identical quality
-metrics): 19/21 pass, 100% clause recall, 100% must-escalate recall, exact action agreement 15/18, no false
-escalation on clean posts, 0 invalid outputs, 0.021 USD per run. Clause precision is 100% on labelled codes and 69%
-strict, where every unexpected citation counts against it (a quoted threat, banter, an ambiguous reply, a
-non-English insult); every one of those cases went to a human, and none was actioned automatically.
+Evaluation (`npm run eval`, 21 labelled cases, live `gemini-3.5-flash-lite`, classify prompt v2, three runs):
+19-20/21 pass, 100% clause recall, 100% must-escalate recall, exact action agreement 16-17/18, no false escalation
+on clean posts, 0 invalid outputs, about 0.022 USD per run. Clause precision is 100% on labelled codes and 69-79%
+strict, where every unexpected citation counts against it. Prompt v1, kept for comparison, scored 19/21, 69% strict
+and 15/18 in each of its three runs (PROMPTS_USED.md sec. 3.5).
 
 ## Setup
 

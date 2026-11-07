@@ -111,7 +111,7 @@ src/
     shell/     AppShell, top app bar, navigation bar / rail / drawer, More sheet, navigation.ts (03 sec. 3)
     features/  auth/ feed/ me/ history/ queue/ case/ appeals/ policy/ audit/ metrics/ status/
     api/       client.ts  hooks.ts
-prompts/   classify.v1.md  appeal-brief.v1.md
+prompts/   classify.v1.md  classify.v2.md (active)  appeal-brief.v1.md
 policies/  policy.v1.json  policy.v2.json
 evals/     cases.json  run.ts
 prisma/    schema.prisma  migrations/  seed.ts
@@ -299,7 +299,7 @@ generateJson({ system, user, schema, model, timeoutMs, maxOutputTokens })
 Implementations: `gemini.ts` (JSON mode: `responseMimeType: application/json` plus a response schema; thinking
 budget as low as the model allows) and `mock.ts`.
 
-**Prompt** (`prompts/classify.v1.md`, version and SHA-256 hash recorded on every run):
+**Prompt** (`prompts/classify.v2.md`; v1 is kept for comparison; version and SHA-256 hash recorded on every run):
 
 - **System:** role ("assist human moderators; you never decide"); scope (only the supplied policy); evidence
   rules (quotes copied character for character, otherwise use `interpretation`); severity and confidence
@@ -387,18 +387,20 @@ that fails Zod is **not** sent down the ladder again; it goes to the repair call
 
 ### 5.6 Combine (`moderation/combine.ts`) [AI-6, AI-7, Q-2]
 
-`needsHuman` has **14 conditions**: the 13 of AI-6 (the AI is unavailable; the action is not `none`; the AI asked
+`needsHuman` has **15 conditions**: the 14 of AI-6 (the AI is unavailable; the action is not `none`; the AI asked
 for review; confidence below `HUMAN_CONFIDENCE_THRESHOLD`; a `high` severity finding; an `alwaysEscalate` clause;
 rules and AI disagree; an invalid citation; an unverified quote; the case was reported; `insufficientContext`; a
-finding dropped because nothing verifiable was left; a proposed action lowered to what the cited clauses allow)
+finding dropped because nothing verifiable was left; a proposed action lowered to what the cited clauses allow;
+a keyword or pattern hit the AI ran on but did not confirm)
 plus the AI-8 injection signal from `ai/prompts.ts`. A model that saw something it
 could not back up therefore never auto-clears. Each condition adds one or more plain-language reasons.
 
 ```
-action     = max(lowered AI action, defaultAction of each rule-hit clause)   // never above allowed
+action     = max(lowered AI action, defaultAction of each rule-hit clause)   // never above allowed;
+             //   a keyword or pattern hit the AI ran on but did not confirm adds no action (still needs a human)
 severity   = max over findings
 confidence = AI overall confidence (after caps), or null when the AI is unavailable
-needsHuman = any of 14 conditions -> reasons[] in plain language (AI reasons prefixed "AI:")
+needsHuman = any of 15 conditions -> reasons[] in plain language (AI reasons prefixed "AI:")
 autoClear  = AUTO_CLEAR_ENABLED && AI ok && 0 findings && 0 reports && confidence >= 0.85 && reasons empty
 priority   = Q-2 formula
 ```
