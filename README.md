@@ -185,7 +185,8 @@ content (evidence stays stable), notifications, real-time push (pages poll while
 - Deterministic threat patterns cannot tell a quotation from a threat (evaluation case E09). Such cases still go
   to a human; no action is taken automatically.
 - The AI over-flags some friendly banter as possible harassment (label only, sent to a human).
-- The fallback model's prices default to the primary model's until `AI_PRICE_FALLBACK_*` is set.
+- Model prices are configuration copied from Google's published list on 2026-11-08; the fallback model's price
+  doubles on 2027-01-01, and `AI_PRICE_FALLBACK_*` must be updated then.
 - The Gemini free tier has small quotas; a daily AI call budget and a fallback model reduce, but do not remove,
   "AI unavailable" periods. Rule findings still reach a human in that state.
 - The audit integrity check walks the whole chain on each audit page load; fine at demo scale, and a stored

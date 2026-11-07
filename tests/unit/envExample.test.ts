@@ -37,5 +37,6 @@ describe('.env.example', () => {
   it('[AI-10] also parses with the live provider once a key is set, because the prices are filled in', () => {
     const config = parseAiConfig({ ...env, AI_PROVIDER: 'gemini', GEMINI_API_KEY: 'test-key' });
     expect(config.prices).toEqual({ inputPerMTok: 0.3, outputPerMTok: 2.5 });
+    expect(config.fallbackPrices).toEqual({ inputPerMTok: 0.75, outputPerMTok: 3.75 });
   });
 });

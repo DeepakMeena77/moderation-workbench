@@ -216,6 +216,12 @@ describe('appeal brief outcome language (AI-12)', () => {
       'The label should be kept.',
       'The moderator recommends overturning the decision.',
       'Overall this is recommended upholding.',
+      'The decision should stand.',
+      'The label should be lifted.',
+      'Overturning seems justified given the context.',
+      'I would uphold the original decision.',
+      'Upholding the limit would be appropriate.',
+      'The author is right and the label should be lifted.',
     ]) {
       expect(hasOutcomeLanguage(brief(text)), text).toBe(true);
     }
@@ -229,6 +235,9 @@ describe('appeal brief outcome language (AI-12)', () => {
       'The post was limited under HAR-1; the author disputes the finding.',
       'The author recommended the film to a friend in the thread.',
       'Shoulder injuries came up earlier in the thread.',
+      'The author argues the label should be lifted because the post quotes a song.',
+      "The author's position is that the decision should not stand.",
+      'The decision was made under policy v1; the policy has since changed.',
     ]) {
       expect(hasOutcomeLanguage(brief(text)), text).toBe(false);
     }

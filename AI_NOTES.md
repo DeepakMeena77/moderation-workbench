@@ -161,8 +161,8 @@ What the runs show:
 
 ## 9. Known limitations
 
-- The fallback model's prices default to the primary model's until `AI_PRICE_FALLBACK_*` is set; the published
-  gemini-3.6-flash price is not filled in.
+- Model prices are configuration copied from Google's published list on 2026-11-08: 0.30 / 2.50 USD per million
+  tokens for the primary model and 0.75 / 3.75 for the fallback model, which rise to 1.50 / 7.50 on 2027-01-01.
 - Pacing is per serverless instance, best effort.
 - English only; other languages are routed to a human.
 - Free-tier quotas are small; the daily budget and the fallback model reduce, but do not remove, the chance of

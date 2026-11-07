@@ -56,15 +56,31 @@ export interface BriefFlags {
 export type VerifiedAppealBrief = AppealBrief & { flags: BriefFlags };
 
 /**
- * Recommending language in the model's own voice (AI-12): "I recommend", "should be overturned", "recommends
- * reinstating". Reporting what the author asks for ("the author asks for the label to be removed") does not match.
+ * Recommending language in the model's own voice (AI-12): "I recommend", "should be overturned", "the decision
+ * should stand", "I would uphold", "overturning seems justified", "recommends reinstating".
+ * Checked sentence by sentence, skipping sentences that report the author's own position ("the author argues the
+ * label should be lifted"), because a neutral brief has to say what the author asks for.
  * Applied to summary and newPoints only: authorClaim restates the author's position by design.
  */
-export const OUTCOME_LANGUAGE =
-  /\b(i|we) (recommend|suggest)\b|\b(should|must|ought to) (be )?(upheld|overturned|reversed|reinstated|restored|kept|removed)\b|\brecommend(s|ed)? (upholding|overturning|reinstating|removing)\b/i;
+export const OUTCOME_LANGUAGE = new RegExp(
+  [
+    String.raw`\b(i|we) (recommend|suggest|would (uphold|overturn|reverse|reinstate|restore|keep|remove|lift))\b`,
+    String.raw`\b(should|must|ought to) (be )?(upheld|overturned|reversed|reinstated|restored|kept|removed|lifted|dropped)\b`,
+    String.raw`\b(decision|label|limit|removal|action|outcome) (should|must) (stand|remain|stay)\b`,
+    String.raw`\b(upholding|overturning|reversing|reinstating|lifting|keeping) (it |the \w+ )?(is|seems|would be|appears) (justified|warranted|appropriate|reasonable|right|fair|correct)\b`,
+    String.raw`\brecommend(s|ed)? (upholding|overturning|reinstating|removing|lifting|keeping)\b`,
+  ].join('|'),
+  'i',
+);
+
+/** A sentence that attributes the view to the author is reporting, not recommending. */
+const REPORTS_AUTHOR =
+  /\b(the )?author('s)? (says|said|argues|argued|asks|asked|claims|claimed|believes|thinks|feels|states|stated|wants|requests|requested|contends|maintains|disputes|position|view|request)\b/i;
 
 export function hasOutcomeLanguage(brief: Pick<AppealBrief, 'summary' | 'newPoints'>): boolean {
-  return [brief.summary, ...brief.newPoints].some((text) => OUTCOME_LANGUAGE.test(text));
+  return [brief.summary, ...brief.newPoints]
+    .flatMap((text) => text.split(/(?<=[.!?;])\s+/))
+    .some((sentence) => !REPORTS_AUTHOR.test(sentence) && OUTCOME_LANGUAGE.test(sentence));
 }
 
 const str = (maxLength: number) => ({ type: 'string', maxLength });

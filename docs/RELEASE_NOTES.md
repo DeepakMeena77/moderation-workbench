@@ -7,7 +7,8 @@
 - An integration test pauses the model call and shows no database transaction is open while it runs.
 - Verify lowers a proposed action to the strongest allowed action at or below it, never raising it.
 - Recommending language in the appeal brief's summary is flagged, logged and shown as a warning to the reviewer.
-- Fallback-model runs are costed at their own prices when `AI_PRICE_FALLBACK_*` is set.
+- Fallback-model runs are costed at their own prices (`AI_PRICE_FALLBACK_*`, set to Google's published
+  gemini-3.6-flash prices in `.env.example` and in production).
 - Attribute values in the appeal brief prompt are escaped.
 - Metrics show how many auto-cleared cases were later reported or reopened.
 - The evaluation reports exact action agreement; E12 is stricter; three live runs are kept (19/21 each).
