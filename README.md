@@ -57,7 +57,7 @@ Demo accounts: `author@`, `author2@`, `moderator@`, `senior@`, `senior2@`, `admi
 
 Every acceptance criterion in [docs/01-requirements.md](docs/01-requirements.md) has an ID, and tests carry the
 ID in their name. `npm run check:trace -- --strict` maps each criterion to its tests and writes
-[docs/trace.md](docs/trace.md): 66 of 70 criteria are covered by tests, and the other 4 are checked by hand.
+[docs/trace.md](docs/trace.md): 65 of 70 criteria are covered by tests, and the other 5 are checked by hand.
 
 | Area | Criteria | Evidence |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ ID in their name. `npm run check:trace -- --strict` maps each criterion to its t
 | UI and UX | UX-1..5 | 5 of 5 |
 | Operations | OPS-1..6 | 5 of 6; OPS-5 (deployment) in [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) |
 | Evaluation | EVAL-1..2 | 2 of 2 |
-| Documents and CI | DOC-1..4 | DOC-3 by a test that parses `.env.example`; the rest by hand: these documents and [.github/workflows/ci.yml](.github/workflows/ci.yml) |
+| Documents and CI | DOC-1..4 | By hand: these documents and [.github/workflows/ci.yml](.github/workflows/ci.yml) |
 
 ## Screenshots
 
@@ -122,10 +122,11 @@ See [AI_NOTES.md](AI_NOTES.md) for the model choice, every safeguard with its fi
 and the evaluation results, and [PROMPTS_USED.md](PROMPTS_USED.md) for the runtime prompts and how they were
 refined.
 
-Evaluation (`npm run eval`, 21 labelled cases, live `gemini-3.5-flash-lite`): 20/21 pass, 100% clause recall,
-100% must-escalate recall, no false escalation on clean posts, 0 invalid outputs, 0.021 USD for the run. Clause
-precision is 100% on labelled codes and 69% strict, where every unexpected citation counts against it (a quoted
-threat, banter, an ambiguous reply, a non-English insult); every one of those cases went to a human.
+Evaluation (`npm run eval`, 21 labelled cases, live `gemini-3.5-flash-lite`, three runs with identical quality
+metrics): 19/21 pass, 100% clause recall, 100% must-escalate recall, exact action agreement 15/18, no false
+escalation on clean posts, 0 invalid outputs, 0.021 USD per run. Clause precision is 100% on labelled codes and 69%
+strict, where every unexpected citation counts against it (a quoted threat, banter, an ambiguous reply, a
+non-English insult); every one of those cases went to a human, and none was actioned automatically.
 
 ## Setup
 
@@ -189,7 +190,8 @@ content (evidence stays stable), notifications, real-time push (pages poll while
   "AI unavailable" periods. Rule findings still reach a human in that state.
 - The audit integrity check walks the whole chain on each audit page load; fine at demo scale, and a stored
   checkpoint would be the next step for a large trail.
-- Rate limits and AI pacing are per serverless instance.
+- AI pacing (the minimum gap between model calls) is per serverless instance; rate limits are shared, because
+  they are counted in the database.
 - English only; other languages are sent to a human.
 
 ## Deployment

@@ -82,6 +82,7 @@ describe('evaluation runner (EVAL-2)', () => {
       'Clause precision, labelled codes',
       'Clause precision, strict (every unexpected citation is a false positive)',
       'Clause recall',
+      'Exact action agreement',
       'Action in expected set',
       'Must-escalate recall (target 100%)',
       'Invalid-output rate',

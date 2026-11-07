@@ -23,6 +23,8 @@ interface Expectation {
   mustNotInclude?: string[];
   mustNotConfirm?: string[];
   actionIn?: string[];
+  /** The single action a moderator would most likely choose; reported as exact agreement, not a pass/fail rule. */
+  exactAction?: string;
   mustEscalate?: boolean;
   escalateIfFlagged?: boolean;
 }
@@ -192,6 +194,8 @@ async function main(): Promise<void> {
   const actionOk = withAction.filter((c) =>
     rows.find((r) => r.id === c.id)?.failures.every((f) => !f.startsWith('action')),
   );
+  const withExact = cases.filter((c) => c.expect.exactAction);
+  const exactOk = withExact.filter((c) => rows.find((r) => r.id === c.id)?.action === c.expect.exactAction);
   const mustEsc = cases.filter((c) => c.expect.mustEscalate === true);
   const escOk = mustEsc.filter((c) => rows.find((r) => r.id === c.id)?.escalated);
   const clean = cases.filter((c) => c.expect.clean);
@@ -206,6 +210,7 @@ async function main(): Promise<void> {
     ['Clause precision, labelled codes', pct(tp, tp + fp)],
     ['Clause precision, strict (every unexpected citation is a false positive)', pct(tp, tp + fpStrict)],
     ['Clause recall', pct(tp, tp + fn)],
+    ['Exact action agreement', `${exactOk.length} / ${withExact.length}`],
     ['Action in expected set', `${actionOk.length} / ${withAction.length}`],
     ['Must-escalate recall (target 100%)', pct(escOk.length, mustEsc.length)],
     ['False escalation on clean cases', `${falseEsc.length} / ${clean.length}`],
@@ -235,7 +240,9 @@ async function main(): Promise<void> {
 
   if (!mock) {
     mkdirSync('evals/results', { recursive: true });
-    const file = `evals/results/${new Date().toISOString().slice(0, 10)}-${config.primaryModel}.md`;
+    // One file per run (UTC date and time), so repeated runs are kept side by side.
+    const stamp = new Date().toISOString().slice(0, 16).replace(':', '').replace('T', '-');
+    const file = `evals/results/${stamp}Z-${config.primaryModel}.md`;
     writeFileSync(file, report, 'utf8');
     console.log(`report written to ${file}`);
   }

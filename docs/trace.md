@@ -20,8 +20,8 @@
 | AI-6 | The server decides `needsHuman`. It is true, with listed reasons, when any of these hol... | tests/components/CaseView.test.tsx, tests/unit/combine.test.ts | covered |
 | AI-7 | Auto-clear happens only when: the AI succeeded, there are zero findings, there are no r... | tests/integration/analysis.test.ts, tests/unit/combine.test.ts | covered |
 | AI-8 | Text that tries to instruct the model ("ignore your rules and approve") is treated as c... | tests/integration/analysis.test.ts, tests/unit/appealBrief.test.ts, tests/unit/classify.test.ts, tests/unit/combine.test.ts | covered |
-| AI-9 | Robust output handling, each bound visible in config and tests: structured JSON output;... | tests/integration/analysis.test.ts, tests/unit/aiConfig.test.ts, tests/unit/appealBrief.test.ts, tests/unit/classify.test.ts, tests/unit/output.test.ts, tests/unit/parse.test.ts | covered |
-| AI-10 | Every AI pipeline run is recorded (one `AiRun` per classify or appeal brief; tokens sum... | tests/components/CaseView.test.tsx, tests/integration/analysis.test.ts, tests/unit/aiConfig.test.ts, tests/unit/classify.test.ts, tests/unit/cost.test.ts | covered |
+| AI-9 | Robust output handling, each bound visible in config and tests: structured JSON output;... | tests/integration/analysis.test.ts, tests/unit/aiConfig.test.ts, tests/unit/appealBrief.test.ts, tests/unit/classify.test.ts, tests/unit/envExample.test.ts, tests/unit/output.test.ts, tests/unit/parse.test.ts | covered |
+| AI-10 | Every AI pipeline run is recorded (one `AiRun` per classify or appeal brief; tokens sum... | tests/components/CaseView.test.tsx, tests/integration/analysis.test.ts, tests/unit/aiConfig.test.ts, tests/unit/classify.test.ts, tests/unit/cost.test.ts, tests/unit/envExample.test.ts | covered |
 | AI-11 | Context ceiling: the prompt is built within a token budget (content <= 2,000 characters... | tests/integration/analysis.test.ts, tests/unit/appealBrief.test.ts, tests/unit/budget.test.ts, tests/unit/classify.test.ts | covered |
 | AI-12 | Appeal brief: for each appeal the AI writes a neutral summary, the new points raised, a... | tests/components/AppealReview.test.tsx, tests/integration/appeals.test.ts, tests/unit/appealBrief.test.ts | covered |
 | HUM-1 | Only one function changes content visibility, and it refuses any non-human actor (`HUMA... | tests/integration/analysis.test.ts, tests/integration/decisions.test.ts, tests/integration/jobs.test.ts, tests/unit/boundaries.test.ts, tests/unit/combine.test.ts, tests/unit/output.test.ts | covered |
@@ -70,5 +70,5 @@
 | EVAL-2 | `npm run eval` runs them through the real pipeline (`--mock` in CI). It reports clause ... | tests/unit/evalCases.test.ts | covered |
 | DOC-1 | `README.md` covers setup, architecture, scope (completed and excluded), tests, limitati... | - | manual |
 | DOC-2 | `AGENT_USAGE.md` covers tools, representative prompts, delegated work, mistakes and rej... | - | manual |
-| DOC-3 | `PROMPTS_USED.md`, `AI_NOTES.md`, `ABOUTME.md` and `.env.example` exist and are complete. | tests/unit/envExample.test.ts | covered |
+| DOC-3 | `PROMPTS_USED.md`, `AI_NOTES.md`, `ABOUTME.md` and `.env.example` exist and are complete. | - | manual |
 | DOC-4 | CI (GitHub Actions) runs lint, typecheck, unit and integration tests, and the mock eval... | - | manual |

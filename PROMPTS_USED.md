@@ -73,10 +73,13 @@ traced to the exact prompt that produced it.
 
 ### 3.5 Next refinement, from the evaluation (not yet made)
 
-- E09 (a news report quoting a threat) is confirmed as THR-1 by the deterministic pattern, and E10 and E11
-  (sarcasm, banter) are labelled as possible harassment. All three go to a human, so nothing is removed
-  automatically. The planned change is to let a quoting or reporting interpretation from the AI lower a rule-only
-  threat to "label", measured with the same evaluation set.
+- E09 (a news report quoting a threat) is confirmed as THR-1 by the deterministic pattern; E12 ("Exactly, they
+  deserve it." under a post about a vandalised shop) is cited as THR-1 with "remove" by the model itself; E10 and
+  E11 (sarcasm, banter) are labelled as possible harassment. All of them go to a human, so nothing is removed
+  automatically. The planned prompt v2 adds a "quoting or reporting" signal that lets combine lower a rule-only
+  threat to "label", and a rubric line separating harm to property from threats to people. It will be measured
+  with the same three-run evaluation, and kept only if strict precision rises without losing must-escalate
+  recall.
 
 ## 4. How malformed output is handled
 

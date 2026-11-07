@@ -253,7 +253,7 @@ screenshot). Failure cases are part of the criterion, not extras.
 | ID | Criterion | Evidence |
 | --- | --- | --- |
 | EVAL-1 | `evals/cases.json` holds about 20 labelled examples: clean, clear violations, borderline (quote, news, sarcasm), missing context, out of scope, prompt injection, and v2-only cases. | |
-| EVAL-2 | `npm run eval` runs them through the real pipeline (`--mock` in CI). It reports clause precision and recall, action agreement (each case lists the actions a moderator could reasonably choose; agreement means the recommendation is one of them), must-escalate recall (target 100%), invalid-output rate, latency and cost. The latest live result is pasted into `AI_NOTES.md`. | |
+| EVAL-2 | `npm run eval` runs them through the real pipeline (`--mock` in CI). It reports clause precision and recall, exact action agreement (and agreement with each case's set of acceptable actions), must-escalate recall (target 100%), invalid-output rate, latency and cost. The latest live result is pasted into `AI_NOTES.md`. | |
 
 ### 5.13 Documentation and delivery (DOC)
 
