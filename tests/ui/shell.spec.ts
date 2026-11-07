@@ -112,15 +112,22 @@ test.describe('navigation variant by width', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Metrics');
   });
 
-  test('[UX-3] navigation targets are at least 48 px high and 40 px wide at 360 and 1280 px', async ({ page }) => {
+  // docs/05-test-plan.md sec. 6 (target size): navigation items >= 40 high, with the 48 px hit area where M3
+  // specifies it. That is the touch bar (360 px); the pointer-width drawer uses compact 40 px rows (03 sec. 3.1).
+  test('[UX-3] navigation targets: bar items at least 48 px high, drawer rows at least 40 px, all 40 px wide', async ({
+    page,
+  }) => {
     await signInAs(page, 'senior');
-    for (const width of [360, 1280]) {
+    for (const [width, minHeight] of [
+      [360, 48],
+      [1280, 40],
+    ] as const) {
       await openPage(page, '/queue', width);
       const nav = page.getByRole('navigation');
       for (const item of await nav.locator('a, button').all()) {
         const box = await item.boundingBox();
         expect(box, `${width}px`).not.toBeNull();
-        expect(box?.height ?? 0, `${width}px ${await item.textContent()}`).toBeGreaterThanOrEqual(48);
+        expect(box?.height ?? 0, `${width}px ${await item.textContent()}`).toBeGreaterThanOrEqual(minHeight);
         expect(box?.width ?? 0, `${width}px ${await item.textContent()}`).toBeGreaterThanOrEqual(40);
       }
     }

@@ -17,9 +17,10 @@ import { EmptyState } from '../../components/EmptyState';
 import { FilterChip } from '../../components/FilterChip';
 import { IconButton } from '../../components/IconButton';
 import { QueryState } from '../../components/QueryState';
+import { RowList } from '../../components/RowList';
 import { SearchBar } from '../../components/SearchBar';
 import { CardSkeleton } from '../../components/Skeletons';
-import { m3 } from '../../theme/theme';
+import { layout, m3, pageSx } from '../../theme/theme';
 import { shortDateTime } from '../feed/format';
 import {
   ACTION_LABEL,
@@ -139,9 +140,9 @@ function EventDetails({ row }: { row: AuditRow }) {
       sx={(t) => ({
         display: 'flex',
         flexDirection: 'column',
-        gap: 4,
-        p: 4,
-        borderRadius: '12px',
+        gap: 3,
+        p: 3,
+        borderRadius: `${layout.nestedRadius}px`,
         backgroundColor: m3(t).cardNested,
         minWidth: 0,
       })}
@@ -190,10 +191,9 @@ function EventListItem({ row }: { row: AuditRow }) {
         listStyle: 'none',
         display: 'flex',
         flexDirection: 'column',
-        gap: 3,
+        gap: 2,
         px: 4,
-        py: 3,
-        borderRadius: '12px',
+        py: 2,
         backgroundColor: m3(t).card,
         minWidth: 0,
       })}
@@ -319,11 +319,13 @@ export function AuditView() {
   const total = events.data?.pages[0]?.total ?? 0;
 
   return (
-    <Box sx={{ px: { xs: 4, sm: 6 }, py: 6, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-      <Typography variant="h1">Audit</Typography>
+    <Box sx={{ ...pageSx, display: 'flex', flexDirection: 'column', gap: layout.stackGap, minWidth: 0 }}>
+      <Typography variant="h1" sx={{ mb: { xs: 0, sm: 1 } }}>
+        Audit
+      </Typography>
       <IntegrityBanner onShowEvent={(id) => setFilters({ q: `#${id}` })} />
 
-      <Card component="section" aria-label="Filters" sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Card component="section" aria-label="Filters" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <SearchBar
           value={filters.q ?? ''}
           onSearch={onSearch}
@@ -343,7 +345,7 @@ export function AuditView() {
       <Box
         component="section"
         aria-label="Events"
-        sx={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}
+        sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap, minWidth: 0 }}
       >
         <QueryState
           query={events}
@@ -383,14 +385,12 @@ export function AuditView() {
                   expandLabel={(row) => `Details of event #${row.id}`}
                 />
               </Card>
-              <Box
-                component="ul"
-                aria-label="Audit events, newest first"
-                sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1, m: 0, p: 0 }}
-              >
-                {loaded.map((row) => (
-                  <EventListItem key={row.id} row={row} />
-                ))}
+              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                <RowList component="ul" aria-label="Audit events, newest first">
+                  {loaded.map((row) => (
+                    <EventListItem key={row.id} row={row} />
+                  ))}
+                </RowList>
               </Box>
               <Box
                 sx={{

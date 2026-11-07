@@ -16,7 +16,7 @@ import { ActionTag, SeverityTag } from '../../components/ModerationTags';
 import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { Tag } from '../../components/Tag';
-import { m3 } from '../../theme/theme';
+import { layout, m3, pageSx } from '../../theme/theme';
 import { shortDate } from '../feed/format';
 import { useCompare, usePolicies, usePolicy, type PolicyClause, type PolicySummary } from './api';
 import { DiffView } from './DiffView';
@@ -63,8 +63,8 @@ function ClauseItem({ clause }: { clause: PolicyClause }) {
       data-ui="section"
       sx={(t) => ({
         listStyle: 'none',
-        borderRadius: '12px',
-        p: 4,
+        borderRadius: `${layout.nestedRadius}px`,
+        p: 3,
         backgroundColor: m3(t).cardNested,
         display: 'flex',
         flexDirection: 'column',
@@ -159,8 +159,9 @@ function VersionRow({
         flexWrap: 'wrap',
         alignItems: 'center',
         gap: 3,
-        p: 3,
-        borderRadius: '12px',
+        px: 3,
+        py: 2,
+        borderRadius: `${layout.nestedRadius}px`,
         backgroundColor: selected ? m3(t).selected : 'transparent',
       })}
     >
@@ -252,9 +253,11 @@ export function PolicyView({ canPublish, canSeeRuns }: { canPublish: boolean; ca
   const [publishedRunId, setPublishedRunId] = useState<string | null>(null);
 
   return (
-    <Box data-ui="section" sx={{ px: { xs: 4, sm: 6 }, py: 6 }}>
-      <Box sx={{ maxWidth: 960, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <Typography variant="h1">Policy</Typography>
+    <Box data-ui="section" sx={pageSx}>
+      <Box sx={{ maxWidth: layout.formWidth, display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
+        <Typography variant="h1" sx={{ mb: { xs: 0, sm: 1 } }}>
+          Policy
+        </Typography>
         <QueryState
           query={policies}
           loadingLabel="Loading policy versions"
@@ -281,7 +284,7 @@ export function PolicyView({ canPublish, canSeeRuns }: { canPublish: boolean; ca
                 {canSeeRuns && runId ? <ReevaluationProgress runId={runId} canRetry={canSeeRuns} /> : null}
 
                 <Card component="section" aria-labelledby="policy-versions">
-                  <Typography id="policy-versions" variant="h2" component="h2" sx={{ mb: 3 }}>
+                  <Typography id="policy-versions" variant="h2" component="h2" sx={{ mb: 2 }}>
                     Versions
                   </Typography>
                   <Box component="ul" sx={{ m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -298,7 +301,7 @@ export function PolicyView({ canPublish, canSeeRuns }: { canPublish: boolean; ca
 
                 {shown !== null ? (
                   <Card component="section" aria-labelledby="policy-clauses">
-                    <Typography id="policy-clauses" variant="h2" component="h2" sx={{ mb: 3 }}>
+                    <Typography id="policy-clauses" variant="h2" component="h2" sx={{ mb: 2 }}>
                       Clauses in v{shown}
                     </Typography>
                     <VersionClauses version={shown} />
@@ -306,7 +309,7 @@ export function PolicyView({ canPublish, canSeeRuns }: { canPublish: boolean; ca
                 ) : null}
 
                 <Card component="section" aria-labelledby="policy-compare">
-                  <Typography id="policy-compare" variant="h2" component="h2" sx={{ mb: 3 }}>
+                  <Typography id="policy-compare" variant="h2" component="h2" sx={{ mb: 2 }}>
                     Compare versions
                   </Typography>
                   <CompareCard key={data.versions.length} versions={data.versions} />
@@ -317,7 +320,7 @@ export function PolicyView({ canPublish, canSeeRuns }: { canPublish: boolean; ca
                     <Typography id="policy-publish" variant="h2" component="h2" sx={{ mb: 1 }}>
                       Publish a new version
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                       Publishing retires the active version and re-analyses every unresolved case.
                     </Typography>
                     <PublishFlow onPublished={setPublishedRunId} />

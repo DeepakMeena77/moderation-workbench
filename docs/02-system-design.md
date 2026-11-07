@@ -106,7 +106,7 @@ src/
                history.ts policy.ts reevaluation.ts audit.ts metrics.ts status.ts rateLimit.ts auth.ts
     jobs/      queue.ts runner.ts handlers.ts
   ui/
-    theme/     tokens.ts theme.ts
+    theme/     tokens.ts layout.ts theme.ts
     components/ (see 03-ui-ux.md sec. 4)
     shell/     AppShell, top app bar, navigation bar / rail / drawer, More sheet, navigation.ts (03 sec. 3)
     features/  auth/ feed/ me/ history/ queue/ case/ appeals/ policy/ audit/ metrics/ status/

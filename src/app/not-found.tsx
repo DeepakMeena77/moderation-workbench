@@ -5,24 +5,26 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { Button } from '@/ui/components/Button';
 import { Card } from '@/ui/components/Card';
+import { layout, pageSx, titleGap } from '@/ui/theme/theme';
 
 // 404 (03 sec. 6.13).
 export default function NotFound() {
   return (
-    <Box component="main" id="content" sx={{ minHeight: '100dvh', px: { xs: 4, sm: 6 }, py: 12 }}>
-      <Card sx={{ maxWidth: 680, mx: 'auto' }}>
-        <Box
-          data-ui="stack"
-          sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, py: 6 }}
-        >
-          <SearchOffRounded aria-hidden sx={{ fontSize: 48, color: 'text.secondary' }} />
-          <Typography variant="h1">Not found</Typography>
-          <Typography variant="body2" color="text.secondary">
-            This page doesn&apos;t exist or has moved. Check the address, or go back to the start page.
-          </Typography>
-          <Button variant="tonal" href="/">
-            Go to the start page
-          </Button>
+    <Box component="main" id="content" sx={{ minHeight: '100dvh', ...pageSx, pt: { xs: 6, sm: 10 } }}>
+      <Typography variant="h1" sx={{ mb: titleGap }}>
+        Not found
+      </Typography>
+      <Card sx={{ maxWidth: layout.readingWidth }}>
+        <Box data-ui="stack" sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
+          <SearchOffRounded aria-hidden sx={{ fontSize: 20, color: 'text.secondary' }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, minWidth: 0 }}>
+            <Typography variant="body2">
+              This page doesn&apos;t exist or has moved. Check the address, or go back to the start page.
+            </Typography>
+            <Button variant="tonal" href="/">
+              Go to the start page
+            </Button>
+          </Box>
         </Box>
       </Card>
     </Box>

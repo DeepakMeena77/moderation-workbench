@@ -11,18 +11,21 @@ import { EmptyState } from '../../components/EmptyState';
 import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { useSnackbar } from '../../components/SnackbarProvider';
+import { RowList } from '../../components/RowList';
+import { layout, pageSx, titleGap } from '../../theme/theme';
 import { Composer } from './Composer';
 import { PostCard } from './PostCard';
 import { ReportDialog, type ReportTarget } from './ReportDialog';
 
-// The Feed page (03 sec. 6.2): a composer card for authors, then post cards newest first, with "Load more".
-// A reading page: 680 wide and centred (03 sec. 5).
+// The Feed page (03 sec. 6.2): a composer card for authors, then the posts as rows in one region, newest first,
+// with "Load more".
+// A reading page: left-aligned next to the navigation, with a max width (03 sec. 5).
 
 function FeedSkeleton() {
   return (
-    <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
       <CardSkeleton height={180} />
-      <CardSkeleton height={180} />
+      <CardSkeleton height={320} />
     </Box>
   );
 }
@@ -34,9 +37,11 @@ export function FeedView({ canPost }: { canPost: boolean }) {
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
   return (
-    <Box data-ui="section" sx={{ px: { xs: 4, sm: 6 }, py: 6 }}>
-      <Box sx={{ maxWidth: 680, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <Typography variant="h1">Feed</Typography>
+    <Box data-ui="section" sx={pageSx}>
+      <Box sx={{ maxWidth: layout.readingWidth, display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
+        <Typography variant="h1" sx={{ mb: { xs: titleGap.xs - layout.stackGap, sm: titleGap.sm - layout.stackGap } }}>
+          Feed
+        </Typography>
 
         {canPost ? (
           <Card component="section" aria-label="New post">
@@ -71,12 +76,18 @@ export function FeedView({ canPost }: { canPost: boolean }) {
           }
         >
           {(data) => (
-            <Box component="section" aria-label="Posts" sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {data.pages.flatMap((page) =>
-                page.items.map((post) => (
-                  <PostCard key={post.id} post={post} canComment={canPost} onReport={setReportTarget} />
-                )),
-              )}
+            <Box
+              component="section"
+              aria-label="Posts"
+              sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap }}
+            >
+              <RowList>
+                {data.pages.flatMap((page) =>
+                  page.items.map((post) => (
+                    <PostCard key={post.id} post={post} canComment={canPost} onReport={setReportTarget} />
+                  )),
+                )}
+              </RowList>
               {feed.hasNextPage ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                   <Button variant="tonal" loading={feed.isFetchingNextPage} onClick={() => void feed.fetchNextPage()}>

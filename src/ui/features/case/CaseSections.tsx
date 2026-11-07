@@ -23,7 +23,7 @@ import {
   PolicyVersionTag,
   SeverityTag,
 } from '../../components/ModerationTags';
-import { m3 } from '../../theme/theme';
+import { layout, m3 } from '../../theme/theme';
 import { relativeTime } from '../feed/format';
 import { REASON_LABEL } from './decisionForm';
 
@@ -50,8 +50,8 @@ function Nested({ children, label }: { children: ReactNode; label?: string }) {
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
-        p: 4,
-        borderRadius: '12px',
+        p: 3,
+        borderRadius: `${layout.nestedRadius}px`,
         backgroundColor: m3(t).cardNested,
         minWidth: 0,
       })}
@@ -94,7 +94,7 @@ export function ContentCard({ detail }: { detail: CaseDetail }) {
   const headingId = useId();
   const clauses = detail.policy?.clauses ?? [];
   return (
-    <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box>
         <SectionTitle id={headingId}>
           {detail.content.type === 'post' ? 'Post' : 'Comment'} by {detail.content.author.name}
@@ -247,7 +247,7 @@ export function FindingsCard({ detail }: { detail: CaseDetail }) {
   ];
 
   return (
-    <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <SectionTitle id={headingId}>Findings</SectionTitle>
       <FindingGroup title="Confirmed evidence" empty="No confirmed evidence.">
         {confirmed.map(item)}
@@ -276,7 +276,7 @@ export function RecommendationCard({ detail }: { detail: CaseDetail }) {
   const rec = analysis.recommendation;
   const ai = analysis.ai;
   return (
-    <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box>
         <Typography variant="overline" component="p" color="text.secondary">
           AI + rules suggestion

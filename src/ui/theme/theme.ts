@@ -1,6 +1,9 @@
 import { createTheme, type PaletteOptions, type Theme } from '@mui/material/styles';
 import type { CSSProperties } from 'react';
+import { layout } from './layout';
 import { tokens, type M3Palette } from './tokens';
+
+export { layout, pageSx, titleGap } from './layout';
 
 // Material 3 theme with no elevation (docs/03-ui-ux.md sec. 2 and sec. 9). Components read colours through
 // the generated CSS variables (theme.vars.palette.m3.*), so light and dark switch without a re-render.
@@ -55,7 +58,7 @@ const type = (size: number, lineHeight: number, weight: 400 | 500) => ({
   letterSpacing: 0,
 });
 
-const headlineSmall = type(24, 32, 400);
+const headlineMedium = type(28, 36, 400);
 const titleLarge = type(22, 28, 400);
 const titleMedium = type(16, 24, 500);
 const titleSmall = type(14, 20, 500);
@@ -64,10 +67,11 @@ const bodyMedium = type(14, 20, 400);
 const bodySmall = type(12, 16, 400);
 const labelLarge = type(14, 20, 500);
 const labelMedium = type(12, 16, 500);
-const displaySmall = type(36, 44, 400);
 
 export const FOCUS_RING_WIDTH = 3;
 export const FOCUS_RING_OFFSET = 2;
+
+const COMPACT = '@media (max-width: 599.95px)';
 
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
@@ -76,13 +80,14 @@ export const theme = createTheme({
     dark: { palette: paletteFrom(tokens.dark) },
   },
   breakpoints: { values: { xs: 0, sm: 600, md: 840, lg: 1200, xl: 1600 } },
-  shape: { borderRadius: 12 },
+  shape: { borderRadius: layout.cardRadius },
   spacing: 4, // 1 unit = 4 px (M3 4 dp grid); scripts/check-ui-rules.mjs relies on it
   typography: {
     fontFamily: 'var(--font-roboto), Roboto, "Helvetica Neue", Arial, sans-serif',
-    h1: headlineSmall,
-    h2: titleLarge,
-    h3: titleMedium,
+    // The page heading is titleLarge, and titleMedium on phones, where the app bar already names the product.
+    h1: { ...titleLarge, [COMPACT]: titleMedium },
+    h2: titleMedium,
+    h3: titleSmall,
     h4: titleSmall,
     h5: titleSmall,
     h6: titleSmall,
@@ -93,7 +98,7 @@ export const theme = createTheme({
     caption: bodySmall,
     button: { ...labelLarge, textTransform: 'none' },
     overline: { ...labelMedium, textTransform: 'none' },
-    display: displaySmall,
+    display: headlineMedium,
   },
   components: {
     MuiCssBaseline: {
@@ -121,7 +126,7 @@ export const theme = createTheme({
     MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { backgroundImage: 'none' } } },
     MuiCard: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { root: ({ theme }) => ({ borderRadius: 12, background: m3(theme).card }) },
+      styleOverrides: { root: ({ theme }) => ({ borderRadius: layout.cardRadius, background: m3(theme).card }) },
     },
     MuiButton: {
       defaultProps: { disableElevation: true },
@@ -135,6 +140,8 @@ export const theme = createTheme({
           '&:has(.MuiButton-startIcon)': { paddingInlineStart: 16 },
           boxShadow: 'none',
         },
+        // M3 text buttons use 12 px side padding, so a text action lines up with the text around it.
+        text: { paddingInline: 12, '&:has(.MuiButton-startIcon)': { paddingInlineStart: 12, paddingInlineEnd: 16 } },
       },
     },
     MuiFab: { styleOverrides: { root: { borderRadius: 16, boxShadow: 'none' } } },
@@ -145,12 +152,44 @@ export const theme = createTheme({
     MuiDrawer: { defaultProps: { elevation: 0 }, styleOverrides: { paper: { border: 0 } } },
     MuiDialog: {
       defaultProps: { slotProps: { paper: { elevation: 0 } } },
-      styleOverrides: { paper: { borderRadius: 28, boxShadow: 'none' } },
+      styleOverrides: { paper: { borderRadius: 16, boxShadow: 'none' } },
     },
-    MuiTextField: { defaultProps: { variant: 'filled' } },
-    // MUI sets input and label line heights to 1.4375em (23 px); M3 bodyLarge is 16/24.
+    // Outlined fields, 40 high for a single line (size small). The outline carries meaning (WCAG 1.4.11), so it
+    // is the one edge the design keeps outside data tables.
+    MuiTextField: { defaultProps: { variant: 'outlined', size: 'small' } },
+    // MUI sets input and label line heights to 1.4375em (23 px); 24 px keeps a single-line field at 40.
     MuiInputBase: { styleOverrides: { root: { lineHeight: '1.5rem' } } },
-    MuiInputLabel: { styleOverrides: { root: { lineHeight: '1.5rem' } } },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: layout.fieldRadius,
+          // The notch's hidden copy of the label (legend > span) is 12 px; give it the bodySmall line height too.
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: m3(theme).outline, '& legend': { lineHeight: '1rem' } },
+          '&:hover:not(.Mui-disabled, .Mui-error, .Mui-focused) .MuiOutlinedInput-notchedOutline': {
+            borderColor: m3(theme).onSurface,
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: m3(theme).primary, borderWidth: 2 },
+          '&.Mui-error .MuiOutlinedInput-notchedOutline': { borderColor: m3(theme).error },
+          '&.MuiInputBase-multiline': { padding: '8px 14px' },
+        }),
+        input: { padding: '8px 14px', '&.MuiInputBase-inputMultiline': { padding: 0 } },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          lineHeight: '1.5rem',
+          color: m3(theme).onSurfaceVariant,
+          '&.MuiInputLabel-sizeSmall:not(.MuiInputLabel-shrink)': { transform: 'translate(14px, 8px) scale(1)' },
+          '&.Mui-focused': { color: m3(theme).primary },
+          '&.Mui-error': { color: m3(theme).error },
+        }),
+      },
+    },
+    // Helper and error text start at the field's edge, in bodySmall.
+    MuiFormHelperText: {
+      styleOverrides: { root: ({ theme }) => ({ ...theme.typography.caption, marginInline: 0, marginTop: 4 }) },
+    },
     // 03 sec. 2.2: the scrim behind dialogs, sheets and the modal drawer is black at 32%.
     MuiBackdrop: {
       styleOverrides: { root: { '&:not(.MuiBackdrop-invisible)': { backgroundColor: 'rgba(0, 0, 0, 0.32)' } } },

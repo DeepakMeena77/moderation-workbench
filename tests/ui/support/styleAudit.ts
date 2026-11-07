@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { layout } from '../../../src/ui/theme/layout';
 import { tokens, type SchemeName } from '../../../src/ui/theme/tokens';
 
 // Style audit (docs/05-test-plan.md sec. 6.4): reads computed styles of visible elements and checks the
@@ -32,10 +33,10 @@ function hexToRgb(hex: string): string {
 export async function auditStyles(page: Page, scheme: SchemeName): Promise<StyleViolation[]> {
   const t = tokens[scheme];
   const cardRgb = hexToRgb(t.card);
-  const surfaceRgbs = [t.canvas, t.card, t.cardNested, t.field, t.selected].map(hexToRgb);
+  const surfaceRgbs = [t.canvas, t.chrome, t.card, t.cardNested, t.field, t.selected].map(hexToRgb);
 
   return page.evaluate(
-    ({ cardRgb, surfaceRgbs, typeScale }) => {
+    ({ cardRgb, surfaceRgbs, typeScale, search }) => {
       const out: Array<{ rule: string; element: string; detail: string }> = [];
       const describe = (el: Element): string => {
         const ui = el.getAttribute('data-ui');
@@ -116,12 +117,18 @@ export async function auditStyles(page: Page, scheme: SchemeName): Promise<Style
         if (ui === 'tag' && (Math.abs(height - 24) > 0.5 || Math.abs(radius - 6) > 0.5)) {
           out.push({ rule: 'tag-shape', element: describe(el), detail: `${height}px / radius ${radius}px` });
         }
-        if (ui === 'search' && (Math.abs(height - 56) > 0.5 || radius < height / 2)) {
+        // The search bar shares the text fields' height and radius (03 sec. 4), so search and fields match.
+        if (ui === 'search' && (Math.abs(height - search.height) > 0.5 || Math.abs(radius - search.radius) > 0.5)) {
           out.push({ rule: 'search-shape', element: describe(el), detail: `${height}px / radius ${radius}px` });
         }
       }
       return out;
     },
-    { cardRgb, surfaceRgbs, typeScale: TYPE_SCALE },
+    {
+      cardRgb,
+      surfaceRgbs,
+      typeScale: TYPE_SCALE,
+      search: { height: layout.searchHeight, radius: layout.fieldRadius },
+    },
   );
 }

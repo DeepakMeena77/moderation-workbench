@@ -20,7 +20,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { ActionTag } from '../../components/ModerationTags';
 import { QueryState } from '../../components/QueryState';
 import { Tag, type TagTone } from '../../components/Tag';
-import { m3 } from '../../theme/theme';
+import { layout, m3, pageSx } from '../../theme/theme';
 import { relativeTime, shortDate } from '../feed/format';
 import { AppealDialog, type AppealTarget } from './AppealDialog';
 
@@ -84,7 +84,7 @@ function ContentRow({ item, onAppeal }: { item: MyContentItem; onAppeal: (target
           data-ui="section"
           role="group"
           aria-label="Your appeal"
-          sx={(t) => ({ p: 4, borderRadius: '12px', backgroundColor: m3(t).cardNested })}
+          sx={(t) => ({ p: 3, borderRadius: `${layout.nestedRadius}px`, backgroundColor: m3(t).cardNested })}
         >
           <Typography variant="h4" component="p">
             {item.appeal.status === 'pending' ? 'Appeal pending' : 'Appeal outcome'}
@@ -99,7 +99,7 @@ function ContentRow({ item, onAppeal }: { item: MyContentItem; onAppeal: (target
           {window.reason}
         </Typography>
       ) : null}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: -1 }}>
         {window?.canAppeal && item.decision ? (
           <Button variant="tonal" onClick={() => onAppeal({ item, decisionId: item.decision?.id ?? '' })}>
             Appeal{window.until ? ` - until ${shortDate(window.until)}` : ''}
@@ -123,9 +123,11 @@ export function MyContentView() {
   const [target, setTarget] = useState<AppealTarget | null>(null);
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
   return (
-    <Box data-ui="section" sx={{ px: { xs: 4, sm: 6 }, py: 6 }}>
-      <Box sx={{ maxWidth: 680, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <Typography variant="h1">My content</Typography>
+    <Box data-ui="section" sx={pageSx}>
+      <Box sx={{ maxWidth: layout.readingWidth, display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
+        <Typography variant="h1" sx={{ mb: { xs: 0, sm: 1 } }}>
+          My content
+        </Typography>
         <QueryState
           query={query}
           loadingLabel="Loading your content"
@@ -149,7 +151,7 @@ export function MyContentView() {
               <Box
                 component="ul"
                 aria-label="Your posts and comments"
-                sx={{ m: 0, p: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 2 }}
+                sx={{ m: 0, p: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: layout.stackGap }}
               >
                 {items.map((item) => (
                   <ContentRow key={item.id} item={item} onAppeal={setTarget} />

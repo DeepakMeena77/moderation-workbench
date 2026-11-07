@@ -9,7 +9,7 @@ import MenuItem from '@mui/material/MenuItem';
 import { useState, type MouseEvent } from 'react';
 import type { Me } from '../api/hooks';
 import { IconButton } from '../components/IconButton';
-import { m3 } from '../theme/theme';
+import { layout, m3 } from '../theme/theme';
 import { ROLE_LABEL } from './navigation';
 import { useThemeChoice } from './ThemeToggle';
 
@@ -61,7 +61,13 @@ export function AccountMenu({
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{
           // The menu sits on the canvas-coloured app bar, so it takes surfaceContainerHigh (03 sec. 9).
-          paper: { sx: (t) => ({ backgroundColor: m3(t).surfaceContainerHigh, borderRadius: '12px', minWidth: 220 }) },
+          paper: {
+            sx: (t) => ({
+              backgroundColor: m3(t).surfaceContainerHigh,
+              borderRadius: `${layout.cardRadius}px`,
+              minWidth: 220,
+            }),
+          },
         }}
       >
         {/* Stays open, so the new theme label is visible after the change. */}

@@ -9,10 +9,12 @@ import type { SvgIconProps } from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
 import type { ReactElement, ReactNode } from 'react';
 import { useStatus, type CheckState, type StatusCheck, type StatusReport } from '../../api/hooks';
+import { Banner, type BannerTone } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { QueryState } from '../../components/QueryState';
 import { Tag, type TagTone } from '../../components/Tag';
+import { layout, m3, pageSx, titleGap } from '../../theme/theme';
 import { shortDateTime } from '../feed/format';
 import { JobsAdminPanel } from './JobsAdminPanel';
 
@@ -92,13 +94,16 @@ function CheckCard({ check }: { check: StatusCheck }) {
   const title = CHECK_TITLE[check.check] ?? check.check;
   return (
     <Card component="section" aria-label={`${title} check`}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
         <Typography variant="h3" component="h2">
           {title}
         </Typography>
         <Tag label={tag.label} tone={tag.tone} icon={tag.icon} />
       </Box>
-      <Box component="dl" sx={{ m: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 4, rowGap: 1 }}>
+      <Box
+        component="dl"
+        sx={{ m: 0, display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', columnGap: 4, rowGap: 1 }}
+      >
         {Object.entries(check.detail).map(([key, value]) => (
           <Box key={key} sx={{ display: 'contents' }}>
             <Typography component="dt" variant="body2" color="text.secondary">
@@ -114,23 +119,21 @@ function CheckCard({ check }: { check: StatusCheck }) {
   );
 }
 
+const OVERALL_TONE: Record<CheckState, BannerTone> = { ok: 'success', warn: 'warning', fail: 'error' };
+
 function Report({ report }: { report: StatusReport }) {
-  const overall = STATE_TAG[report.overall];
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Card>
-        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 3 }}>
-          <Tag label={overall.label} tone={overall.tone} icon={overall.icon} />
-          <Typography variant="body1">{OVERALL_TEXT[report.overall]}</Typography>
-        </Box>
-        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
-          Checked <LocalTime iso={report.checkedAt} />. Refreshes every 30 seconds.
-        </Typography>
-      </Card>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
+      <Banner tone={OVERALL_TONE[report.overall]} icon={STATE_TAG[report.overall].icon} role="status">
+        <Box component="span" sx={{ fontWeight: 500 }}>
+          {OVERALL_TEXT[report.overall]}.
+        </Box>{' '}
+        Checked <LocalTime iso={report.checkedAt} />. Refreshes every 30 seconds.
+      </Banner>
       <Box
         sx={{
           display: 'grid',
-          gap: 4,
+          gap: layout.stackGap,
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
         }}
       >
@@ -145,16 +148,32 @@ function Report({ report }: { report: StatusReport }) {
 export function StatusView({ signedIn }: { signedIn: boolean }) {
   const query = useStatus();
   return (
-    <Box component="main" id="content" sx={{ minHeight: '100dvh', px: { xs: 4, sm: 6 }, py: 6 }}>
-      <Box sx={{ maxWidth: 1600, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 3 }}>
-          <Box>
-            <Typography variant="overline" component="p" color="text.secondary">
-              Moderation Workbench
-            </Typography>
+    <Box component="main" id="content" sx={{ minHeight: '100dvh' }}>
+      {/* The public page has no app shell: a slim chrome bar names the product and leads into the app. */}
+      <Box
+        sx={(theme) => ({
+          height: layout.appBarHeight,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          px: { xs: 4, sm: 6 },
+          backgroundColor: m3(theme).chrome,
+        })}
+      >
+        <Typography variant="subtitle1" component="p" noWrap sx={{ flex: 1, minWidth: 0 }}>
+          Moderation Workbench
+        </Typography>
+        {/* The public page's only way into the app (03 sec. 6.12). */}
+        <Button variant="text" href={signedIn ? '/' : '/sign-in'}>
+          {signedIn ? 'Back to the app' : 'Sign in'}
+        </Button>
+      </Box>
+      <Box sx={pageSx}>
+        <Box sx={{ maxWidth: layout.workWidth, display: 'flex', flexDirection: 'column', gap: titleGap }}>
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 3 }}
+          >
             <Typography variant="h1">System status</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
             <Button
               variant="tonal"
               startIcon={<RefreshRounded />}
@@ -163,16 +182,12 @@ export function StatusView({ signedIn }: { signedIn: boolean }) {
             >
               Refresh
             </Button>
-            {/* The public page's only way into the app (03 sec. 6.12). */}
-            <Button variant="text" href={signedIn ? '/' : '/sign-in'}>
-              {signedIn ? 'Back to the app' : 'Sign in'}
-            </Button>
           </Box>
+          <QueryState query={query} loadingLabel="Loading system status">
+            {(report) => <Report report={report} />}
+          </QueryState>
+          <JobsAdminPanel signedIn={signedIn} />
         </Box>
-        <QueryState query={query} loadingLabel="Loading system status">
-          {(report) => <Report report={report} />}
-        </QueryState>
-        <JobsAdminPanel signedIn={signedIn} />
       </Box>
     </Box>
   );

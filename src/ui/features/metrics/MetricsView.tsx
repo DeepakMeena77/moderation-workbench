@@ -8,7 +8,7 @@ import { Card } from '../../components/Card';
 import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { StatCard } from '../../components/StatCard';
-import { m3 } from '../../theme/theme';
+import { layout, m3, pageSx, titleGap } from '../../theme/theme';
 import { shortDateTime } from '../feed/format';
 import { useMetrics, type Metrics } from './api';
 
@@ -59,7 +59,7 @@ interface Bar {
 function BarList({ title, bars, empty }: { title: string; bars: Bar[]; empty: string }) {
   const max = Math.max(0, ...bars.map((b) => b.value));
   return (
-    <Card component="section" aria-label={title} sx={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+    <Card component="section" aria-label={title} sx={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
       <Typography variant="h3" component="h2">
         {title}
       </Typography>
@@ -68,7 +68,7 @@ function BarList({ title, bars, empty }: { title: string; bars: Bar[]; empty: st
           {empty}
         </Typography>
       ) : (
-        <Box component="ul" sx={{ m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box component="ul" sx={{ m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {bars.map((bar) => (
             <Box
               component="li"
@@ -86,8 +86,8 @@ function BarList({ title, bars, empty }: { title: string; bars: Bar[]; empty: st
               <Box
                 aria-hidden
                 sx={(t) => ({
-                  height: 8,
-                  borderRadius: '4px',
+                  height: 4,
+                  borderRadius: '2px',
                   backgroundColor: m3(t).surfaceContainerHighest,
                   overflow: 'hidden',
                 })}
@@ -96,7 +96,7 @@ function BarList({ title, bars, empty }: { title: string; bars: Bar[]; empty: st
                   sx={(t) => ({
                     height: '100%',
                     width: `${max === 0 ? 0 : (bar.value / max) * 100}%`,
-                    borderRadius: '4px',
+                    borderRadius: '2px',
                     backgroundColor: m3(t).primary,
                   })}
                 />
@@ -111,7 +111,7 @@ function BarList({ title, bars, empty }: { title: string; bars: Bar[]; empty: st
 
 const GRID = {
   display: 'grid',
-  gap: 4,
+  gap: layout.stackGap,
   gridTemplateColumns: {
     xs: 'minmax(0, 1fr)',
     sm: 'repeat(2, minmax(0, 1fr))',
@@ -124,7 +124,7 @@ function Report({ metrics }: { metrics: Metrics }) {
   const { agreement, overrides, aiFailures, latency, usage } = metrics;
   const days = `${metrics.windowDays} d`;
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
       <Box sx={GRID}>
         <StatCard
           title="AI and human agreement"
@@ -207,7 +207,7 @@ function Report({ metrics }: { metrics: Metrics }) {
 export function MetricsView() {
   const query = useMetrics();
   return (
-    <Box sx={{ px: { xs: 4, sm: 6 }, py: 6, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+    <Box sx={{ ...pageSx, display: 'flex', flexDirection: 'column', gap: titleGap, minWidth: 0 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 3 }}>
         <Typography variant="h1">Metrics</Typography>
         <Button

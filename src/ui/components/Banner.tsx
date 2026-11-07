@@ -7,9 +7,9 @@ import type { SvgIconProps } from '@mui/material/SvgIcon';
 import type { Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { cloneElement, type ReactElement, type ReactNode } from 'react';
-import { m3 } from '../theme/theme';
+import { layout, m3 } from '../theme/theme';
 
-export type BannerTone = 'info' | 'success' | 'warning' | 'error';
+export type BannerTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 
 export interface BannerProps {
   tone?: BannerTone;
@@ -24,6 +24,7 @@ export interface BannerProps {
 }
 
 const ICONS: Record<BannerTone, ReactElement<SvgIconProps>> = {
+  neutral: <InfoRounded />,
   info: <InfoRounded />,
   success: <CheckCircleRounded />,
   warning: <WarningRounded />,
@@ -33,6 +34,8 @@ const ICONS: Record<BannerTone, ReactElement<SvgIconProps>> = {
 function colours(theme: Theme, tone: BannerTone) {
   const p = m3(theme);
   switch (tone) {
+    case 'neutral':
+      return { backgroundColor: p.cardNested, color: p.onSurface };
     case 'info':
       return { backgroundColor: p.secondaryContainer, color: p.onSecondaryContainer };
     case 'success':
@@ -45,34 +48,50 @@ function colours(theme: Theme, tone: BannerTone) {
 }
 
 // Inline banner (03 sec. 4): a nested section in the semantic container colour with an icon, a message and an
-// optional action. "AI review unavailable", "Read-only oversight", the 409 "Reload" message.
+// optional action on one row, centred vertically. When the banner is narrower than 480 px the action moves
+// under the message and lines up with its text (a container query, so it works inside panes and cards too).
+// "AI review unavailable", "Read-only oversight", the 409 "Reload" message, a limited post.
 export function Banner({ tone = 'info', icon, title, children, action, role = 'note' }: BannerProps) {
   return (
-    <Box
-      role={role}
-      sx={(theme) => ({
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        gap: 3,
-        px: 4,
-        py: 3,
-        borderRadius: '12px',
-        ...colours(theme, tone),
-      })}
-    >
-      {cloneElement(icon ?? ICONS[tone], { 'aria-hidden': true, sx: { fontSize: 20, flexShrink: 0 } })}
-      <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
-        {title ? (
-          <Typography variant="h4" component="p">
-            {title}
+    <Box sx={{ containerType: 'inline-size', minWidth: 0 }}>
+      <Box
+        role={role}
+        sx={(theme) => ({
+          display: 'grid',
+          gridTemplateColumns: action ? 'auto minmax(0, 1fr) auto' : 'auto minmax(0, 1fr)',
+          alignItems: 'center',
+          columnGap: 3,
+          rowGap: 1,
+          minHeight: 48,
+          px: 4,
+          py: 2,
+          borderRadius: `${layout.nestedRadius}px`,
+          ...colours(theme, tone),
+          '@container (max-width: 480px)': {
+            gridTemplateColumns: 'auto minmax(0, 1fr)',
+            alignItems: 'start',
+            '& > svg': { mt: 1 },
+            '& .banner-action': { gridColumn: 2, justifySelf: 'start', ml: -3 },
+          },
+        })}
+      >
+        {cloneElement(icon ?? ICONS[tone], { 'aria-hidden': true, sx: { fontSize: 20, display: 'block' } })}
+        <Box sx={{ minWidth: 0, py: 1 }}>
+          {title ? (
+            <Typography variant="h4" component="p">
+              {title}
+            </Typography>
+          ) : null}
+          <Typography variant="body2" component="div" sx={{ overflowWrap: 'anywhere' }}>
+            {children}
           </Typography>
+        </Box>
+        {action ? (
+          <Box className="banner-action" sx={{ my: -1, mr: -2 }}>
+            {action}
+          </Box>
         ) : null}
-        <Typography variant="body2" component="div" sx={{ overflowWrap: 'anywhere' }}>
-          {children}
-        </Typography>
       </Box>
-      {action ? <Box sx={{ flexShrink: 0 }}>{action}</Box> : null}
     </Box>
   );
 }

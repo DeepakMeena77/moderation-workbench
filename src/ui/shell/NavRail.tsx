@@ -77,34 +77,43 @@ export function NavRail({ role, pathname }: { role: Role; pathname: string }) {
       data-nav="rail"
       sx={(theme) => ({
         display: { xs: 'none', sm: 'flex', lg: 'none' },
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 3,
         width: 80,
         flexShrink: 0,
-        position: 'sticky',
-        top: 0,
-        height: '100dvh',
-        overflowY: 'auto',
-        pt: 4,
-        pb: 4,
-        backgroundColor: m3(theme).canvas,
+        backgroundColor: m3(theme).chrome,
       })}
     >
-      {railDestinations(role).map(({ key, label, href, icon }) => {
-        const active = isActive(href, pathname);
-        return (
-          <ButtonBase
-            key={key}
-            component={Link}
-            href={href}
-            aria-current={active ? 'page' : undefined}
-            sx={[navItemSx, { width: 72 }]}
-          >
-            <NavItemContent Icon={icon} label={label} active={active} indicatorWidth={56} />
-          </ButtonBase>
-        );
-      })}
+      {/* The column is as tall as the page, so the chrome colour runs the full height; its content stays in view. */}
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 3,
+          position: 'sticky',
+          top: 0,
+          height: '100dvh',
+          overflowY: 'auto',
+          pt: 4,
+          pb: 4,
+        }}
+      >
+        {railDestinations(role).map(({ key, label, href, icon }) => {
+          const active = isActive(href, pathname);
+          return (
+            <ButtonBase
+              key={key}
+              component={Link}
+              href={href}
+              aria-current={active ? 'page' : undefined}
+              sx={[navItemSx, { width: 72 }]}
+            >
+              <NavItemContent Icon={icon} label={label} active={active} indicatorWidth={56} />
+            </ButtonBase>
+          );
+        })}
+      </Box>
     </Box>
   );
 }

@@ -11,24 +11,25 @@ export interface EmptyStateProps {
   action?: ReactNode;
 }
 
+// Empty state (03 sec. 4 and sec. 7): left-aligned, a 20 dp icon beside a short title, one line of help and an
+// optional next action. Compact, so an empty list reads as a state of the page, not as an illustration.
 export function EmptyState({ title, description, icon, action }: EmptyStateProps) {
   return (
-    <Box
-      data-ui="stack"
-      sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2, py: 8 }}
-    >
-      <Box aria-hidden sx={{ color: 'text.secondary', display: 'flex', '& svg': { fontSize: 48 } }}>
+    <Box data-ui="stack" sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, py: 1 }}>
+      <Box aria-hidden sx={{ color: 'text.secondary', display: 'flex', '& svg': { fontSize: 20 } }}>
         {icon ?? <InboxRounded />}
       </Box>
-      <Typography variant="h3" component="p">
-        {title}
-      </Typography>
-      {description ? (
-        <Typography variant="body2" color="text.secondary">
-          {description}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, minWidth: 0 }}>
+        <Typography variant="h3" component="p">
+          {title}
         </Typography>
-      ) : null}
-      {action}
+        {description ? (
+          <Typography variant="body2" color="text.secondary">
+            {description}
+          </Typography>
+        ) : null}
+        {action ? <Box sx={{ mt: 1 }}>{action}</Box> : null}
+      </Box>
     </Box>
   );
 }

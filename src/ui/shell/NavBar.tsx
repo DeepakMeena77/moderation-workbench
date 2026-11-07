@@ -39,7 +39,7 @@ export function NavBar({
         alignItems: 'center',
         px: 1,
         zIndex: theme.zIndex.appBar,
-        backgroundColor: m3(theme).canvas,
+        backgroundColor: m3(theme).chrome,
       })}
     >
       {barDestinations(role).map(({ key, label, href, icon }) => {

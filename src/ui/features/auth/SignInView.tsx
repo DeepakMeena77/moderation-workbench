@@ -19,7 +19,7 @@ import { useAfterAuthChange, useDemoSignIn, useSignIn, type DemoAccount, type Ro
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { homeFor, ROLE_LABEL } from '../../shell/navigation';
-import { m3 } from '../../theme/theme';
+import { layout, m3 } from '../../theme/theme';
 
 // Sign-in page (03 sec. 6.1): email and password for any seeded account, and in demo mode one-click cards per
 // role (UX-5). Typed input is kept on every error (03 sec. 7).
@@ -118,13 +118,13 @@ export function SignInView({ demoMode, accounts, next }: SignInViewProps) {
       sx={{
         minHeight: '100dvh',
         px: { xs: 4, sm: 6 },
-        py: { xs: 8, sm: 12 },
+        py: { xs: 6, sm: 10 },
         display: 'flex',
         justifyContent: 'center',
       }}
     >
       <Box
-        sx={{ width: '100%', maxWidth: 880, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
+        sx={{ width: '100%', maxWidth: 880, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
       >
         <Box sx={{ textAlign: 'center' }}>
           <Typography variant="overline" component="p" color="text.secondary">
@@ -137,7 +137,7 @@ export function SignInView({ demoMode, accounts, next }: SignInViewProps) {
         </Box>
 
         <Card component="section" aria-label="Sign in with email" sx={{ width: '100%', maxWidth: 440 }}>
-          <Box component="form" noValidate onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <Box component="form" noValidate onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {formError ? (
               <Box
                 role="alert"
@@ -146,8 +146,9 @@ export function SignInView({ demoMode, accounts, next }: SignInViewProps) {
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 3,
-                  p: 4,
-                  borderRadius: '12px',
+                  px: 4,
+                  py: 3,
+                  borderRadius: `${layout.nestedRadius}px`,
                   backgroundColor: m3(theme).errorContainer,
                   color: m3(theme).onErrorContainer,
                 })}
@@ -193,7 +194,7 @@ export function SignInView({ demoMode, accounts, next }: SignInViewProps) {
             <Typography id="demo-accounts-title" variant="h3" component="h2">
               Demo accounts
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 4 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
               One click signs you in. These are test accounts only.
             </Typography>
             <Box
@@ -219,8 +220,8 @@ export function SignInView({ demoMode, accounts, next }: SignInViewProps) {
                       alignItems: 'flex-start',
                       textAlign: 'left',
                       gap: 1,
-                      p: 4,
-                      borderRadius: '12px',
+                      p: 3,
+                      borderRadius: `${layout.nestedRadius}px`,
                       backgroundColor: m3(theme).cardNested,
                       color: m3(theme).onSurface,
                       '&:hover': {

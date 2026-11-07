@@ -39,14 +39,20 @@ export function useThemeChoice(): ThemeChoice {
 }
 
 /** The toggle as a list row, for the drawer footer and the "More" sheet. */
-export function ThemeToggleItem({ sx }: { sx?: SxProps<Theme> }) {
+export function ThemeToggleItem({
+  sx,
+  textVariant = 'button',
+}: {
+  sx?: SxProps<Theme>;
+  textVariant?: 'button' | 'body2';
+}) {
   const { label, Icon, cycle } = useThemeChoice();
   return (
     <ListItemButton onClick={cycle} sx={sx}>
       <ListItemIcon>
         <Icon />
       </ListItemIcon>
-      <ListItemText primary={label} slotProps={{ primary: { variant: 'button' } }} />
+      <ListItemText primary={label} slotProps={{ primary: { variant: textVariant } }} />
     </ListItemButton>
   );
 }

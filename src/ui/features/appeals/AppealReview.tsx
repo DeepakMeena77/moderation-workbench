@@ -32,7 +32,7 @@ import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { useSnackbar } from '../../components/SnackbarProvider';
 import { Tag } from '../../components/Tag';
-import { m3 } from '../../theme/theme';
+import { layout, m3 } from '../../theme/theme';
 import { REASON_LABEL } from '../case/decisionForm';
 import { relativeTime } from '../feed/format';
 import {
@@ -69,7 +69,7 @@ function Panel({ title, children, area }: { title: string; children: ReactNode; 
     <Card
       component="section"
       aria-labelledby={headingId}
-      sx={{ gridArea: area, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}
+      sx={{ gridArea: area, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}
     >
       <Typography id={headingId} variant="h3" component="h2">
         {title}
@@ -89,8 +89,8 @@ function Nested({ children, label }: { children: ReactNode; label?: string }) {
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
-        p: 4,
-        borderRadius: '12px',
+        p: 3,
+        borderRadius: `${layout.nestedRadius}px`,
         backgroundColor: m3(t).cardNested,
         minWidth: 0,
       })}
@@ -338,8 +338,8 @@ function ResolveForm({ detail, onReload }: { detail: AppealDetail; onReload: () 
         display: 'flex',
         flexDirection: 'column',
         gap: 4,
-        p: 4,
-        borderRadius: '12px',
+        p: 3,
+        borderRadius: `${layout.nestedRadius}px`,
         backgroundColor: m3(t).cardNested,
       })}
     >
@@ -407,7 +407,6 @@ function ResolveForm({ detail, onReload }: { detail: AppealDetail; onReload: () 
             </span>
           </Box>
         }
-        slotProps={{ formHelperText: { sx: (t) => ({ ...t.typography.caption, mx: 4 }) } }}
       />
       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Button type="submit" loading={resolve.isPending} disabled={locked}>
@@ -467,7 +466,7 @@ function OutcomePanel({ detail, onReload }: { detail: AppealDetail; onReload: ()
 
 export function AppealBody({ detail, onReload }: { detail: AppealDetail; onReload: () => void }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, containerType: 'inline-size' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap, containerType: 'inline-size' }}>
       <TagRow>
         <StatusTag status={detail.caseStatus} />
         <Button
@@ -495,7 +494,7 @@ export function AppealBody({ detail, onReload }: { detail: AppealDetail; onReloa
       <Box
         sx={{
           display: 'grid',
-          gap: 4,
+          gap: layout.stackGap,
           gridTemplateColumns: 'minmax(0, 1fr)',
           gridTemplateAreas: '"original" "evidence" "outcome"',
           alignItems: 'start',
@@ -524,7 +523,7 @@ export function AppealReview({ appealId }: { appealId: string }) {
       query={query}
       loadingLabel="Loading the appeal"
       skeleton={
-        <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
           <CardSkeleton height={220} />
           <CardSkeleton height={220} />
         </Box>

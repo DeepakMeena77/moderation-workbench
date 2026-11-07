@@ -33,7 +33,7 @@ function RunBody({ run, canRetry }: { run: ReevaluationRun; canRetry: boolean })
   return (
     <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
-        <Typography variant="h2" component="h2" sx={{ flex: '1 1 auto' }}>
+        <Typography variant="h2" component="h2" sx={{ flex: '1 1 auto', overflowWrap: 'anywhere' }}>
           Re-evaluation v{run.fromVersion} {'->'} v{run.toVersion}
         </Typography>
         {stateTag(run)}
@@ -43,7 +43,7 @@ function RunBody({ run, canRetry }: { run: ReevaluationRun; canRetry: boolean })
         value={percent}
         aria-label={`Re-evaluation progress, ${processed} of ${run.total} cases`}
         color={run.failed > 0 ? 'error' : 'primary'}
-        sx={{ height: 8, borderRadius: 9999 }}
+        sx={{ height: 4, borderRadius: 9999 }}
       />
       <Typography variant="body2" aria-live="polite">
         {run.total === 0

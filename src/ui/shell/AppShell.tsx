@@ -81,7 +81,7 @@ export function AppShell({ user, demoAccounts, children }: AppShellProps) {
           tabIndex={-1}
           // Room for the fixed bottom bar (80) plus 16 on compact screens, so the last element stays
           // reachable. Theme spacing units: 24 x 4 px = 96 px.
-          sx={{ flex: 1, pb: { xs: (NAV_BAR_HEIGHT + 16) / 4, sm: 0 }, '&:focus': { outline: 'none' } }}
+          sx={{ flex: 1, minWidth: 0, pb: { xs: (NAV_BAR_HEIGHT + 16) / 4, sm: 0 }, '&:focus': { outline: 'none' } }}
         >
           {children}
         </Box>

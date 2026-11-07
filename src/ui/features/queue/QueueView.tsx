@@ -2,15 +2,10 @@
 
 import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import FilterAltOffRounded from '@mui/icons-material/FilterAltOffRounded';
-import InfoRounded from '@mui/icons-material/InfoRounded';
 import InboxRounded from '@mui/icons-material/InboxRounded';
-import ReportRounded from '@mui/icons-material/ReportRounded';
 import TouchAppRounded from '@mui/icons-material/TouchAppRounded';
-import WarningRounded from '@mui/icons-material/WarningRounded';
 import Box from '@mui/material/Box';
-import type { Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
-import NextLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 import { queueSearch, useCases, type CaseRow, type QueueFilters, type Severity } from '../../api/hooks';
@@ -19,10 +14,12 @@ import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { FilterChip } from '../../components/FilterChip';
 import { IconButton } from '../../components/IconButton';
+import { ListRow, type RowAccent } from '../../components/ListRow';
 import { QueryState } from '../../components/QueryState';
+import { RowList } from '../../components/RowList';
 import { SearchBar } from '../../components/SearchBar';
 import { Tag } from '../../components/Tag';
-import { m3 } from '../../theme/theme';
+import { layout, pageSx, titleGap } from '../../theme/theme';
 import { CaseView } from '../case/CaseView';
 import { relativeTime } from '../feed/format';
 import { hasNarrowingFilters, parseQueueFilters } from './queueFilters';
@@ -31,12 +28,12 @@ import { hasNarrowingFilters, parseQueueFilters } from './queueFilters';
 // case are separate screens (/queue and /queue/[caseId]); from 840 px the case opens beside the list. Panes are
 // switched with CSS, so the server render and the first client render agree. Filters and search are in the URL.
 
-function severityStyle(theme: Theme, severity: Severity | null): { bg: string; fg: string } {
-  const p = m3(theme);
-  if (severity === 'high') return { bg: p.errorContainer, fg: p.onErrorContainer };
-  if (severity === 'medium') return { bg: p.warningContainer, fg: p.onWarningContainer };
-  if (severity === 'low') return { bg: p.secondaryContainer, fg: p.onSecondaryContainer };
-  return { bg: p.surfaceContainerHighest, fg: p.onSurfaceVariant };
+/** The row's start bar: the severity in colour; the supporting text says it in words (03 sec. 2.3). */
+function severityAccent(severity: Severity | null): RowAccent {
+  if (severity === 'high') return 'error';
+  if (severity === 'medium') return 'warning';
+  if (severity === 'low') return 'primary';
+  return 'neutral';
 }
 
 const SEVERITY_WORD: Record<Severity, string> = { high: 'High', medium: 'Medium', low: 'Low' };
@@ -56,67 +53,14 @@ export function rowSupportingText(row: CaseRow): string {
 
 function QueueRow({ row, selected, href }: { row: CaseRow; selected: boolean; href: string }) {
   return (
-    <Box component="li" sx={{ listStyle: 'none' }}>
-      <Box
-        component={NextLink}
-        href={href}
-        scroll={false}
-        aria-current={selected ? 'page' : undefined}
-        data-ui="section"
-        sx={(t) => {
-          const sev = severityStyle(t, row.analysis?.severity ?? null);
-          const bg = selected ? m3(t).selected : m3(t).card;
-          return {
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            minHeight: 88,
-            px: 4,
-            py: 3,
-            borderRadius: '12px',
-            backgroundColor: bg,
-            color: m3(t).onSurface,
-            textDecoration: 'none',
-            '&:hover': { backgroundColor: `color-mix(in srgb, ${m3(t).onSurface} 8%, ${bg})` },
-            '& .severity-dot': { backgroundColor: sev.bg, color: sev.fg },
-          };
-        }}
-      >
-        <Box
-          className="severity-dot"
-          aria-hidden
-          sx={{
-            width: 40,
-            height: 40,
-            flexShrink: 0,
-            borderRadius: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {/* The icon repeats the severity word in the supporting text; it is decorative. */}
-          <SeverityIcon severity={row.analysis?.severity ?? null} />
-        </Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            variant="body2"
-            component="p"
-            sx={{
-              overflowWrap: 'anywhere',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {row.content.excerpt}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ overflowWrap: 'anywhere' }}>
-            {rowSupportingText(row)}
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, flexShrink: 0 }}>
+    <ListRow
+      href={href}
+      selected={selected}
+      headline={row.content.excerpt}
+      supporting={rowSupportingText(row)}
+      accent={severityAccent(row.analysis?.severity ?? null)}
+      trailing={
+        <>
           <Tag
             label={`P ${row.priority}`}
             tone={row.priority >= 75 ? 'error' : 'neutral'}
@@ -125,16 +69,10 @@ function QueueRow({ row, selected, href }: { row: CaseRow; selected: boolean; hr
           <Typography variant="caption" color="text.secondary">
             <time dateTime={row.createdAt}>{relativeTime(row.createdAt)}</time>
           </Typography>
-        </Box>
-      </Box>
-    </Box>
+        </>
+      }
+    />
   );
-}
-
-function SeverityIcon({ severity }: { severity: Severity | null }) {
-  if (severity === 'high') return <ReportRounded />;
-  if (severity === 'medium') return <WarningRounded />;
-  return <InfoRounded />;
 }
 
 const STATUS_CHIPS: Array<{ status: QueueFilters['status']; label: string }> = [
@@ -239,12 +177,12 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
   const total = cases.data?.pages[0]?.total ?? 0;
 
   return (
-    <Box data-ui="section" sx={{ px: { xs: 4, sm: 6 }, py: 6 }}>
-      <Box sx={{ display: { xs: selectedId ? 'none' : 'block', md: 'block' }, mb: 4 }}>
+    <Box data-ui="section" sx={pageSx}>
+      <Box sx={{ display: { xs: selectedId ? 'none' : 'block', md: 'block' }, mb: titleGap }}>
         <Typography variant="h1">Queue</Typography>
       </Box>
       {selectedId ? (
-        <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 2, mb: 4, ml: -3 }}>
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 2, mb: titleGap, ml: -3 }}>
           <IconButton label="Back to the queue" onClick={() => router.push(`/queue${search}`, { scroll: false })}>
             <ArrowBackRounded />
           </IconButton>
@@ -256,7 +194,7 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '360px minmax(0, 1fr)', lg: '400px minmax(0, 1fr)' },
-          gap: 6,
+          gap: { md: 4, lg: 6 },
           alignItems: 'start',
         }}
       >
@@ -266,7 +204,7 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
           sx={{
             display: { xs: selectedId ? 'none' : 'flex', md: 'flex' },
             flexDirection: 'column',
-            gap: 4,
+            gap: layout.stackGap,
             minWidth: 0,
           }}
         >
@@ -289,7 +227,7 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
           >
             {() => (
               <>
-                <Box component="ul" sx={{ m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <RowList component="ul" aria-label="Cases">
                   {loaded.map((row) => (
                     <QueueRow
                       key={row.id}
@@ -298,7 +236,7 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
                       href={`/queue/${row.id}${search}`}
                     />
                   ))}
-                </Box>
+                </RowList>
                 <Box
                   sx={{
                     display: 'flex',
