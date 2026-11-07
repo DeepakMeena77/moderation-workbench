@@ -17,7 +17,7 @@ const ALLOWED = [
   /^(README|AGENT_USAGE|AI_NOTES|PROMPTS_USED|ABOUTME|CLAUDE)\.md$/,
   /^\.env\.example$/,
   /^\.(gitignore|gitattributes|prettierrc(\.json)?|prettierignore|editorconfig|nvmrc|node-version)$/,
-  /^\.githooks\/(pre-commit|pre-push)$/,
+  /^\.githooks\/(pre-commit|pre-push|commit-msg)$/,
   /^\.github\/workflows\/[\w.-]+\.ya?ml$/,
   /^\.claude\/settings\.json$/,
   /^\.vscode\/extensions\.json$/,
