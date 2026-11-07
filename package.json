@@ -22,7 +22,8 @@
     "test:ui": "playwright test --project=ui",
     "verify": "npm run check:repo && npm run check:ascii && npm run check:ui && npm run lint && npm run typecheck && npm run test",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "eval": "tsx evals/run.ts"
   },
   "dependencies": {
     "@emotion/cache": "11.14.0",
