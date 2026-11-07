@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git restore:*)",
+      "Bash(git rm:*)",
+      "Bash(git mv:*)",
+      "Bash(git stash:*)",
+      "Bash(git clean:*)",
+      "Bash(git config:*)",
+      "Bash(git remote:*)",
+      "Bash(git tag:*)",
+      "Bash(git branch -d:*)",
+      "Bash(git branch -D:*)",
+      "Bash(rm -rf:*)",
+      "Bash(npx vercel:*)",
+      "Bash(vercel:*)",
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.production)",
+      "Read(./.repo-guard.local)",
+      "Edit(./.githooks/**)",
+      "Edit(./scripts/check-ascii.mjs)",
+      "Edit(./scripts/check-ui-rules.mjs)",
+      "Edit(./scripts/check-repo.mjs)",
+      "Edit(./scripts/check-secrets.mjs)",
+      "Edit(./scripts/check-trace.mjs)",
+      "Edit(./.claude/**)",
+      "Edit(./.gitignore)",
+      "Edit(./.repo-guard.local)",
+      "Edit(./ABOUTME.md)"
+    ]
+  }
+}

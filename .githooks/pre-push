@@ -1,0 +1,9 @@
+#!/bin/sh
+# Runs before every push: the whole repository and its history, then the full verify if the app exists.
+set -e
+node scripts/check-repo.mjs
+node scripts/check-secrets.mjs --history
+node scripts/check-ascii.mjs
+if [ -f package.json ] && grep -q '"verify"' package.json; then
+  npm run --silent verify
+fi

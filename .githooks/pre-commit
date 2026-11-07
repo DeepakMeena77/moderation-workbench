@@ -1,0 +1,10 @@
+#!/bin/sh
+# Runs on every commit. Enable once with: git config core.hooksPath .githooks
+set -e
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$STAGED" ] && exit 0
+node scripts/check-repo.mjs --staged
+node scripts/check-secrets.mjs --staged
+# shellcheck disable=SC2086
+node scripts/check-ascii.mjs $STAGED
+node scripts/check-ui-rules.mjs

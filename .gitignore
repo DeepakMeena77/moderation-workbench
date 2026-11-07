@@ -1,0 +1,40 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Test and tool output
+coverage/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+evals/results/*.json
+*.log
+npm-debug.log*
+
+# Deployment
+.vercel/
+
+# Local agent settings and private notes (never committed)
+.claude/settings.local.json
+.repo-guard.local
+_scaffold/
+*.local.md
+scratch/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
