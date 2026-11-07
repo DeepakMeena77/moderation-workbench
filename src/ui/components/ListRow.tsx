@@ -1,12 +1,9 @@
 import Box from '@mui/material/Box';
-import type { Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import NextLink from 'next/link';
 import type { ReactNode } from 'react';
-import { m3 } from '../theme/theme';
-
-/** The colour of the 4 dp bar at the start of a row: a severity, or none. */
-export type RowAccent = 'error' | 'warning' | 'primary' | 'neutral' | null;
+import { layer, m3 } from '../theme/theme';
+import { Dot, type DotTone } from './Tag';
 
 export interface ListRowProps {
   href: string;
@@ -14,24 +11,15 @@ export interface ListRowProps {
   /** Up to two lines, clamped. */
   headline: string;
   supporting: string;
-  /** Right column: a tag and the age, for example. */
+  /** Right column: a badge and the age, for example. */
   trailing?: ReactNode;
-  /** Decorative: the supporting text names the same thing in words, so colour is never the only signal. */
-  accent?: RowAccent;
+  /** A severity dot before the supporting text, which starts with the severity in words. */
+  dot?: DotTone | null;
 }
 
-function accentColour(theme: Theme, accent: RowAccent): string {
-  const p = m3(theme);
-  if (accent === 'error') return p.error;
-  if (accent === 'warning') return p.warning;
-  if (accent === 'primary') return p.primary;
-  if (accent === 'neutral') return p.outline;
-  return 'transparent';
-}
-
-// A selectable row inside a RowList (03 sec. 4): min height 64, a hover state layer, selected = secondaryContainer
-// with aria-current="page". The 4 dp accent bar is a filled box at the row's start, not a border.
-export function ListRow({ href, selected, headline, supporting, trailing, accent = null }: ListRowProps) {
+// A selectable row inside a RowList (03 sec. 4): min height 56, a flat hover layer, selected = the neutral selected
+// fill with a 2 px accent marker at the start and aria-current="page". The marker is a filled box, not a border.
+export function ListRow({ href, selected, headline, supporting, trailing, dot = null }: ListRowProps) {
   return (
     <Box component="li" sx={{ listStyle: 'none' }}>
       <Box
@@ -47,26 +35,26 @@ export function ListRow({ href, selected, headline, supporting, trailing, accent
             display: 'flex',
             alignItems: 'center',
             gap: 3,
-            minHeight: 64,
+            minHeight: 56,
             px: 4,
-            py: 2,
+            py: 3,
             backgroundColor: bg,
             color: m3(t).onSurface,
             textDecoration: 'none',
-            '&:hover': { backgroundColor: `color-mix(in srgb, ${m3(t).onSurface} 8%, ${bg})` },
-            '&:focus-visible': { outlineOffset: -3 },
+            '&:hover': { backgroundColor: layer(m3(t).onSurface, bg, 4) },
+            '&:focus-visible': { outlineOffset: -2 },
           };
         }}
       >
-        {accent ? (
+        {selected ? (
           <Box
             aria-hidden
             sx={(t) => ({
               position: 'absolute',
               insetBlock: 0,
               insetInlineStart: 0,
-              width: 4,
-              backgroundColor: accentColour(t, accent),
+              width: 2,
+              backgroundColor: m3(t).primary,
             })}
           />
         ) : null}
@@ -84,8 +72,14 @@ export function ListRow({ href, selected, headline, supporting, trailing, accent
           >
             {headline}
           </Typography>
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ overflowWrap: 'anywhere' }}>
-            {supporting}
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            component="p"
+            sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, overflowWrap: 'anywhere' }}
+          >
+            {dot ? <Dot tone={dot} /> : null}
+            <span>{supporting}</span>
           </Typography>
         </Box>
         {trailing ? (

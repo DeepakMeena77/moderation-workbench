@@ -1,120 +1,179 @@
-// Material 3 colour tokens, copied exactly from docs/03-ui-ux.md sec. 2.1, plus the surface roles from sec. 2.2.
-// This is the only file in src/ allowed to contain hex colours.
+// Colour tokens (docs/03-ui-ux.md sec. 2.1 and sec. 2.2). This is the only file in src/ allowed to contain hex
+// colours. Neutrals do the work; one blue accent; red, amber, green and blue only where they carry meaning. The role
+// names (primary, secondaryContainer, ...) are the keys MUI and the components read; sec. 2.1 says what each is for.
 
 const lightScheme = {
-  primary: '#0B57D0',
+  // The one accent: primary buttons, links, focus rings, the selected navigation marker.
+  primary: '#2563EB',
   onPrimary: '#FFFFFF',
-  primaryContainer: '#C2E7FF',
-  onPrimaryContainer: '#001D35',
-  secondary: '#3E5F90',
+  // Info: soft blue badge and banner.
+  primaryContainer: '#EFF6FF',
+  onPrimaryContainer: '#1D4ED8',
+  // Focus ring.
+  secondary: '#2563EB',
   onSecondary: '#FFFFFF',
-  secondaryContainer: '#D3E3FD',
-  onSecondaryContainer: '#041E49',
-  tertiary: '#00696B',
+  // Selected: a neutral grey fill with the darkest text.
+  secondaryContainer: '#F4F4F5',
+  onSecondaryContainer: '#18181B',
+  // Neutral badge.
+  tertiary: '#52525B',
   onTertiary: '#FFFFFF',
-  tertiaryContainer: '#CCEBEB',
-  onTertiaryContainer: '#002020',
-  error: '#C5221F',
+  tertiaryContainer: '#F4F4F5',
+  onTertiaryContainer: '#3F3F46',
+  error: '#DC2626',
   onError: '#FFFFFF',
-  errorContainer: '#FCE8E6',
-  onErrorContainer: '#A50E0E',
-  success: '#137333',
+  errorContainer: '#FEF2F2',
+  onErrorContainer: '#B91C1C',
+  success: '#15803D',
   onSuccess: '#FFFFFF',
-  successContainer: '#E6F4EA',
-  onSuccessContainer: '#0D652D',
-  warning: '#9A5B00',
+  successContainer: '#F0FDF4',
+  onSuccessContainer: '#166534',
+  warning: '#B45309',
   onWarning: '#FFFFFF',
-  warningContainer: '#FEEFC3',
-  onWarningContainer: '#5C3A00',
-  surface: '#F1F3F4',
-  onSurface: '#1F1F1F',
-  onSurfaceVariant: '#444746',
+  warningContainer: '#FFFBEB',
+  onWarningContainer: '#92400E',
+  surface: '#FAFAFA',
+  onSurface: '#18181B',
+  onSurfaceVariant: '#52525B',
   surfaceContainerLowest: '#FFFFFF',
-  surfaceContainerLow: '#F8F9FA',
-  surfaceContainer: '#F1F3F4',
-  surfaceContainerHigh: '#E8EAED',
-  surfaceContainerHighest: '#DADCE0',
-  outline: '#747775',
-  outlineVariant: '#DADCE0',
-  inverseSurface: '#303030',
-  inverseOnSurface: '#F2F2F2',
+  surfaceContainerLow: '#FAFAFA',
+  surfaceContainer: '#F4F4F5',
+  surfaceContainerHigh: '#E4E4E7',
+  surfaceContainerHighest: '#D4D4D8',
+  // Input border (outline) and hairline (outlineVariant).
+  outline: '#D4D4D8',
+  outlineVariant: '#E4E4E7',
+  inverseSurface: '#18181B',
+  inverseOnSurface: '#FAFAFA',
 };
 
 export type M3Scheme = typeof lightScheme;
 
 const darkScheme: M3Scheme = {
-  primary: '#A8C7FA',
-  onPrimary: '#062E6F',
-  primaryContainer: '#004A77',
-  onPrimaryContainer: '#C2E7FF',
-  secondary: '#A9C7F0',
-  onSecondary: '#0A305F',
-  secondaryContainer: '#2B3A52',
-  onSecondaryContainer: '#D2E3FC',
-  tertiary: '#78D9D9',
-  onTertiary: '#003737',
-  tertiaryContainer: '#004F50',
-  onTertiaryContainer: '#A6F2F2',
-  error: '#F28B82',
-  onError: '#5C0C08',
-  errorContainer: '#8C1D18',
-  onErrorContainer: '#FCE8E6',
-  success: '#81C995',
-  onSuccess: '#0D3B1E',
-  successContainer: '#0F5223',
-  onSuccessContainer: '#CEEAD6',
-  warning: '#FDD663',
-  onWarning: '#3F2A00',
-  warningContainer: '#5C4300',
-  onWarningContainer: '#FEEFC3',
-  surface: '#121314',
-  onSurface: '#E3E3E3',
-  onSurfaceVariant: '#C4C7C5',
-  surfaceContainerLowest: '#0E0F10',
-  surfaceContainerLow: '#1B1C1E',
-  surfaceContainer: '#1E1F21',
-  surfaceContainerHigh: '#26282B',
-  surfaceContainerHighest: '#2D2F33',
-  outline: '#8E918F',
-  outlineVariant: '#3C4043',
-  inverseSurface: '#E3E3E3',
-  inverseOnSurface: '#303030',
+  primary: '#60A5FA',
+  onPrimary: '#0B0B0C',
+  primaryContainer: '#111D33',
+  onPrimaryContainer: '#93C5FD',
+  secondary: '#60A5FA',
+  onSecondary: '#0B0B0C',
+  secondaryContainer: '#27272A',
+  onSecondaryContainer: '#FAFAFA',
+  tertiary: '#A1A1AA',
+  onTertiary: '#0B0B0C',
+  tertiaryContainer: '#27272A',
+  onTertiaryContainer: '#D4D4D8',
+  error: '#F87171',
+  onError: '#0B0B0C',
+  errorContainer: '#2A1416',
+  onErrorContainer: '#FCA5A5',
+  success: '#4ADE80',
+  onSuccess: '#0B0B0C',
+  successContainer: '#10261A',
+  onSuccessContainer: '#86EFAC',
+  warning: '#FBBF24',
+  onWarning: '#0B0B0C',
+  warningContainer: '#2A2010',
+  onWarningContainer: '#FCD34D',
+  surface: '#0B0B0C',
+  onSurface: '#FAFAFA',
+  onSurfaceVariant: '#A1A1AA',
+  surfaceContainerLowest: '#141416',
+  surfaceContainerLow: '#18181B',
+  surfaceContainer: '#1C1C1F',
+  surfaceContainerHigh: '#27272A',
+  surfaceContainerHighest: '#3F3F46',
+  outline: '#3F3F46',
+  outlineVariant: '#27272A',
+  inverseSurface: '#FAFAFA',
+  inverseOnSurface: '#18181B',
 };
 
 export interface SurfaceRoles {
+  /** Page background. */
   canvas: string;
-  /** Navigation (bar, rail, drawer) and the top app bar. */
+  /** Sidebar, top bar and bottom bar. */
   chrome: string;
+  /** Cards, panels, dialogs, menus, list regions. */
   card: string;
+  /** Sections inside a card (findings, nested notes). */
   cardNested: string;
+  /** Input and search-bar background. */
   field: string;
+  /** Selected row, selected navigation item, selected filter. */
   selected: string;
+  /** The 1 px hairline on cards, panels and between rows. */
+  border: string;
+  /** Borders of secondary buttons and chips at rest. */
+  borderStrong: string;
+  /** Borders on hover. */
+  borderHover: string;
+  /** Text-field and search-field borders at rest: at least 3:1 against the field (WCAG 1.4.11). */
+  fieldBorder: string;
+  /** Text-field and search-field borders on hover. */
+  fieldBorderHover: string;
+  /** Third text level: section labels, quiet meta. Only on canvas, card and chrome. */
+  textTertiary: string;
+  /** Borders of the soft semantic badges and banners, in the same hue as their text. */
+  infoBorder: string;
+  successBorder: string;
+  warningBorder: string;
+  errorBorder: string;
+  /** Severity dots: high red, medium amber, low neutral grey. */
+  dotHigh: string;
+  dotMedium: string;
+  dotLow: string;
   scrim: string;
 }
 
 export type M3Palette = M3Scheme & SurfaceRoles;
 
-const SCRIM = 'rgba(0, 0, 0, 0.32)';
+const SCRIM = 'rgba(0, 0, 0, 0.4)';
 
 export const tokens: Record<'light' | 'dark', M3Palette> = {
   light: {
     ...lightScheme,
-    canvas: lightScheme.surfaceContainer,
+    canvas: lightScheme.surface,
     chrome: lightScheme.surfaceContainerLowest,
     card: lightScheme.surfaceContainerLowest,
-    cardNested: lightScheme.surfaceContainer,
-    field: lightScheme.surfaceContainerHigh,
+    cardNested: lightScheme.surfaceContainerLow,
+    field: lightScheme.surfaceContainerLowest,
     selected: lightScheme.secondaryContainer,
+    border: '#E4E4E7',
+    borderStrong: '#D4D4D8',
+    borderHover: '#A1A1AA',
+    fieldBorder: '#8E8E96',
+    fieldBorderHover: '#71717A',
+    textTertiary: '#71717A',
+    infoBorder: '#BFDBFE',
+    successBorder: '#BBF7D0',
+    warningBorder: '#FDE68A',
+    errorBorder: '#FECACA',
+    dotHigh: '#DC2626',
+    dotMedium: '#D97706',
+    dotLow: '#A1A1AA',
     scrim: SCRIM,
   },
   dark: {
     ...darkScheme,
     canvas: darkScheme.surface,
-    chrome: darkScheme.surfaceContainerLow,
-    card: darkScheme.surfaceContainer,
-    cardNested: darkScheme.surfaceContainerHigh,
-    field: darkScheme.surfaceContainerHighest,
+    chrome: darkScheme.surfaceContainerLowest,
+    card: darkScheme.surfaceContainerLowest,
+    cardNested: darkScheme.surfaceContainerLow,
+    field: darkScheme.surfaceContainerLowest,
     selected: darkScheme.secondaryContainer,
+    border: '#27272A',
+    borderStrong: '#3F3F46',
+    borderHover: '#52525B',
+    fieldBorder: '#6B6B74',
+    fieldBorderHover: '#A1A1AA',
+    textTertiary: '#8B8B94',
+    infoBorder: '#1E3A6B',
+    successBorder: '#14532D',
+    warningBorder: '#4A3A12',
+    errorBorder: '#5B1F22',
+    dotHigh: '#F87171',
+    dotMedium: '#FBBF24',
+    dotLow: '#71717A',
     scrim: SCRIM,
   },
 };

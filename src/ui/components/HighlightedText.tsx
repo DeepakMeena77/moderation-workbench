@@ -80,9 +80,9 @@ export function HighlightedText({ text, highlights, variant = 'body1', activeCod
                 color: m3(t).onPrimaryContainer,
                 textDecorationLine: 'underline',
                 textDecorationColor: m3(t).primary,
-                textDecorationThickness: 2,
+                textDecorationThickness: 1,
                 textUnderlineOffset: 3,
-                borderRadius: '4px',
+                borderRadius: '2px',
                 outline: active ? `2px solid ${m3(t).primary}` : 'none',
                 '@media (prefers-reduced-motion: no-preference)': { transition: 'outline-color 200ms' },
               })}

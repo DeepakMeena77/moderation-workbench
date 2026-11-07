@@ -1,8 +1,5 @@
 'use client';
 
-import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded';
-import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded';
-import SyncRounded from '@mui/icons-material/SyncRounded';
 import Box from '@mui/material/Box';
 import LinearProgress from '@mui/material/LinearProgress';
 import Typography from '@mui/material/Typography';
@@ -19,9 +16,9 @@ import { useReevaluationRun, useRetryFailed, type ReevaluationRun } from './api'
 // It polls the run every 2 s while it is running; each poll also kicks the job runner on the server.
 
 function stateTag(run: ReevaluationRun) {
-  if (run.state === 'running') return <Tag label="Running" tone="primary" icon={<SyncRounded />} />;
-  if (run.state === 'finished') return <Tag label="Finished" tone="success" icon={<CheckCircleRounded />} />;
-  return <Tag label="Finished with failures" tone="error" icon={<ErrorOutlineRounded />} />;
+  if (run.state === 'running') return <Tag label="Running" tone="info" />;
+  if (run.state === 'finished') return <Tag label="Finished" tone="success" />;
+  return <Tag label="Finished with failures" tone="error" />;
 }
 
 function RunBody({ run, canRetry }: { run: ReevaluationRun; canRetry: boolean }) {
@@ -43,7 +40,7 @@ function RunBody({ run, canRetry }: { run: ReevaluationRun; canRetry: boolean })
         value={percent}
         aria-label={`Re-evaluation progress, ${processed} of ${run.total} cases`}
         color={run.failed > 0 ? 'error' : 'primary'}
-        sx={{ height: 4, borderRadius: 9999 }}
+        sx={{ height: 4, borderRadius: '2px' }}
       />
       <Typography variant="body2" aria-live="polite">
         {run.total === 0
@@ -53,7 +50,7 @@ function RunBody({ run, canRetry }: { run: ReevaluationRun; canRetry: boolean })
       {run.failed > 0 && canRetry ? (
         <Box>
           <Button
-            variant="tonal"
+            variant="secondary"
             loading={retry.isPending}
             onClick={() =>
               retry.mutate(undefined, {

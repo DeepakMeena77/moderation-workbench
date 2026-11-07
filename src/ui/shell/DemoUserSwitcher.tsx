@@ -47,14 +47,7 @@ export function DemoUserSwitcher({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      aria-labelledby="demo-switcher-title"
-      fullWidth
-      maxWidth="xs"
-      slotProps={{ paper: { sx: (theme) => ({ backgroundColor: m3(theme).surfaceContainerHigh }) } }}
-    >
+    <Dialog open={open} onClose={onClose} aria-labelledby="demo-switcher-title" fullWidth maxWidth="xs">
       <DialogTitle id="demo-switcher-title" sx={(theme) => ({ ...theme.typography.h2 })}>
         Switch demo user
       </DialogTitle>
@@ -70,10 +63,8 @@ export function DemoUserSwitcher({
                   disabled={demoSignIn.isPending}
                   aria-current={current ? 'true' : undefined}
                   sx={(theme) => ({
-                    borderRadius: `${layout.nestedRadius}px`,
-                    ...(current
-                      ? { backgroundColor: m3(theme).secondaryContainer, color: m3(theme).onSecondaryContainer }
-                      : {}),
+                    borderRadius: `${layout.controlRadius}px`,
+                    ...(current ? { backgroundColor: m3(theme).selected, color: m3(theme).onSurface } : {}),
                   })}
                 >
                   <ListItemText
@@ -89,7 +80,7 @@ export function DemoUserSwitcher({
         </List>
       </DialogContent>
       <DialogActions sx={{ px: 6, pb: 6 }}>
-        <Button variant="text" onClick={onClose}>
+        <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
       </DialogActions>

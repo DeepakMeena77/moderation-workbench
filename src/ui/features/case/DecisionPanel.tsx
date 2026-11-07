@@ -29,9 +29,9 @@ import {
   type DraftField,
 } from './decisionForm';
 
-// The decision panel (03 sec. 6.6, HUM-2..6): Approve recommendation (filled), Modify (tonal), Reject
-// recommendation (text). Modify and Reject open an inline form. Submitting shows progress and blocks a second
-// submit. On failure every choice is kept; a 409 explains what changed and offers Reload.
+// The decision panel (03 sec. 6.6, HUM-2..6): Approve recommendation (primary), Modify (secondary), Reject
+// recommendation (ghost, red only on hover and focus), all at the large size. Modify and Reject open an inline form. Submitting shows progress
+// and blocks a second submit. On failure every choice is kept; a 409 explains what changed and offers Reload.
 
 const CONFLICT_CODES = new Set(['STALE_ANALYSIS', 'ALREADY_DECIDED']);
 
@@ -157,7 +157,7 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
           action={
             failure.conflict ? (
               <Button
-                variant="text"
+                variant="ghost"
                 onClick={() => {
                   // The draft is kept; the next submit uses the reloaded analysis.
                   setFailure(null);
@@ -175,6 +175,7 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
         <Button
+          size="large"
           onClick={() => submit({ kind: 'approve', analysisId: analysis.id })}
           loading={decide.isPending && draft === null}
           disabled={decide.isPending}
@@ -182,7 +183,8 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
           Approve recommendation ({ACTION_LABEL[recommended].toLowerCase()})
         </Button>
         <Button
-          variant="tonal"
+          size="large"
+          variant="secondary"
           aria-expanded={draft?.mode === 'modify'}
           disabled={decide.isPending}
           onClick={() => openForm('modify')}
@@ -190,7 +192,9 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
           Modify
         </Button>
         <Button
-          variant="text"
+          size="large"
+          variant="ghost"
+          destructive
           aria-expanded={draft?.mode === 'reject'}
           disabled={decide.isPending}
           onClick={() => openForm('reject')}
@@ -211,7 +215,8 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
             flexDirection: 'column',
             gap: 4,
             p: 3,
-            borderRadius: `${layout.nestedRadius}px`,
+            borderRadius: `${layout.controlRadius}px`,
+            border: `1px solid ${m3(t).border}`,
             backgroundColor: m3(t).cardNested,
           })}
         >
@@ -274,7 +279,7 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
             }
           />
           <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 2 }}>
-            <Button variant="text" onClick={() => setDraft(null)} disabled={decide.isPending}>
+            <Button variant="ghost" onClick={() => setDraft(null)} disabled={decide.isPending}>
               Cancel
             </Button>
             <Button type="submit" loading={decide.isPending}>

@@ -2,9 +2,7 @@
 
 import BlockRounded from '@mui/icons-material/BlockRounded';
 import HistoryRounded from '@mui/icons-material/HistoryRounded';
-import HourglassTopRounded from '@mui/icons-material/HourglassTopRounded';
 import PolicyRounded from '@mui/icons-material/PolicyRounded';
-import PsychologyRounded from '@mui/icons-material/PsychologyRounded';
 import VisibilityRounded from '@mui/icons-material/VisibilityRounded';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
@@ -90,7 +88,8 @@ function Nested({ children, label }: { children: ReactNode; label?: string }) {
         flexDirection: 'column',
         gap: 2,
         p: 3,
-        borderRadius: `${layout.nestedRadius}px`,
+        borderRadius: `${layout.controlRadius}px`,
+        border: `1px solid ${m3(t).border}`,
         backgroundColor: m3(t).cardNested,
         minWidth: 0,
       })}
@@ -162,7 +161,7 @@ function BriefCard({ detail }: { detail: AppealDetail }) {
   return (
     <Nested label="AI summary">
       <TagRow>
-        <Tag label="AI summary" tone="secondary" icon={<PsychologyRounded />} />
+        <Tag label="AI summary" tone="neutral" />
         <Typography variant="caption" color="text.secondary">
           Does not recommend an outcome. A senior moderator decides.
         </Typography>
@@ -339,7 +338,8 @@ function ResolveForm({ detail, onReload }: { detail: AppealDetail; onReload: () 
         flexDirection: 'column',
         gap: 4,
         p: 3,
-        borderRadius: `${layout.nestedRadius}px`,
+        borderRadius: `${layout.controlRadius}px`,
+        border: `1px solid ${m3(t).border}`,
         backgroundColor: m3(t).cardNested,
       })}
     >
@@ -350,7 +350,7 @@ function ResolveForm({ detail, onReload }: { detail: AppealDetail; onReload: () 
           action={
             failure.conflict ? (
               <Button
-                variant="text"
+                variant="ghost"
                 onClick={() => {
                   setFailure(null);
                   onReload();
@@ -424,7 +424,7 @@ function OutcomePanel({ detail, onReload }: { detail: AppealDetail; onReload: ()
       {outcome ? (
         <>
           <TagRow>
-            <Tag label={OUTCOME_WORD[outcome.outcome]} tone="secondary" />
+            <Tag label={OUTCOME_WORD[outcome.outcome]} tone="neutral" />
             <Typography variant="body2">Final:</Typography>
             <ActionTag action={outcome.finalAction} />
           </TagRow>
@@ -441,7 +441,7 @@ function OutcomePanel({ detail, onReload }: { detail: AppealDetail; onReload: ()
       ) : (
         <>
           <TagRow>
-            <Tag label="Pending" tone="tertiary" icon={<HourglassTopRounded />} />
+            <Tag label="Pending" tone="neutral" />
             <Typography variant="body2">
               {detail.assignedReviewer
                 ? `Assigned to ${detail.assignedReviewer.name}. Any other senior moderator may also resolve it.`
@@ -470,7 +470,7 @@ export function AppealBody({ detail, onReload }: { detail: AppealDetail; onReloa
       <TagRow>
         <StatusTag status={detail.caseStatus} />
         <Button
-          variant="text"
+          variant="ghost"
           href={`/content/${encodeURIComponent(detail.content.id)}/history`}
           LinkComponent={NextLink}
           startIcon={<HistoryRounded />}

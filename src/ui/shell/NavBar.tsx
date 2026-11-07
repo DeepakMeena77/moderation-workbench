@@ -9,7 +9,7 @@ import { m3 } from '../theme/theme';
 import { barDestinations, isActive, moreDestinations } from './navigation';
 import { NavItemContent, navItemSx } from './NavRail';
 
-export const NAV_BAR_HEIGHT = 80;
+export const NAV_BAR_HEIGHT = 64;
 
 // Compact windows, below 600 px (03 sec. 3.1): a bottom bar with up to 3 destinations plus "More".
 export function NavBar({
@@ -40,6 +40,7 @@ export function NavBar({
         px: 1,
         zIndex: theme.zIndex.appBar,
         backgroundColor: m3(theme).chrome,
+        borderTop: `1px solid ${m3(theme).border}`,
       })}
     >
       {barDestinations(role).map(({ key, label, href, icon }) => {
@@ -52,7 +53,7 @@ export function NavBar({
             aria-current={active ? 'page' : undefined}
             sx={[navItemSx, { flex: 1, minWidth: 0 }]}
           >
-            <NavItemContent Icon={icon} label={label} active={active} indicatorWidth={64} />
+            <NavItemContent Icon={icon} label={label} active={active} indicatorWidth={56} />
           </ButtonBase>
         );
       })}
@@ -62,7 +63,7 @@ export function NavBar({
         aria-expanded={moreOpen}
         sx={[navItemSx, { flex: 1, minWidth: 0 }]}
       >
-        <NavItemContent Icon={MoreHorizRounded} label="More" active={moreActive} indicatorWidth={64} />
+        <NavItemContent Icon={MoreHorizRounded} label="More" active={moreActive} indicatorWidth={56} />
       </ButtonBase>
     </Box>
   );

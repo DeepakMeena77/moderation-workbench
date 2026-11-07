@@ -1,19 +1,16 @@
 'use client';
 
-import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded';
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import UploadFileRounded from '@mui/icons-material/UploadFileRounded';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import type { Theme } from '@mui/material/styles';
 import { useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { ApiError } from '../../api/client';
+import { Banner as SharedBanner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Stepper } from '../../components/Stepper';
 import { useSnackbar } from '../../components/SnackbarProvider';
-import { layout, m3 } from '../../theme/theme';
 import { usePublishPolicy, useValidatePolicy, type PolicyValidation } from './api';
 import { DiffView } from './DiffView';
 
@@ -26,35 +23,9 @@ const STEPS = ['Paste or upload JSON', 'Validate', 'Review changes and impact', 
 
 function Banner({ tone, children }: { tone: 'error' | 'warning' | 'info'; children: ReactNode }) {
   return (
-    <Box
-      role={tone === 'info' ? 'status' : 'alert'}
-      sx={(t) => {
-        const p = m3(t);
-        const [bg, fg] =
-          tone === 'error'
-            ? [p.errorContainer, p.onErrorContainer]
-            : tone === 'warning'
-              ? [p.warningContainer, p.onWarningContainer]
-              : [p.secondaryContainer, p.onSecondaryContainer];
-        return {
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 3,
-          px: 4,
-          py: 3,
-          borderRadius: `${layout.nestedRadius}px`,
-          backgroundColor: bg,
-          color: fg,
-        };
-      }}
-    >
-      {tone === 'info' ? (
-        <InfoOutlined aria-hidden sx={{ fontSize: 20 }} />
-      ) : (
-        <ErrorOutlineRounded aria-hidden sx={{ fontSize: 20 }} />
-      )}
-      <Box sx={{ minWidth: 0, flex: 1 }}>{children}</Box>
-    </Box>
+    <SharedBanner tone={tone} role={tone === 'info' ? 'status' : 'alert'}>
+      {children}
+    </SharedBanner>
   );
 }
 
@@ -151,7 +122,7 @@ export function PublishFlow({ onPublished }: { onPublished: (runId: string) => v
         <Button onClick={runValidate} loading={validate.isPending}>
           Validate
         </Button>
-        <Button variant="tonal" startIcon={<UploadFileRounded />} onClick={() => fileRef.current?.click()}>
+        <Button variant="secondary" startIcon={<UploadFileRounded />} onClick={() => fileRef.current?.click()}>
           Upload JSON file
         </Button>
         <Box
@@ -242,7 +213,7 @@ export function PublishFlow({ onPublished }: { onPublished: (runId: string) => v
         fullWidth
         maxWidth="xs"
         slotProps={{
-          paper: { elevation: 0, sx: (t: Theme) => ({ backgroundColor: m3(t).surfaceContainerHigh, p: 6 }) },
+          paper: { elevation: 0, sx: { p: 6 } },
         }}
       >
         {preview ? (
@@ -261,7 +232,7 @@ export function PublishFlow({ onPublished }: { onPublished: (runId: string) => v
               </Banner>
             ) : null}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-              <Button variant="text" disabled={publish.isPending} onClick={() => setConfirmOpen(false)}>
+              <Button variant="ghost" disabled={publish.isPending} onClick={() => setConfirmOpen(false)}>
                 Cancel
               </Button>
               <Button loading={publish.isPending} onClick={runPublish}>

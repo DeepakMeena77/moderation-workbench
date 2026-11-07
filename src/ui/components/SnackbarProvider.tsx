@@ -54,7 +54,7 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
         action={
           current?.action ? (
             <Button
-              variant="text"
+              variant="ghost"
               onClick={() => {
                 current.action?.onClick();
                 close();
@@ -66,8 +66,8 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
           ) : undefined
         }
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        // Above the 80 dp navigation bar on compact screens, so the bar stays usable (05 sec. 6.3).
-        sx={{ bottom: { xs: 96, sm: 24 } }}
+        // Above the 64 px navigation bar on compact screens, so the bar stays usable (05 sec. 6.3).
+        sx={{ bottom: { xs: 80, sm: 24 } }}
         slotProps={{
           content: {
             role: 'status',
@@ -75,7 +75,7 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
             sx: (theme) => ({
               backgroundColor: m3(theme).inverseSurface,
               color: m3(theme).inverseOnSurface,
-              borderRadius: '4px',
+              borderRadius: '6px',
               boxShadow: 'none',
               ...theme.typography.body2,
             }),

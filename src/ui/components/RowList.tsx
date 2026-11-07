@@ -10,8 +10,8 @@ export interface RowListProps {
   'aria-label'?: string;
 }
 
-// Row list (03 sec. 4): one card-coloured region that holds rows edge to edge, split by a 1 px tonal step (the
-// region's surfaceContainerHigh showing between the rows), not by divider lines. Feed, queue, appeals, my content.
+// Row list (03 sec. 4): one bordered panel that holds rows edge to edge, with a 1 px hairline between rows. Feed,
+// queue, appeals, audit (below 840 px), failed jobs.
 export function RowList({ children, component = 'div', 'aria-label': ariaLabel }: RowListProps) {
   return (
     <Card sx={{ p: { xs: 0, md: 0 }, overflow: 'hidden' }}>
@@ -24,8 +24,7 @@ export function RowList({ children, component = 'div', 'aria-label': ariaLabel }
           listStyle: 'none',
           display: 'flex',
           flexDirection: 'column',
-          gap: 0.25,
-          backgroundColor: m3(theme).surfaceContainerHigh,
+          '& > *:not(:first-of-type)': { borderTop: `1px solid ${m3(theme).border}` },
         })}
       >
         {children}

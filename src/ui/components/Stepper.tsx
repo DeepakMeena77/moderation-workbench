@@ -11,9 +11,10 @@ export interface StepperProps {
   current: number;
 }
 
-// Stepper (03 sec. 4): numbered 24 dp markers joined by a 1 dp line, the current step in primary with its label at
-// weight 500, done steps with a check. An ordered list; the current label carries aria-current="step". Below
-// 600 px of container width the steps stack; above it, long labels wrap instead of running into the next step.
+// Stepper (03 sec. 4): numbered 20 px markers joined by a 1 px hairline, the current and done steps filled with the
+// accent (done steps show a check), later steps outlined; the current label at weight 500. An ordered list; the
+// current label carries aria-current="step". Below 600 px of container width the steps stack; above it, long labels
+// wrap instead of running into the next step.
 export function Stepper({ label, steps, current }: StepperProps) {
   return (
     <Box sx={{ containerType: 'inline-size' }}>
@@ -53,19 +54,21 @@ export function Stepper({ label, steps, current }: StepperProps) {
               <Box
                 aria-hidden
                 sx={(t) => ({
-                  width: 24,
-                  height: 24,
+                  width: 20,
+                  height: 20,
                   flexShrink: 0,
                   borderRadius: 9999,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   ...t.typography.overline,
-                  backgroundColor: active || done ? m3(t).primary : m3(t).surfaceContainerHighest,
+                  boxSizing: 'border-box',
+                  border: `1px solid ${active || done ? m3(t).primary : m3(t).borderStrong}`,
+                  backgroundColor: active || done ? m3(t).primary : m3(t).card,
                   color: active || done ? m3(t).onPrimary : m3(t).onSurfaceVariant,
                 })}
               >
-                {done ? <CheckRounded sx={{ fontSize: 16 }} /> : number}
+                {done ? <CheckRounded sx={{ fontSize: 14 }} /> : number}
               </Box>
               <Typography
                 variant="body2"
@@ -87,7 +90,7 @@ export function Stepper({ label, steps, current }: StepperProps) {
                 <Box
                   aria-hidden
                   className="step-line"
-                  sx={(t) => ({ flex: 1, minWidth: 16, height: 1, backgroundColor: m3(t).outlineVariant })}
+                  sx={(t) => ({ flex: 1, minWidth: 16, height: '1px', backgroundColor: m3(t).border })}
                 />
               ) : null}
             </Box>

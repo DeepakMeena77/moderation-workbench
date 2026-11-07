@@ -10,7 +10,7 @@ one lives.
 | Layer | Choice | Why |
 | --- | --- | --- |
 | App | **Next.js 15 (App Router) + React 19 + TypeScript 5 (strict)**, Node runtime | One codebase and one deploy; API route handlers and UI share types; no CORS |
-| UI | **MUI 7 (Material UI) themed with Material 3 tokens** (`03-ui-ux.md`), `@mui/icons-material` (Rounded set), Roboto via `next/font` | Accessible components; easy to express M3 shapes, colours and states; agents know it well |
+| UI | **MUI 7 (Material UI) themed with the design tokens of `03-ui-ux.md`**, `@mui/icons-material` (Rounded set), self-hosted Roboto | Accessible components; easy to express our own shapes, colours and states; agents know it well |
 | Client data | TanStack Query | Loading, error and retry states and cache invalidation in one place |
 | Validation | Zod (inputs, config, policy files, AI output) | One schema language end to end |
 | Database | **PostgreSQL (Neon)** via **Prisma** | Transactions, partial unique indexes, triggers (insert-only tables), `FOR UPDATE SKIP LOCKED` job claiming |

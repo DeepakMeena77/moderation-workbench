@@ -17,8 +17,9 @@ export interface SearchBarProps {
 
 export const SEARCH_DEBOUNCE_MS = 300; // 03 sec. 4
 
-// Search bar (03 sec. 4): 40 high with the text-field radius, so search and fields read as one family; field fill, leading search icon, trailing clear button.
-// Typing is debounced; the committed value lives in the URL, so a reload or a shared link keeps the search.
+// Search bar (03 sec. 4): an input, 36 high, radius 6, a 1 px border that turns accent on focus, a 16 px search icon
+// and a clear button. Typing is debounced; the committed value lives in the URL, so a reload or a shared link keeps
+// the search.
 export function SearchBar({ value, onSearch, label, placeholder, debounceMs = SEARCH_DEBOUNCE_MS }: SearchBarProps) {
   const [draft, setDraft] = useState(value);
   const committed = useRef(value);
@@ -45,14 +46,21 @@ export function SearchBar({ value, onSearch, label, placeholder, debounceMs = SE
       sx={(t) => ({
         display: 'flex',
         alignItems: 'center',
-        gap: 1,
+        gap: 2,
         height: layout.searchHeight,
-        pl: 4,
+        pl: 3,
         pr: 1,
         borderRadius: `${layout.fieldRadius}px`,
+        border: `1px solid ${m3(t).fieldBorder}`,
         backgroundColor: m3(t).field,
-        color: m3(t).onSurfaceVariant,
-        '&:focus-within': { outline: `3px solid ${m3(t).secondary}`, outlineOffset: 2 },
+        color: m3(t).textTertiary,
+        '&:hover': { borderColor: m3(t).fieldBorderHover },
+        '&:focus-within': {
+          borderColor: m3(t).primary,
+          outline: `2px solid color-mix(in srgb, ${m3(t).primary} 30%, transparent)`,
+          outlineOffset: 0,
+        },
+        '& > svg': { fontSize: 16 },
       })}
     >
       <SearchRounded aria-hidden />
@@ -70,16 +78,16 @@ export function SearchBar({ value, onSearch, label, placeholder, debounceMs = SE
         sx={(t) => ({
           flex: 1,
           minWidth: 0,
-          ...t.typography.body1,
+          ...t.typography.body2,
           color: m3(t).onSurface,
-          '& input::placeholder': { color: m3(t).onSurfaceVariant, opacity: 1 },
+          '& input::placeholder': { color: m3(t).textTertiary, opacity: 1 },
           '& input:focus-visible': { outline: 'none' },
           '& input::-webkit-search-cancel-button': { display: 'none' },
         })}
       />
       {draft ? (
         <IconButton
-          sx={{ width: 40, height: 40 }}
+          sx={{ width: 28, height: 28, '& svg': { fontSize: 16 } }}
           label="Clear search"
           onClick={() => {
             setDraft('');

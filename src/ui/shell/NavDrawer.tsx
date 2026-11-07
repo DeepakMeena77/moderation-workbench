@@ -11,57 +11,68 @@ import type { Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import Link from 'next/link';
 import type { Role } from '../api/hooks';
-import { layout, m3 } from '../theme/theme';
+import { layer, layout, m3 } from '../theme/theme';
 import { drawerGroups, isActive } from './navigation';
 import { ThemeToggleItem } from './ThemeToggle';
 
-/** A full-width pill row, 48 high, for the compact "More" sheet (touch); active rows use secondaryContainer. */
+/** A More-sheet row (phones): 44 high for touch, radius 6, selected = the neutral selected fill and darker text. */
 export const pillRowSx = (theme: Theme) =>
   ({
-    minHeight: 48,
-    borderRadius: 9999,
-    px: 4,
-    color: m3(theme).onSurfaceVariant,
-    '& .MuiListItemIcon-root': { color: 'inherit', minWidth: 40 },
+    minHeight: layout.touchTarget,
+    borderRadius: `${layout.controlRadius}px`,
+    px: 3,
+    color: m3(theme).onSurface,
+    '& .MuiListItemIcon-root': { color: m3(theme).onSurfaceVariant, minWidth: 32 },
+    '& .MuiListItemIcon-root svg': { fontSize: 18 },
     '&[aria-current="page"]': {
-      backgroundColor: m3(theme).secondaryContainer,
-      color: m3(theme).onSecondaryContainer,
+      backgroundColor: m3(theme).selected,
+      '& .MuiListItemText-primary': { fontWeight: 500 },
     },
   }) as const;
 
 /**
- * A compact drawer row (03 sec. 3.1): no gap between rows, label in bodyMedium, icon 20. The active row is
- * filled with secondaryContainer and its label goes to weight 500.
+ * A sidebar row (03 sec. 3.1): 32 high, radius 6, no gap between rows, an 18 px monochrome icon and the label in
+ * body text. The selected row takes the neutral selected fill, darker text at weight 500 and a 2 px accent marker
+ * at its start (a pseudo-element box, not a border).
  */
 export const drawerRowSx = (theme: Theme) => {
-  const layer = `color-mix(in srgb, ${m3(theme).onSurface} 8%, transparent)`;
+  const p = m3(theme);
   return {
+    position: 'relative',
     minHeight: layout.drawerItemHeight,
     py: 0,
     px: 3,
-    borderRadius: `${layout.nestedRadius}px`,
-    color: m3(theme).onSurface,
-    '& .MuiListItemIcon-root': { color: m3(theme).onSurfaceVariant, minWidth: 36 },
-    '& .MuiListItemIcon-root svg': { fontSize: 20 },
+    borderRadius: `${layout.controlRadius}px`,
+    color: p.onSurfaceVariant,
+    '& .MuiListItemIcon-root': { color: p.onSurfaceVariant, minWidth: 28 },
+    '& .MuiListItemIcon-root svg': { fontSize: 18 },
     '& .MuiListItemText-root': { my: 0 },
-    '&:hover': { backgroundColor: layer },
+    '&:hover': { backgroundColor: layer(p.onSurface, 'transparent', 5), color: p.onSurface },
     '&[aria-current="page"]': {
-      backgroundColor: m3(theme).secondaryContainer,
-      color: m3(theme).onSecondaryContainer,
-      '& .MuiListItemIcon-root': { color: 'inherit' },
+      backgroundColor: p.selected,
+      color: p.onSurface,
+      '& .MuiListItemIcon-root': { color: p.onSurface },
       '& .MuiListItemText-primary': { fontWeight: 500 },
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        left: 0,
+        top: 8,
+        bottom: 8,
+        width: 2,
+        borderRadius: '1px',
+        backgroundColor: p.primary,
+      },
     },
-    '&[aria-current="page"]:hover': {
-      backgroundColor: `color-mix(in srgb, ${m3(theme).onSecondaryContainer} 8%, ${m3(theme).secondaryContainer})`,
-    },
+    '&[aria-current="page"]:hover': { backgroundColor: layer(p.onSurface, p.selected, 4) },
   } as const;
 };
 
 const rowText = { primary: { variant: 'body2' } } as const;
 
-// Large windows, 1200 px and up (03 sec. 3.1): a permanent drawer with grouped destinations. The header holds
-// the product name, level with the top app bar; the footer holds the theme toggle and the demo-user switcher
-// (03 sec. 3.2), in the same compact rows.
+// Large windows, 1200 px and up (03 sec. 3.1): a permanent white sidebar with a right hairline and grouped
+// destinations. The header holds the product name, level with the top bar; the footer holds the theme toggle and
+// the demo-user switcher (03 sec. 3.2), in the same rows.
 export function NavDrawer({
   role,
   pathname,
@@ -85,6 +96,7 @@ export function NavDrawer({
         width: layout.drawerWidth,
         flexShrink: 0,
         backgroundColor: m3(theme).chrome,
+        borderRight: `1px solid ${m3(theme).border}`,
       })}
     >
       {/* The column is as tall as the page, so the chrome colour runs the full height; its content stays in view. */}
@@ -102,13 +114,15 @@ export function NavDrawer({
         }}
       >
         <Box
-          sx={{
+          sx={(t) => ({
             height: layout.appBarHeight,
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
+            borderBottom: `1px solid ${m3(t).border}`,
+            mb: 2,
             ...rowGutter,
-          }}
+          })}
         >
           <Typography variant="subtitle1" component="p" noWrap sx={{ pl: headingIndent }}>
             Moderation Workbench
@@ -122,7 +136,7 @@ export function NavDrawer({
                 id={headingId}
                 variant="overline"
                 component="p"
-                sx={{ pl: headingIndent, pt: index === 0 ? 1 : 4, pb: 1, color: 'text.secondary' }}
+                sx={(t) => ({ pl: headingIndent, pt: index === 0 ? 2 : 5, pb: 1, color: m3(t).textTertiary })}
               >
                 {group.label}
               </Typography>

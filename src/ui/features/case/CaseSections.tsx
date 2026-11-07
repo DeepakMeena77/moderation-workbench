@@ -51,8 +51,8 @@ function Nested({ children, label }: { children: ReactNode; label?: string }) {
         flexDirection: 'column',
         gap: 2,
         p: 3,
-        borderRadius: `${layout.nestedRadius}px`,
-        backgroundColor: m3(t).cardNested,
+        borderRadius: `${layout.controlRadius}px`,
+        border: `1px solid ${m3(t).border}`,
         minWidth: 0,
       })}
     >
@@ -136,12 +136,12 @@ function ClauseText({ clause }: { clause: Clause | undefined }) {
   return (
     <Box>
       <Button
-        variant="text"
+        variant="ghost"
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((v) => !v)}
         endIcon={<ExpandMoreRounded sx={{ transform: open ? 'rotate(180deg)' : 'none' }} />}
-        sx={{ ml: -3 }}
+        sx={(t) => ({ ml: -3, color: m3(t).onSurfaceVariant, fontWeight: 400 })}
       >
         {open ? 'Hide clause text' : `Clause: ${clause.title}`}
       </Button>
@@ -202,7 +202,7 @@ function FindingItem({ finding, clause, policyVersion }: { finding: Finding; cla
 function FindingGroup({ title, empty, children }: { title: string; empty: string; children: ReactNode[] }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="h4" component="h3">
+      <Typography variant="overline" component="h3" color="text.secondary">
         {title}
       </Typography>
       {children.length > 0 ? (
@@ -290,17 +290,29 @@ export function RecommendationCard({ detail }: { detail: CaseDetail }) {
         {ai?.insufficientContext ? <InsufficientContextTag /> : null}
       </TagRow>
       {rec.clauseCodes.length > 0 ? (
-        <Typography variant="body2">Clauses: {rec.clauseCodes.join(', ')}</Typography>
+        <TagRow>
+          <Typography variant="body2" color="text.secondary">
+            Clauses
+          </Typography>
+          {rec.clauseCodes.map((code) => (
+            <ClauseTag key={code} code={code} />
+          ))}
+        </TagRow>
       ) : null}
       {ai?.severityReason ? (
         <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
           Severity: {ai.severityReason}
         </Typography>
       ) : null}
-      <ConfidenceMeter value={rec.confidence} reason={ai?.confidenceReason ?? null} emptyLabel={AI_PENDING} />
+      <ConfidenceMeter
+        value={rec.confidence}
+        reason={ai?.confidenceReason ?? null}
+        emptyLabel={AI_PENDING}
+        emphasis="main"
+      />
       {rec.needsHuman ? (
         <Nested label="Why a human must decide">
-          <Typography variant="h4" component="h3">
+          <Typography variant="overline" component="h3" color="text.secondary">
             Why a human must decide
           </Typography>
           <Box component="ul" sx={{ m: 0, pl: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -364,10 +376,14 @@ function Disclosure({ title, children }: { title: string; children: ReactNode })
   const [open, setOpen] = useState(false);
   const id = useId();
   return (
-    <Card component="section" aria-label={title} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Card
+      component="section"
+      aria-label={title}
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: { xs: 2, md: 2 } }}
+    >
       <Box>
         <Button
-          variant="text"
+          variant="ghost"
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen((v) => !v)}

@@ -1,6 +1,3 @@
-import AddRounded from '@mui/icons-material/AddRounded';
-import EditRounded from '@mui/icons-material/EditRounded';
-import RemoveRounded from '@mui/icons-material/RemoveRounded';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
@@ -29,7 +26,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 const nested = {
-  borderRadius: `${layout.nestedRadius}px`,
+  borderRadius: `${layout.controlRadius}px`,
   p: 3,
   display: 'flex',
   flexDirection: 'column',
@@ -50,9 +47,9 @@ export function DiffView({ diff, fromLabel, toLabel }: { diff: PolicyDiff; fromL
       {diff.added.length > 0 ? (
         <Section title="Added">
           {diff.added.map((clause) => (
-            <Box key={clause.code} data-ui="section" sx={(t) => ({ ...nested, backgroundColor: m3(t).cardNested })}>
+            <Box key={clause.code} data-ui="section" sx={(t) => ({ ...nested, border: `1px solid ${m3(t).border}` })}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
-                <Tag label="Added" tone="success" icon={<AddRounded />} />
+                <Tag label="Added" tone="success" />
                 <Typography variant="h4" component="p">
                   {clause.code} - {clause.title}
                 </Typography>
@@ -68,9 +65,9 @@ export function DiffView({ diff, fromLabel, toLabel }: { diff: PolicyDiff; fromL
       {diff.removed.length > 0 ? (
         <Section title="Removed">
           {diff.removed.map((clause) => (
-            <Box key={clause.code} data-ui="section" sx={(t) => ({ ...nested, backgroundColor: m3(t).cardNested })}>
+            <Box key={clause.code} data-ui="section" sx={(t) => ({ ...nested, border: `1px solid ${m3(t).border}` })}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
-                <Tag label="Removed" tone="error" icon={<RemoveRounded />} />
+                <Tag label="Removed" tone="error" />
                 <Typography variant="h4" component="p">
                   {clause.code} - {clause.title}
                 </Typography>
@@ -83,9 +80,9 @@ export function DiffView({ diff, fromLabel, toLabel }: { diff: PolicyDiff; fromL
       {diff.changed.length > 0 ? (
         <Section title="Changed">
           {diff.changed.map((clause) => (
-            <Box key={clause.code} data-ui="section" sx={(t) => ({ ...nested, backgroundColor: m3(t).cardNested })}>
+            <Box key={clause.code} data-ui="section" sx={(t) => ({ ...nested, border: `1px solid ${m3(t).border}` })}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
-                <Tag label="Changed" tone="warning" icon={<EditRounded />} />
+                <Tag label="Changed" tone="warning" />
                 <Typography variant="h4" component="p">
                   {clause.code} - {clause.title}
                 </Typography>

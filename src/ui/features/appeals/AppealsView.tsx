@@ -2,7 +2,6 @@
 
 import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import ForumRounded from '@mui/icons-material/ForumRounded';
-import PersonRounded from '@mui/icons-material/PersonRounded';
 import TouchAppRounded from '@mui/icons-material/TouchAppRounded';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -36,10 +35,10 @@ export function appealSupportingText(row: AppealRow): string {
 function RowTag({ row }: { row: AppealRow }) {
   if (row.status === 'resolved' && row.outcome) {
     const word = { uphold: 'Upheld', overturn: 'Overturned', modify: 'Modified' }[row.outcome];
-    return <Tag label={word} tone="secondary" />;
+    return <Tag label={word} tone="neutral" />;
   }
   if (row.ownDecision) return <Tag label="Your decision" tone="warning" />;
-  if (row.assignedToMe) return <Tag label="Assigned to you" tone="primary" icon={<PersonRounded />} />;
+  if (row.assignedToMe) return <Tag label="Assigned to you" tone="info" />;
   if (!row.assignedReviewer) return <Tag label="Unassigned" tone="error" />;
   return null;
 }

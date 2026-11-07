@@ -2,25 +2,26 @@ import InboxRounded from '@mui/icons-material/InboxRounded';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { ReactElement, ReactNode } from 'react';
+import { m3 } from '../theme/theme';
 
 export interface EmptyStateProps {
   title: string;
   description?: string;
   icon?: ReactElement;
-  /** Optional next action, usually a tonal Button (03 sec. 7). */
+  /** Optional next action, usually a secondary Button (03 sec. 7). */
   action?: ReactNode;
 }
 
-// Empty state (03 sec. 4 and sec. 7): left-aligned, a 20 dp icon beside a short title, one line of help and an
+// Empty state (03 sec. 4 and sec. 7): left-aligned, an 18 px muted icon beside a short title, one line of help and an
 // optional next action. Compact, so an empty list reads as a state of the page, not as an illustration.
 export function EmptyState({ title, description, icon, action }: EmptyStateProps) {
   return (
     <Box data-ui="stack" sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, py: 1 }}>
-      <Box aria-hidden sx={{ color: 'text.secondary', display: 'flex', '& svg': { fontSize: 20 } }}>
+      <Box aria-hidden sx={(t) => ({ color: m3(t).textTertiary, display: 'flex', '& svg': { fontSize: 18 } })}>
         {icon ?? <InboxRounded />}
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, minWidth: 0 }}>
-        <Typography variant="h3" component="p">
+        <Typography variant="h4" component="p">
           {title}
         </Typography>
         {description ? (

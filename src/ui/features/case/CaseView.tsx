@@ -43,9 +43,6 @@ function CaseSkeleton() {
   );
 }
 
-/** Header actions sit in the chip row, so they keep tight side padding next to the 24 dp tags. */
-const COMPACT_BUTTON = { pr: 4 } as const;
-
 function CaseActions({ detail }: { detail: CaseDetail }) {
   const reanalyze = useReanalyze(detail.id);
   const reopen = useReopen(detail.id);
@@ -57,9 +54,8 @@ function CaseActions({ detail }: { detail: CaseDetail }) {
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
       {detail.permissions.canReopen ? (
         <Button
-          variant="tonal"
+          variant="secondary"
           startIcon={<LockOpenRounded />}
-          sx={COMPACT_BUTTON}
           loading={reopen.isPending}
           onClick={() =>
             reopen.mutate(undefined, {
@@ -73,9 +69,8 @@ function CaseActions({ detail }: { detail: CaseDetail }) {
       ) : null}
       {detail.permissions.canReanalyze ? (
         <Button
-          variant="tonal"
+          variant="secondary"
           startIcon={<RefreshRounded />}
-          sx={COMPACT_BUTTON}
           loading={reanalyze.isPending}
           disabled={detail.analysisPending}
           onClick={() =>

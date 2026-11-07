@@ -1,10 +1,10 @@
 import Box from '@mui/material/Box';
-import type { Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { m3 } from '../theme/theme';
 
-// ConfidenceMeter (03 sec. 4 and sec. 2.3): a 4 dp bar plus a text label ("0.72, Likely") and the reason. The
-// bar is decorative; the label carries the value, so colour is never the only signal.
+// ConfidenceMeter (03 sec. 4): a text label ("0.72, Likely"), a 4 px bar on a hairline-coloured track (max 240
+// wide; grey fill per finding, accent for the recommendation's overall confidence) and the reason. The bar is
+// decorative; the label carries the value.
 
 export function confidenceLabel(value: number): string {
   if (value >= 0.9) return 'Explicit';
@@ -13,22 +13,21 @@ export function confidenceLabel(value: number): string {
   return 'Speculative';
 }
 
-function barColour(theme: Theme, value: number): string {
-  const p = m3(theme);
-  if (value >= 0.9) return p.success;
-  if (value >= 0.7) return p.primary;
-  if (value >= 0.4) return p.warning;
-  return p.error;
-}
-
 export interface ConfidenceMeterProps {
   value: number | null;
   reason?: string | null;
   /** Shown instead of a value when there is none (AI unavailable). */
   emptyLabel?: string;
+  /** main = the recommendation's overall confidence, filled with the accent; detail = per finding, in grey. */
+  emphasis?: 'main' | 'detail';
 }
 
-export function ConfidenceMeter({ value, reason, emptyLabel = 'No AI confidence' }: ConfidenceMeterProps) {
+export function ConfidenceMeter({
+  value,
+  reason,
+  emptyLabel = 'No AI confidence',
+  emphasis = 'detail',
+}: ConfidenceMeterProps) {
   const clamped = value === null ? null : Math.min(1, Math.max(0, value));
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
@@ -42,8 +41,9 @@ export function ConfidenceMeter({ value, reason, emptyLabel = 'No AI confidence'
         aria-hidden
         sx={(t) => ({
           height: 4,
-          borderRadius: 9999,
-          backgroundColor: m3(t).surfaceContainerHighest,
+          maxWidth: 240,
+          borderRadius: '2px',
+          backgroundColor: m3(t).border,
           overflow: 'hidden',
         })}
       >
@@ -52,7 +52,7 @@ export function ConfidenceMeter({ value, reason, emptyLabel = 'No AI confidence'
             sx={(t) => ({
               height: '100%',
               width: `${Math.round(clamped * 100)}%`,
-              backgroundColor: barColour(t, clamped),
+              backgroundColor: emphasis === 'main' ? m3(t).primary : m3(t).onSurfaceVariant,
             })}
           />
         )}

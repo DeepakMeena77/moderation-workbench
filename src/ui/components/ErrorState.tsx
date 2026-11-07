@@ -2,6 +2,7 @@ import ErrorOutlineRounded from '@mui/icons-material/ErrorOutlineRounded';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { ApiError } from '../api/client';
+import { monoSx } from '../theme/theme';
 import { Button } from './Button';
 
 export interface ErrorStateProps {
@@ -19,19 +20,19 @@ export function ErrorState({ error, onRetry, retrying = false }: ErrorStateProps
 
   return (
     <Box role="alert" data-ui="stack" sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, py: 1 }}>
-      <ErrorOutlineRounded aria-hidden sx={{ fontSize: 20, color: 'error.main' }} />
+      <ErrorOutlineRounded aria-hidden sx={{ fontSize: 18, color: 'error.main' }} />
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, minWidth: 0 }}>
-        <Typography variant="h3" component="p" sx={{ overflowWrap: 'anywhere' }}>
+        <Typography variant="h4" component="p" sx={{ overflowWrap: 'anywhere' }}>
           {message}
         </Typography>
         {apiError?.requestId ? (
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={monoSx}>
             Request ID: {apiError.requestId}
           </Typography>
         ) : null}
         {onRetry ? (
           <Box sx={{ mt: 1 }}>
-            <Button variant="tonal" onClick={onRetry} loading={retrying}>
+            <Button variant="secondary" onClick={onRetry} loading={retrying}>
               {actionLabel}
             </Button>
           </Box>

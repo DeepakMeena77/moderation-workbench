@@ -3,8 +3,8 @@ import { layout, m3 } from '../theme/theme';
 
 export type CardProps = Omit<MuiCardProps, 'variant' | 'elevation' | 'raised'>;
 
-// A tonal card: white (light) or surfaceContainer (dark) on the canvas, radius 8, padding 12 / 16, no border and
-// no shadow (03 sec. 4).
+// A card or panel (03 sec. 4): the surface colour with a 1 px hairline, radius 8, padding 12 on phones and 16 from
+// 840 px, no shadow.
 export function Card({ sx, children, ...rest }: CardProps) {
   return (
     <MuiCard
@@ -13,7 +13,7 @@ export function Card({ sx, children, ...rest }: CardProps) {
       sx={[
         (theme) => ({
           borderRadius: `${layout.cardRadius}px`,
-          border: 0,
+          border: `1px solid ${m3(theme).border}`,
           boxShadow: 'none',
           backgroundColor: m3(theme).card,
           p: layout.cardPadding,

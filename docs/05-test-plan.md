@@ -20,7 +20,7 @@ evidence for each criterion, and the README evidence table is built from its out
 | 6 | Integration | Services and routes against real Postgres: transactions, triggers, authorisation, jobs, re-evaluation, audit chain | Vitest + Postgres | `npm test` | verify, CI | yes |
 | 7 | Component | Forms, highlighted text, query states, navigation by role | Vitest + Testing Library + jsdom | `npm test` | verify, CI | yes |
 | 8 | End to end | The full multi-role journey in a real browser | Playwright | `npm run test:e2e` | Before each deploy, CI | yes |
-| 9 | UI quality | Accessibility, contrast as rendered, layout and reflow, navigation variants, target sizes, style audit (no elevation, radii, type scale, spacing), focus, dark mode, reduced motion, text spacing, long content, screenshots | Playwright + `@axe-core/playwright` | `npm run test:ui` | End of each UI slice, CI | yes |
+| 9 | UI quality | Accessibility, contrast as rendered, layout and reflow, navigation variants, target sizes, style audit (no shadows or gradients, hairline borders, radii, heights, type scale, spacing), focus, dark mode, reduced motion, text spacing, long content, screenshots | Playwright + `@axe-core/playwright` | `npm run test:ui` | End of each UI slice, CI | yes |
 | 10 | Traceability | Every acceptance criterion has at least one test | `scripts/check-trace.mjs` | `npm run check:trace` | End of each slice, S9 | S9 only |
 | 11 | AI eval | Quality of AI classification on labelled cases | `evals/run.ts` | `npm run eval` (live) / `npm run eval -- --mock` (CI) | S8, and after any prompt change | Mock run only |
 | 12 | Secrets scan (history) | No keys or connection strings anywhere in the history | `scripts/check-secrets.mjs --history` | `npm run check:secrets` | Pre-push, S9, before submit | yes |
@@ -58,8 +58,8 @@ These rules apply to `src/**/*.ts(x)` and CSS:
 | `elevation` | `boxShadow` or `box-shadow` other than `none` or `0`; `elevation` > 0 | none |
 | `raw-html` | `dangerouslySetInnerHTML` | none |
 | `raw-spacing` | A px string in margin, padding or gap props | `src/ui/theme/*` |
-| `outlined-button` | `variant="outlined"` on `Button` | none |
-| `surface-border` | `border...: Npx solid` | Theme files and `src/ui/components/DataTable*` |
+| `gradient` | `linear-`, `radial-` or `conic-gradient(` | none |
+| `heavy-border` | A border (or border width) of 2 px or more | `src/ui/theme/*` |
 
 A justified exception needs a `ui-rules-ignore: <reason>` comment on the same line. Each one is reviewed.
 
@@ -221,20 +221,21 @@ Fails if anyone edits a token into an inaccessible colour, or if a component put
 | Content width | Reading pages (feed, my content, history) are <= 680 px wide at 1920 px | Computed width |
 | Long content | Seed a 2,000-character post, an unbroken 300-character URL, 8 findings and 12 chips; re-run the overflow check | No overflow, no clipped text |
 
-### 6.4 Style audit (enforces "no elevation, tonal cards, pill buttons")
+### 6.4 Style audit (enforces "flat, hairline borders, the shape scale")
 
 A Playwright helper walks the visible elements and reads `getComputedStyle`:
 
 | Check | Pass |
 | --- | --- |
 | Elevation | `box-shadow` is `none` on every element. The focus ring uses `outline`, so it is not a shadow. |
-| Card borders | Elements with `data-ui="card"` have `border-width: 0` and a background equal to the `card` token |
-| Button shape | `data-ui="button"`: `border-radius >= height / 2` (pill), height 40 |
-| Chip shape | `data-ui="chip"`: radius 8, height 32 |
-| Tag shape | `data-ui="tag"`: radius 6, height 24 |
-| Search bar | `data-ui="search"`: height 56, full radius |
-| Dialogs | Radius 28 |
-| Typography | The first `font-family` name contains "Roboto" (`next/font` names the face `__Roboto_<hash>`). `font-size/line-height` pairs are in the M3 scale: 11/16, 12/16, 14/20, 16/24, 22/28, 24/32, 28/36, 32/40, 36/44. |
+| Gradients | No element has a `background-image` with a gradient. |
+| Borders | No `data-ui` element has a border wider than 1 px. Elements with `data-ui="card"` have a 1 px border in the `border` token and a background equal to the `card` token. |
+| Button shape | `data-ui="button"`: radius 6, height 32 or 36 |
+| Chip shape | `data-ui="chip"`: radius 6, height 28 |
+| Tag shape | `data-ui="tag"`: radius 4, height 20 |
+| Search bar | `data-ui="search"`: radius 6, height 36 |
+| Surfaces | `data-ui` cards, sections and stacks are transparent or use a surface token or a soft semantic container |
+| Typography | The first `font-family` name contains "Roboto" (`next/font` names the face `__Roboto_<hash>`), or is the system monospace (`ui-monospace`) for codes and IDs. `font-size/line-height` pairs are in the scale of 03 sec. 2.3: 12/16, 14/20, 15/22, 20/28, 28/36. |
 | Spacing | For elements marked `data-ui` (our layout primitives: page, section, card, stack): padding, margin and gap are multiples of 4 px. MUI internals are skipped, because some use 25 px or 1 px values by design. |
 | Colours | Backgrounds of `data-ui` surfaces are one of the defined surface tokens for the active theme |
 
@@ -245,7 +246,7 @@ the audit checks our design system and not library internals.
 
 | Check | How | Pass |
 | --- | --- | --- |
-| Target size | Bounding box of every button, link, chip and navigation item | >= 24 x 24 everywhere (WCAG 2.5.8). Buttons, icon buttons and navigation items >= 40 high, with a hit area of 48 where M3 specifies it. |
+| Target size | Bounding box of every button, link, chip and navigation item | >= 24 x 24 everywhere (WCAG 2.5.8). Bottom-bar items >= 48 high; sidebar rows >= 32. Buttons, icon buttons and filter chips extend their hit area to 44 px on phones (03 sec. 2.4). |
 | Keyboard path | Tab through sign-in -> queue -> case -> Modify -> submit, using the keyboard only | Each step reachable; the order follows the visual order |
 | Focus visible | On each focused element: `outline-width >= 2px`, and the outline colour contrast >= 3:1 against the background | Every focusable element |
 | Dialog focus | Open a dialog, Tab cycles inside it, Esc closes it, focus returns to the trigger | Exact |

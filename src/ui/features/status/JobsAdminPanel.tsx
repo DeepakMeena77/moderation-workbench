@@ -13,7 +13,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { QueryState } from '../../components/QueryState';
 import { useSnackbar } from '../../components/SnackbarProvider';
-import { m3 } from '../../theme/theme';
+import { layout, m3 } from '../../theme/theme';
 import { shortDateTime } from '../feed/format';
 
 // Admin controls on /status (03 sec. 6.12, OPS-4): Process pending jobs, and Retry for each failed job. Shapes
@@ -85,7 +85,8 @@ function FailedJobRow({ job }: { job: FailedJob }) {
         flexDirection: 'column',
         gap: 2,
         p: 4,
-        borderRadius: '12px',
+        borderRadius: `${layout.controlRadius}px`,
+        border: `1px solid ${m3(t).border}`,
         backgroundColor: m3(t).cardNested,
         minWidth: 0,
       })}
@@ -103,7 +104,12 @@ function FailedJobRow({ job }: { job: FailedJob }) {
             </time>
           </Typography>
         </Box>
-        <Button variant="tonal" startIcon={<ReplayRounded />} loading={retry.isPending} onClick={() => retry.mutate()}>
+        <Button
+          variant="secondary"
+          startIcon={<ReplayRounded />}
+          loading={retry.isPending}
+          onClick={() => retry.mutate()}
+        >
           Retry
         </Button>
       </Box>

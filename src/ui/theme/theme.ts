@@ -1,12 +1,13 @@
 import { createTheme, type PaletteOptions, type Theme } from '@mui/material/styles';
 import type { CSSProperties } from 'react';
-import { layout } from './layout';
+import { layout, MONO_FAMILY } from './layout';
 import { tokens, type M3Palette } from './tokens';
 
-export { layout, pageSx, titleGap } from './layout';
+export { layout, MONO_FAMILY, pageSx, titleGap } from './layout';
 
-// Material 3 theme with no elevation (docs/03-ui-ux.md sec. 2 and sec. 9). Components read colours through
-// the generated CSS variables (theme.vars.palette.m3.*), so light and dark switch without a re-render.
+// The MUI theme for the design in docs/03-ui-ux.md: neutral surfaces with 1 px hairlines, one blue accent, no
+// elevation, no gradients. Components read colours through the generated CSS variables (theme.vars.palette.m3.*),
+// so light and dark switch without a re-render.
 
 declare module '@mui/material/styles' {
   interface Palette {
@@ -36,20 +37,25 @@ function paletteFrom(t: M3Palette): PaletteOptions {
     error: { main: t.error, contrastText: t.onError },
     warning: { main: t.warning, contrastText: t.onWarning },
     success: { main: t.success, contrastText: t.onSuccess },
-    info: { main: t.secondary, contrastText: t.onSecondary },
+    info: { main: t.primary, contrastText: t.onPrimary },
     background: { default: t.canvas, paper: t.card },
     text: { primary: t.onSurface, secondary: t.onSurfaceVariant },
-    divider: t.outlineVariant,
+    divider: t.border,
     m3: t,
   };
 }
 
-/** The M3 palette as CSS variables when available (always, with cssVariables on). */
+/** The palette as CSS variables when available (always, with cssVariables on). */
 export function m3(theme: Theme): M3Palette {
   return (theme.vars ?? theme).palette.m3;
 }
 
-// M3 type scale (sec. 2.4). Sizes and line heights are in rem so browser zoom and font settings apply.
+/** A flat hover or pressed layer: the content colour mixed into the background, never a gradient. */
+export function layer(content: string, background: string, percent = 6): string {
+  return `color-mix(in srgb, ${content} ${percent}%, ${background})`;
+}
+
+// Type scale (sec. 2.3). Sizes and line heights are in rem so browser zoom and font settings apply.
 // The return type is inferred: MUI's typography options take its own CSSProperties, not React's.
 const type = (size: number, lineHeight: number, weight: 400 | 500) => ({
   fontSize: `${size / 16}rem`,
@@ -58,20 +64,39 @@ const type = (size: number, lineHeight: number, weight: 400 | 500) => ({
   letterSpacing: 0,
 });
 
-const headlineMedium = type(28, 36, 400);
-const titleLarge = type(22, 28, 400);
-const titleMedium = type(16, 24, 500);
-const titleSmall = type(14, 20, 500);
-const bodyLarge = type(16, 24, 400);
-const bodyMedium = type(14, 20, 400);
-const bodySmall = type(12, 16, 400);
-const labelLarge = type(14, 20, 500);
-const labelMedium = type(12, 16, 500);
+const pageTitle = type(20, 28, 500);
+const sectionTitle = type(15, 22, 500);
+const strong = type(14, 20, 500);
+const body = type(14, 20, 400);
+const meta = type(12, 16, 400);
+const label = type(12, 16, 500);
+const statValue = type(28, 36, 500);
 
-export const FOCUS_RING_WIDTH = 3;
+export const FOCUS_RING_WIDTH = 2;
 export const FOCUS_RING_OFFSET = 2;
 
+/** Mono text for IDs, clause codes and request IDs (sec. 2.3): small, neutral, from the system stack. */
+export const monoSx = { fontFamily: MONO_FAMILY, fontSize: '0.75rem', lineHeight: '1rem', fontWeight: 400 } as const;
+
 const COMPACT = '@media (max-width: 599.95px)';
+
+/**
+ * On phones, controls smaller than 44 px get an invisible extension of their hit area (sec. 5), so the visual size
+ * stays compact while the touch target meets the minimum.
+ */
+const touchTarget = {
+  [COMPACT]: {
+    '&::after': {
+      content: '""',
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: '50%',
+      height: layout.touchTarget,
+      transform: 'translateY(-50%)',
+    },
+  },
+} as const;
 
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
@@ -80,30 +105,29 @@ export const theme = createTheme({
     dark: { palette: paletteFrom(tokens.dark) },
   },
   breakpoints: { values: { xs: 0, sm: 600, md: 840, lg: 1200, xl: 1600 } },
-  shape: { borderRadius: layout.cardRadius },
-  spacing: 4, // 1 unit = 4 px (M3 4 dp grid); scripts/check-ui-rules.mjs relies on it
+  shape: { borderRadius: layout.controlRadius },
+  spacing: 4, // 1 unit = 4 px; scripts/check-ui-rules.mjs relies on it
   typography: {
     fontFamily: 'var(--font-roboto), Roboto, "Helvetica Neue", Arial, sans-serif',
-    // The page heading is titleLarge, and titleMedium on phones, where the app bar already names the product.
-    h1: { ...titleLarge, [COMPACT]: titleMedium },
-    h2: titleMedium,
-    h3: titleSmall,
-    h4: titleSmall,
-    h5: titleSmall,
-    h6: titleSmall,
-    subtitle1: titleMedium,
-    subtitle2: titleSmall,
-    body1: bodyLarge,
-    body2: bodyMedium,
-    caption: bodySmall,
-    button: { ...labelLarge, textTransform: 'none' },
-    overline: { ...labelMedium, textTransform: 'none' },
-    display: headlineMedium,
+    h1: pageTitle,
+    h2: sectionTitle,
+    h3: sectionTitle,
+    h4: strong,
+    h5: strong,
+    h6: strong,
+    subtitle1: strong,
+    subtitle2: strong,
+    body1: body,
+    body2: body,
+    caption: meta,
+    button: { ...strong, textTransform: 'none' },
+    overline: { ...label, textTransform: 'none' },
+    display: { ...statValue, fontVariantNumeric: 'tabular-nums' },
   },
   components: {
     MuiCssBaseline: {
       styleOverrides: (theme) => ({
-        body: { backgroundColor: m3(theme).canvas },
+        body: { backgroundColor: m3(theme).canvas, color: m3(theme).onSurface },
         '*:focus-visible': {
           outline: `${FOCUS_RING_WIDTH}px solid ${m3(theme).secondary}`,
           outlineOffset: FOCUS_RING_OFFSET,
@@ -114,6 +138,7 @@ export const theme = createTheme({
       }),
     },
     MuiButtonBase: {
+      defaultProps: { disableRipple: true },
       styleOverrides: {
         root: ({ theme }) => ({
           '&.Mui-focusVisible': {
@@ -126,81 +151,145 @@ export const theme = createTheme({
     MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { backgroundImage: 'none' } } },
     MuiCard: {
       defaultProps: { elevation: 0 },
-      styleOverrides: { root: ({ theme }) => ({ borderRadius: layout.cardRadius, background: m3(theme).card }) },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: layout.cardRadius,
+          background: m3(theme).card,
+          border: `1px solid ${m3(theme).border}`,
+        }),
+      },
     },
+    // Buttons (sec. 4): 32 high (36 for the main action, size="large"), radius 6, 16 px icons. Variant colours are
+    // set by src/ui/components/Button.tsx.
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
         root: {
-          borderRadius: 9999,
-          height: 40,
-          // The fixed height centres the label, so MUI's default 6px vertical padding (off the 4 dp grid) goes.
+          borderRadius: layout.controlRadius,
+          height: layout.buttonHeight,
+          minWidth: 0,
           paddingBlock: 0,
-          paddingInline: 24,
-          '&:has(.MuiButton-startIcon)': { paddingInlineStart: 16 },
+          paddingInline: 12,
           boxShadow: 'none',
+          whiteSpace: 'nowrap',
+          '&:has(.MuiButton-startIcon)': { paddingInlineStart: 8 },
+          '& .MuiButton-startIcon': { marginLeft: 0, marginRight: 6 },
+          '& .MuiButton-endIcon': { marginLeft: 4, marginRight: -2 },
+          '& .MuiButton-startIcon > *:nth-of-type(1), & .MuiButton-endIcon > *:nth-of-type(1)': { fontSize: 16 },
+          ...touchTarget,
         },
-        // M3 text buttons use 12 px side padding, so a text action lines up with the text around it.
-        text: { paddingInline: 12, '&:has(.MuiButton-startIcon)': { paddingInlineStart: 12, paddingInlineEnd: 16 } },
+        // MUI's large size sets 15 px text; the main action keeps the 14/20 button style.
+        sizeLarge: { ...strong, height: layout.buttonHeightLarge, paddingInline: 16 },
       },
     },
-    MuiFab: { styleOverrides: { root: { borderRadius: 16, boxShadow: 'none' } } },
-    MuiChip: { styleOverrides: { root: { borderRadius: 8, height: 32 } } },
+    MuiIconButton: {
+      styleOverrides: { root: { borderRadius: layout.controlRadius, ...touchTarget } },
+    },
+    MuiChip: { styleOverrides: { root: { borderRadius: layout.controlRadius, height: layout.chipHeight } } },
     MuiAppBar: { defaultProps: { elevation: 0, color: 'inherit' } },
     // Dialog and Drawer pass their own elevation (24 and 16) to the paper, which wins over MuiPaper's default,
-    // so both are set to 0 here: sheets and dialogs are separated by tone and the scrim, never by a shadow.
+    // so both are set to 0 here: sheets and dialogs are separated by a hairline and the scrim, never by a shadow.
     MuiDrawer: { defaultProps: { elevation: 0 }, styleOverrides: { paper: { border: 0 } } },
     MuiDialog: {
       defaultProps: { slotProps: { paper: { elevation: 0 } } },
-      styleOverrides: { paper: { borderRadius: 16, boxShadow: 'none' } },
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          borderRadius: layout.cardRadius,
+          boxShadow: 'none',
+          backgroundColor: m3(theme).card,
+          border: `1px solid ${m3(theme).border}`,
+        }),
+      },
     },
-    // Outlined fields, 40 high for a single line (size small). The outline carries meaning (WCAG 1.4.11), so it
-    // is the one edge the design keeps outside data tables.
+    MuiMenu: {
+      defaultProps: { elevation: 0 },
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          borderRadius: layout.cardRadius,
+          backgroundColor: m3(theme).card,
+          border: `1px solid ${m3(theme).border}`,
+        }),
+        list: { paddingBlock: 4 },
+      },
+    },
+    MuiMenuItem: { styleOverrides: { root: { ...body, minHeight: 32 } } },
+    MuiPopover: { defaultProps: { elevation: 0 } },
+    // Fields (sec. 4): the label sits above the field, never inside the border; inputs are 36 high with a 6 px radius
+    // and a 1 px border that darkens on hover and turns accent on focus.
     MuiTextField: { defaultProps: { variant: 'outlined', size: 'small' } },
-    // MUI sets input and label line heights to 1.4375em (23 px); 24 px keeps a single-line field at 40.
-    MuiInputBase: { styleOverrides: { root: { lineHeight: '1.5rem' } } },
+    MuiInputLabel: {
+      defaultProps: { shrink: true },
+      styleOverrides: {
+        root: ({ theme }) => ({
+          ...label,
+          position: 'relative',
+          transform: 'none',
+          maxWidth: '100%',
+          marginBottom: 4,
+          color: m3(theme).onSurfaceVariant,
+          '&.Mui-focused': { color: m3(theme).onSurfaceVariant },
+          '&.Mui-error': { color: m3(theme).error },
+          '&.Mui-disabled': { color: m3(theme).textTertiary },
+        }),
+      },
+    },
+    MuiInputBase: { styleOverrides: { root: { ...body } } },
     MuiOutlinedInput: {
+      defaultProps: { notched: false },
       styleOverrides: {
         root: ({ theme }) => ({
           borderRadius: layout.fieldRadius,
-          // The notch's hidden copy of the label (legend > span) is 12 px; give it the bodySmall line height too.
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: m3(theme).outline, '& legend': { lineHeight: '1rem' } },
-          '&:hover:not(.Mui-disabled, .Mui-error, .Mui-focused) .MuiOutlinedInput-notchedOutline': {
-            borderColor: m3(theme).onSurface,
+          backgroundColor: m3(theme).field,
+          '& .MuiOutlinedInput-notchedOutline': {
+            top: 0,
+            borderColor: m3(theme).fieldBorder,
+            '& legend': { display: 'none' },
           },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: m3(theme).primary, borderWidth: 2 },
+          '&:hover:not(.Mui-disabled, .Mui-error, .Mui-focused) .MuiOutlinedInput-notchedOutline': {
+            borderColor: m3(theme).fieldBorderHover,
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: m3(theme).primary, borderWidth: 1 },
+          '&.Mui-focused': {
+            outline: `2px solid color-mix(in srgb, ${m3(theme).primary} 30%, transparent)`,
+            outlineOffset: 0,
+          },
           '&.Mui-error .MuiOutlinedInput-notchedOutline': { borderColor: m3(theme).error },
-          '&.MuiInputBase-multiline': { padding: '8px 14px' },
+          '&.MuiInputBase-multiline': { padding: '8px 12px' },
+          // The field itself shows focus; the inner input does not draw a second ring.
+          '& .MuiInputBase-input:focus-visible': { outline: 'none' },
         }),
-        input: { padding: '8px 14px', '&.MuiInputBase-inputMultiline': { padding: 0 } },
+        input: {
+          padding: '8px 12px',
+          height: '1.25rem',
+          '&.MuiInputBase-inputMultiline': { padding: 0, height: 'auto' },
+        },
       },
     },
-    MuiInputLabel: {
+    MuiSelect: { styleOverrides: { select: { minHeight: 0 } } },
+    MuiFormHelperText: {
       styleOverrides: {
         root: ({ theme }) => ({
-          lineHeight: '1.5rem',
+          ...meta,
+          marginInline: 0,
+          marginTop: 4,
           color: m3(theme).onSurfaceVariant,
-          '&.MuiInputLabel-sizeSmall:not(.MuiInputLabel-shrink)': { transform: 'translate(14px, 8px) scale(1)' },
-          '&.Mui-focused': { color: m3(theme).primary },
           '&.Mui-error': { color: m3(theme).error },
         }),
       },
     },
-    // Helper and error text start at the field's edge, in bodySmall.
-    MuiFormHelperText: {
-      styleOverrides: { root: ({ theme }) => ({ ...theme.typography.caption, marginInline: 0, marginTop: 4 }) },
-    },
-    // 03 sec. 2.2: the scrim behind dialogs, sheets and the modal drawer is black at 32%.
     MuiBackdrop: {
-      styleOverrides: { root: { '&:not(.MuiBackdrop-invisible)': { backgroundColor: 'rgba(0, 0, 0, 0.32)' } } },
+      styleOverrides: { root: { '&:not(.MuiBackdrop-invisible)': { backgroundColor: 'rgba(0, 0, 0, 0.4)' } } },
     },
-    // MUI's tooltip text is 11/14 px, off the M3 type scale; plain tooltips use bodySmall (12/16).
-    MuiTooltip: { styleOverrides: { tooltip: { ...bodySmall } } },
-    MuiMenu: { defaultProps: { elevation: 0 } },
-    MuiPopover: { defaultProps: { elevation: 0 } },
+    // MUI's tooltip text is 11/14 px, off the type scale; tooltips use the 12/16 meta style.
+    MuiTooltip: { styleOverrides: { tooltip: { ...meta } } },
+    MuiLinearProgress: {
+      styleOverrides: {
+        root: ({ theme }) => ({ height: 4, borderRadius: 2, backgroundColor: m3(theme).surfaceContainerHigh }),
+      },
+    },
     MuiSkeleton: {
       styleOverrides: {
-        root: ({ theme }) => ({ backgroundColor: m3(theme).surfaceContainerHigh }),
+        root: ({ theme }) => ({ backgroundColor: m3(theme).surfaceContainer }),
       },
     },
   },

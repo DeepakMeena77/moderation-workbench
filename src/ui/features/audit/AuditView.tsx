@@ -91,7 +91,7 @@ function IntegrityBanner({ onShowEvent }: { onShowEvent: (id: string) => void })
             title="Audit chain broken"
             action={
               result.firstBrokenId ? (
-                <Button variant="tonal" onClick={() => onShowEvent(result.firstBrokenId ?? '')}>
+                <Button variant="secondary" onClick={() => onShowEvent(result.firstBrokenId ?? '')}>
                   Show event
                 </Button>
               ) : null
@@ -142,7 +142,8 @@ function EventDetails({ row }: { row: AuditRow }) {
         flexDirection: 'column',
         gap: 3,
         p: 3,
-        borderRadius: `${layout.nestedRadius}px`,
+        borderRadius: `${layout.controlRadius}px`,
+        border: `1px solid ${m3(t).border}`,
         backgroundColor: m3(t).cardNested,
         minWidth: 0,
       })}
@@ -335,7 +336,7 @@ export function AuditView() {
         <Filters filters={filters} onChange={setFilters} />
         {hasAuditFilters(filters) ? (
           <Box>
-            <Button variant="text" startIcon={<FilterAltOffRounded />} onClick={clear} sx={{ ml: -3 }}>
+            <Button variant="ghost" startIcon={<FilterAltOffRounded />} onClick={clear} sx={{ ml: -3 }}>
               Clear filters
             </Button>
           </Box>
@@ -358,7 +359,7 @@ export function AuditView() {
                   icon={<FilterAltOffRounded />}
                   title={filters.q ? `No events match '${filters.q}'.` : 'No events match these filters.'}
                   action={
-                    <Button variant="tonal" onClick={clear}>
+                    <Button variant="secondary" onClick={clear}>
                       Clear filters
                     </Button>
                   }
@@ -406,7 +407,7 @@ export function AuditView() {
                 </Typography>
                 {events.hasNextPage ? (
                   <Button
-                    variant="tonal"
+                    variant="secondary"
                     loading={events.isFetchingNextPage}
                     onClick={() => void events.fetchNextPage()}
                   >

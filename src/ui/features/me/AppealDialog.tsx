@@ -7,7 +7,7 @@ import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme, type Theme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { ApiError } from '../../api/client';
 import { useCreateAppeal, type MyContentItem } from '../../api/hooks';
@@ -56,7 +56,7 @@ export function AppealDialog({ target, onClose }: { target: AppealTarget | null;
       slotProps={{
         paper: {
           elevation: 0,
-          sx: (t: Theme) => ({ backgroundColor: m3(t).surfaceContainerHigh, p: { xs: 4, sm: 6 } }),
+          sx: { p: { xs: 4, sm: 6 } },
         },
       }}
     >
@@ -243,7 +243,7 @@ export function AppealForm({ target, titleId, onDone }: { target: AppealTarget; 
               slotProps={{ htmlInput: { inputMode: 'url' } }}
               sx={{ flex: '1 1 220px' }}
             />
-            <Button variant="tonal" onClick={addLink} disabled={!draft.linkInput.trim()} sx={{ mt: 2 }}>
+            <Button variant="secondary" onClick={addLink} disabled={!draft.linkInput.trim()} sx={{ mt: 2 }}>
               Add link
             </Button>
           </Box>
@@ -276,7 +276,7 @@ export function AppealForm({ target, titleId, onDone }: { target: AppealTarget; 
       ) : null}
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 2 }}>
-        <Button variant="text" onClick={onDone} disabled={create.isPending}>
+        <Button variant="ghost" onClick={onDone} disabled={create.isPending}>
           Cancel
         </Button>
         <Button type="submit" loading={create.isPending}>

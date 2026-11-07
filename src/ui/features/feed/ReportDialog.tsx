@@ -1,8 +1,6 @@
 'use client';
 
-import CheckRounded from '@mui/icons-material/CheckRounded';
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import Drawer from '@mui/material/Drawer';
 import TextField from '@mui/material/TextField';
@@ -14,6 +12,7 @@ import { ApiError } from '../../api/client';
 import { REPORT_REASONS, useReportContent, type ReportReason } from '../../api/hooks';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
+import { FilterChip } from '../../components/FilterChip';
 import { useSnackbar } from '../../components/SnackbarProvider';
 import { m3 } from '../../theme/theme';
 
@@ -47,9 +46,10 @@ export function ReportDialog({ target, onClose }: { target: ReportTarget | null;
             'aria-modal': true,
             'aria-labelledby': titleId,
             sx: (t: Theme) => ({
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              backgroundColor: m3(t).surfaceContainerLow,
+              borderTopLeftRadius: 8,
+              borderTopRightRadius: 8,
+              backgroundColor: m3(t).card,
+              borderTop: `1px solid ${m3(t).border}`,
               px: 4,
               pb: 6,
               maxHeight: '90dvh',
@@ -62,7 +62,7 @@ export function ReportDialog({ target, onClose }: { target: ReportTarget | null;
           sx={(t) => ({
             width: 32,
             height: 4,
-            borderRadius: 9999,
+            borderRadius: '2px',
             mx: 'auto',
             mt: 4,
             mb: 2,
@@ -83,7 +83,7 @@ export function ReportDialog({ target, onClose }: { target: ReportTarget | null;
       fullWidth
       maxWidth="sm"
       slotProps={{
-        paper: { elevation: 0, sx: (t: Theme) => ({ backgroundColor: m3(t).surfaceContainerHigh, p: 6 }) },
+        paper: { elevation: 0, sx: { p: 6 } },
       }}
     >
       {target ? <ReportForm key={target.id} target={target} titleId={titleId} onDone={onClose} /> : null}
@@ -180,31 +180,21 @@ function ReportForm({ target, titleId, onDone }: { target: ReportTarget; titleId
           {REPORT_REASONS.map((option, index) => {
             const selected = reason === option.value;
             return (
-              <Chip
+              <FilterChip
                 key={option.value}
                 ref={(node: HTMLDivElement | null) => {
                   chipRefs.current[index] = node;
                 }}
-                data-ui="chip"
+                selected={selected}
                 role="radio"
                 aria-checked={selected}
                 tabIndex={selected || (reason === null && index === 0) ? 0 : -1}
                 label={option.label}
-                icon={selected ? <CheckRounded /> : undefined}
                 onClick={() => {
                   setReason(option.value);
                   setReasonError(null);
                 }}
                 onKeyDown={(event) => onChipKeyDown(event, index)}
-                sx={(t) => ({
-                  ...t.typography.button,
-                  backgroundColor: selected ? m3(t).secondaryContainer : m3(t).field,
-                  color: selected ? m3(t).onSecondaryContainer : m3(t).onSurfaceVariant,
-                  '& .MuiChip-icon': { color: 'inherit', fontSize: 20 },
-                  '&:hover': {
-                    backgroundColor: `color-mix(in srgb, ${m3(t).onSurface} 8%, ${selected ? m3(t).secondaryContainer : m3(t).field})`,
-                  },
-                })}
               />
             );
           })}
@@ -245,7 +235,7 @@ function ReportForm({ target, titleId, onDone }: { target: ReportTarget; titleId
       ) : null}
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-        <Button variant="text" onClick={onDone}>
+        <Button variant="ghost" onClick={onDone}>
           Cancel
         </Button>
         <Button type="submit" loading={report.isPending}>

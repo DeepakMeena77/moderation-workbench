@@ -90,7 +90,11 @@ export function FeedView({ canPost }: { canPost: boolean }) {
               </RowList>
               {feed.hasNextPage ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <Button variant="tonal" loading={feed.isFetchingNextPage} onClick={() => void feed.fetchNextPage()}>
+                  <Button
+                    variant="secondary"
+                    loading={feed.isFetchingNextPage}
+                    onClick={() => void feed.fetchNextPage()}
+                  >
                     Load more
                   </Button>
                 </Box>

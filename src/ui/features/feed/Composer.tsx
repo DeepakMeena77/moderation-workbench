@@ -109,7 +109,8 @@ export function Composer({ label, submitLabel, onSubmit, minRows = 3 }: Composer
             alignItems: 'flex-start',
             gap: 3,
             p: 3,
-            borderRadius: `${layout.nestedRadius}px`,
+            borderRadius: `${layout.controlRadius}px`,
+            border: `1px solid ${m3(theme).errorBorder}`,
             backgroundColor: m3(theme).errorContainer,
             color: m3(theme).onErrorContainer,
           })}

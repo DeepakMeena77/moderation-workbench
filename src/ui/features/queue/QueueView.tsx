@@ -14,7 +14,8 @@ import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { FilterChip } from '../../components/FilterChip';
 import { IconButton } from '../../components/IconButton';
-import { ListRow, type RowAccent } from '../../components/ListRow';
+import { ListRow } from '../../components/ListRow';
+import type { DotTone } from '../../components/Tag';
 import { QueryState } from '../../components/QueryState';
 import { RowList } from '../../components/RowList';
 import { SearchBar } from '../../components/SearchBar';
@@ -28,12 +29,9 @@ import { hasNarrowingFilters, parseQueueFilters } from './queueFilters';
 // case are separate screens (/queue and /queue/[caseId]); from 840 px the case opens beside the list. Panes are
 // switched with CSS, so the server render and the first client render agree. Filters and search are in the URL.
 
-/** The row's start bar: the severity in colour; the supporting text says it in words (03 sec. 2.3). */
-function severityAccent(severity: Severity | null): RowAccent {
-  if (severity === 'high') return 'error';
-  if (severity === 'medium') return 'warning';
-  if (severity === 'low') return 'primary';
-  return 'neutral';
+/** The severity dot before the supporting text, which names the severity in words (03 sec. 2.2). */
+function severityDot(severity: Severity | null): DotTone | null {
+  return severity;
 }
 
 const SEVERITY_WORD: Record<Severity, string> = { high: 'High', medium: 'Medium', low: 'Low' };
@@ -58,7 +56,7 @@ function QueueRow({ row, selected, href }: { row: CaseRow; selected: boolean; hr
       selected={selected}
       headline={row.content.excerpt}
       supporting={rowSupportingText(row)}
-      accent={severityAccent(row.analysis?.severity ?? null)}
+      dot={severityDot(row.analysis?.severity ?? null)}
       trailing={
         <>
           <Tag
@@ -136,7 +134,7 @@ function QueueEmpty({ filters, onClear }: { filters: QueueFilters; onClear: () =
         icon={<FilterAltOffRounded />}
         title={filters.q ? `No cases match '${filters.q}'.` : 'No cases match these filters.'}
         action={
-          <Button variant="tonal" onClick={onClear}>
+          <Button variant="secondary" onClick={onClear}>
             Clear filters
           </Button>
         }
@@ -251,7 +249,7 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
                   </Typography>
                   {cases.hasNextPage ? (
                     <Button
-                      variant="tonal"
+                      variant="secondary"
                       loading={cases.isFetchingNextPage}
                       onClick={() => void cases.fetchNextPage()}
                     >

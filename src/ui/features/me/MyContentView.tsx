@@ -1,18 +1,11 @@
 'use client';
 
 import ArticleRounded from '@mui/icons-material/ArticleRounded';
-import ForumRounded from '@mui/icons-material/ForumRounded';
-import GavelRounded from '@mui/icons-material/GavelRounded';
 import HistoryRounded from '@mui/icons-material/HistoryRounded';
-import HourglassTopRounded from '@mui/icons-material/HourglassTopRounded';
-import PendingActionsRounded from '@mui/icons-material/PendingActionsRounded';
-import TaskAltRounded from '@mui/icons-material/TaskAltRounded';
-import VerifiedRounded from '@mui/icons-material/VerifiedRounded';
 import Box from '@mui/material/Box';
-import type { SvgIconProps } from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
 import NextLink from 'next/link';
-import { useState, type ReactElement } from 'react';
+import { useState } from 'react';
 import { useMyContent, type CaseStatus, type MyContentItem } from '../../api/hooks';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -25,16 +18,16 @@ import { relativeTime, shortDate } from '../feed/format';
 import { AppealDialog, type AppealTarget } from './AppealDialog';
 
 // My content (03 sec. 6.3, APP-1, APP-5): the author's own items with a status tag, the action, the decision in
-// plain words and a tonal Appeal button with its deadline. The appeal state and outcome are shown inline. Status
+// plain words and a secondary Appeal button with its deadline. The appeal state and outcome are shown inline. Status
 // words are the author's, not the moderators' queue words.
 
-const AUTHOR_STATUS: Record<CaseStatus, { label: string; tone: TagTone; icon: ReactElement<SvgIconProps> }> = {
-  pending_analysis: { label: 'Being checked', tone: 'neutral', icon: <HourglassTopRounded /> },
-  awaiting_review: { label: 'Waiting for review', tone: 'primary', icon: <PendingActionsRounded /> },
-  auto_cleared: { label: 'No issues found', tone: 'success', icon: <TaskAltRounded /> },
-  resolved: { label: 'Reviewed', tone: 'secondary', icon: <GavelRounded /> },
-  appealed: { label: 'Appeal pending', tone: 'tertiary', icon: <ForumRounded /> },
-  appeal_resolved: { label: 'Appeal resolved', tone: 'secondary', icon: <VerifiedRounded /> },
+const AUTHOR_STATUS: Record<CaseStatus, { label: string; tone: TagTone }> = {
+  pending_analysis: { label: 'Being checked', tone: 'neutral' },
+  awaiting_review: { label: 'Waiting for review', tone: 'info' },
+  auto_cleared: { label: 'No issues found', tone: 'success' },
+  resolved: { label: 'Reviewed', tone: 'neutral' },
+  appealed: { label: 'Appeal pending', tone: 'neutral' },
+  appeal_resolved: { label: 'Appeal resolved', tone: 'neutral' },
 };
 
 /** The action in force now: the appeal's final action once it is resolved, otherwise the decision's. */
@@ -58,7 +51,7 @@ function ContentRow({ item, onAppeal }: { item: MyContentItem; onAppeal: (target
         <Typography variant="caption" color="text.secondary">
           {noun}, <time dateTime={item.createdAt}>{relativeTime(item.createdAt)}</time>
         </Typography>
-        {status ? <Tag label={status.label} tone={status.tone} icon={status.icon} /> : null}
+        {status ? <Tag label={status.label} tone={status.tone} /> : null}
         {action && action !== 'none' ? <ActionTag action={action} /> : null}
       </Box>
       <Typography
@@ -84,7 +77,12 @@ function ContentRow({ item, onAppeal }: { item: MyContentItem; onAppeal: (target
           data-ui="section"
           role="group"
           aria-label="Your appeal"
-          sx={(t) => ({ p: 3, borderRadius: `${layout.nestedRadius}px`, backgroundColor: m3(t).cardNested })}
+          sx={(t) => ({
+            p: 3,
+            borderRadius: `${layout.controlRadius}px`,
+            border: `1px solid ${m3(t).border}`,
+            backgroundColor: m3(t).cardNested,
+          })}
         >
           <Typography variant="h4" component="p">
             {item.appeal.status === 'pending' ? 'Appeal pending' : 'Appeal outcome'}
@@ -101,12 +99,12 @@ function ContentRow({ item, onAppeal }: { item: MyContentItem; onAppeal: (target
       ) : null}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: -1 }}>
         {window?.canAppeal && item.decision ? (
-          <Button variant="tonal" onClick={() => onAppeal({ item, decisionId: item.decision?.id ?? '' })}>
+          <Button variant="secondary" onClick={() => onAppeal({ item, decisionId: item.decision?.id ?? '' })}>
             Appeal{window.until ? ` - until ${shortDate(window.until)}` : ''}
           </Button>
         ) : null}
         <Button
-          variant="text"
+          variant="ghost"
           href={`/content/${encodeURIComponent(item.id)}/history`}
           LinkComponent={NextLink}
           startIcon={<HistoryRounded />}
@@ -138,7 +136,7 @@ export function MyContentView() {
                 icon={<ArticleRounded />}
                 title="You haven't posted yet."
                 action={
-                  <Button variant="tonal" href="/feed" LinkComponent={NextLink}>
+                  <Button variant="secondary" href="/feed" LinkComponent={NextLink}>
                     Write a post
                   </Button>
                 }
@@ -159,7 +157,11 @@ export function MyContentView() {
               </Box>
               {query.hasNextPage ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <Button variant="tonal" loading={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
+                  <Button
+                    variant="secondary"
+                    loading={query.isFetchingNextPage}
+                    onClick={() => void query.fetchNextPage()}
+                  >
                     Load more
                   </Button>
                 </Box>

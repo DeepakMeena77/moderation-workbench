@@ -21,7 +21,7 @@ export default function NotFound() {
             <Typography variant="body2">
               This page doesn&apos;t exist or has moved. Check the address, or go back to the start page.
             </Typography>
-            <Button variant="tonal" href="/">
+            <Button variant="secondary" href="/">
               Go to the start page
             </Button>
           </Box>

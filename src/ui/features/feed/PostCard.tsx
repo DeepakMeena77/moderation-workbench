@@ -3,11 +3,10 @@
 import ChatBubbleOutlineRounded from '@mui/icons-material/ChatBubbleOutlineRounded';
 import DeleteRounded from '@mui/icons-material/DeleteRounded';
 import FlagRounded from '@mui/icons-material/FlagRounded';
-import HourglassTopRounded from '@mui/icons-material/HourglassTopRounded';
-import LabelRounded from '@mui/icons-material/LabelRounded';
 import VisibilityOffRounded from '@mui/icons-material/VisibilityOffRounded';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
+import type { Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { useId, useState } from 'react';
 import { useCreateComment, type FeedItem, type FeedPost } from '../../api/hooks';
@@ -41,11 +40,12 @@ function AuthorAvatar({ item }: { item: FeedItem }) {
     <Avatar
       aria-hidden
       sx={(theme) => ({
-        width: 32,
-        height: 32,
-        ...theme.typography.h4,
-        backgroundColor: m3(theme).primaryContainer,
-        color: m3(theme).onPrimaryContainer,
+        width: 28,
+        height: 28,
+        ...theme.typography.overline,
+        backgroundColor: m3(theme).surfaceContainer,
+        color: m3(theme).onSurfaceVariant,
+        border: `1px solid ${m3(theme).border}`,
       })}
     >
       {item.author.name.trim().charAt(0).toUpperCase() || '?'}
@@ -53,7 +53,7 @@ function AuthorAvatar({ item }: { item: FeedItem }) {
   );
 }
 
-/** Avatar, then the name and the relative time on one line (metadata in bodySmall). */
+/** Avatar, then the name and the relative time on one line (meta in 12/16, secondary colour). */
 function ItemHeader({ item }: { item: FeedItem }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, minWidth: 0 }}>
@@ -76,20 +76,13 @@ function ItemHeader({ item }: { item: FeedItem }) {
 function ItemTags({ item }: { item: FeedItem }) {
   const tags = [];
   if (item.analysing) {
-    tags.push(<Tag key="analysing" label="Analysing..." tone="neutral" icon={<HourglassTopRounded />} />);
+    tags.push(<Tag key="analysing" label="Analysing..." tone="neutral" />);
   }
   if (item.visibility === 'labeled') {
-    tags.push(
-      <Tag
-        key="labeled"
-        label={`Warning: ${clauseText(item.moderation.clauseCodes)}`}
-        tone="tertiary"
-        icon={<LabelRounded />}
-      />,
-    );
+    tags.push(<Tag key="labeled" label={`Warning: ${clauseText(item.moderation.clauseCodes)}`} tone="warning" />);
   }
   if (item.visibility === 'removed' && !item.isOwn) {
-    tags.push(<Tag key="removed" label="Removed - staff view" tone="error" icon={<DeleteRounded />} />);
+    tags.push(<Tag key="removed" label="Removed - staff view" tone="error" />);
   }
   if (tags.length === 0) return null;
   return <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{tags}</Box>;
@@ -112,7 +105,7 @@ function ItemBody({ item, size }: { item: FeedItem; size: 'post' | 'comment' }) 
           tone="neutral"
           icon={<VisibilityOffRounded />}
           action={
-            <Button variant="text" aria-controls={bodyId} aria-expanded={false} onClick={() => setRevealed(true)}>
+            <Button variant="ghost" aria-controls={bodyId} aria-expanded={false} onClick={() => setRevealed(true)}>
               Show anyway
             </Button>
           }
@@ -123,7 +116,7 @@ function ItemBody({ item, size }: { item: FeedItem; size: 'post' | 'comment' }) 
         <>
           {item.visibility === 'limited' ? (
             <Box>
-              <Tag label="Limited reach" tone="warning" icon={<VisibilityOffRounded />} />
+              <Tag label="Limited reach" tone="warning" />
             </Box>
           ) : null}
           <Typography
@@ -139,18 +132,22 @@ function ItemBody({ item, size }: { item: FeedItem; size: 'post' | 'comment' }) 
   );
 }
 
+/** Row actions are ghost buttons in the secondary text colour, so the post text leads. */
+const QUIET = (theme: Theme) => ({ color: m3(theme).onSurfaceVariant });
+
 function ReportButton({ item, onReport }: { item: FeedItem; onReport: (target: ReportTarget) => void }) {
   if (item.isOwn) return null;
   if (item.viewerReported) {
     return (
-      <Button variant="text" disabled startIcon={<FlagRounded />}>
+      <Button variant="ghost" sx={QUIET} disabled startIcon={<FlagRounded />}>
         Reported
       </Button>
     );
   }
   return (
     <Button
-      variant="text"
+      variant="ghost"
+      sx={QUIET}
       startIcon={<FlagRounded />}
       aria-haspopup="dialog"
       aria-label={`Report ${item.type} by ${item.author.name}`}
@@ -177,7 +174,7 @@ export function PostCard({ post, canComment, onReport }: PostCardProps) {
   const commentLabel = count > 0 ? `Comments (${count})` : 'Comment';
 
   return (
-    // A row inside the feed region (03 sec. 6.2): the region is the card, rows are split by a 1 px tonal step.
+    // A row inside the feed panel (03 sec. 6.2): the panel is the card, rows are split by a 1 px hairline.
     <Box
       component="article"
       aria-label={`Post by ${post.author.name}`}
@@ -200,7 +197,8 @@ export function PostCard({ post, canComment, onReport }: PostCardProps) {
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, ml: -3, mt: -1 }}>
         {count > 0 || canComment ? (
           <Button
-            variant="text"
+            variant="ghost"
+            sx={QUIET}
             startIcon={<ChatBubbleOutlineRounded />}
             aria-expanded={open}
             aria-controls={commentsId}
@@ -227,7 +225,8 @@ export function PostCard({ post, canComment, onReport }: PostCardProps) {
                 px: 3,
                 pt: 3,
                 pb: 1,
-                borderRadius: `${layout.nestedRadius}px`,
+                borderRadius: `${layout.controlRadius}px`,
+                border: `1px solid ${m3(theme).border}`,
                 backgroundColor: m3(theme).cardNested,
               })}
             >

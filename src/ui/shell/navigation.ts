@@ -137,6 +137,20 @@ export function isActive(href: string, pathname: string): boolean {
 }
 
 /**
+ * The current page as a short breadcrumb for the top bar (03 sec. 3.1): "Queue", "Queue / Case", "Appeals /
+ * Appeal", "Moderation history". Empty for paths that are not app pages (the 404 page).
+ */
+export function pageTrail(pathname: string): string[] {
+  if (/^\/content\/[^/]+\/history\/?$/.test(pathname)) return ['Moderation history'];
+  const destination = Object.values(DESTINATIONS).find((d) => isActive(d.href, pathname));
+  if (!destination) return [];
+  const deeper = pathname.length > destination.href.length + 1;
+  if (deeper && destination.key === 'queue') return [destination.label, 'Case'];
+  if (deeper && destination.key === 'appeals') return [destination.label, 'Appeal'];
+  return [destination.label];
+}
+
+/**
  * The `next` redirect after sign-in, only if it is a path on this site. Anything that could leave the site
  * ("//host", "/\\host", a full URL) or loop back to sign-in is dropped (open-redirect guard).
  */

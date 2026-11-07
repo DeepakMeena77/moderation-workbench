@@ -13,7 +13,7 @@ import { Banner, type BannerTone } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { QueryState } from '../../components/QueryState';
-import { Tag, type TagTone } from '../../components/Tag';
+import { DotLabel, type DotTone } from '../../components/Tag';
 import { layout, m3, pageSx, titleGap } from '../../theme/theme';
 import { shortDateTime } from '../feed/format';
 import { JobsAdminPanel } from './JobsAdminPanel';
@@ -21,10 +21,10 @@ import { JobsAdminPanel } from './JobsAdminPanel';
 // Public status page (docs/03-ui-ux.md sec. 6.12): the overall state and one card per check. Timestamps show as
 // readable local times, with the ISO value in the tooltip.
 
-const STATE_TAG: Record<CheckState, { label: string; tone: TagTone; icon: ReactElement<SvgIconProps> }> = {
-  ok: { label: 'Operational', tone: 'success', icon: <CheckCircleRounded /> },
-  warn: { label: 'Degraded', tone: 'warning', icon: <WarningRounded /> },
-  fail: { label: 'Down', tone: 'error', icon: <ErrorRounded /> },
+const STATE_TAG: Record<CheckState, { label: string; dot: DotTone; icon: ReactElement<SvgIconProps> }> = {
+  ok: { label: 'Operational', dot: 'ok', icon: <CheckCircleRounded /> },
+  warn: { label: 'Degraded', dot: 'warn', icon: <WarningRounded /> },
+  fail: { label: 'Down', dot: 'fail', icon: <ErrorRounded /> },
 };
 
 const OVERALL_TEXT: Record<CheckState, string> = {
@@ -98,7 +98,7 @@ function CheckCard({ check }: { check: StatusCheck }) {
         <Typography variant="h3" component="h2">
           {title}
         </Typography>
-        <Tag label={tag.label} tone={tag.tone} icon={tag.icon} />
+        <DotLabel tone={tag.dot}>{tag.label}</DotLabel>
       </Box>
       <Box
         component="dl"
@@ -149,7 +149,8 @@ export function StatusView({ signedIn }: { signedIn: boolean }) {
   const query = useStatus();
   return (
     <Box component="main" id="content" sx={{ minHeight: '100dvh' }}>
-      {/* The public page has no app shell: a slim chrome bar names the product and leads into the app. */}
+      {/* The public page has no app shell: a 56 px white bar with a bottom hairline names the product and leads
+          into the app. */}
       <Box
         sx={(theme) => ({
           height: layout.appBarHeight,
@@ -158,13 +159,14 @@ export function StatusView({ signedIn }: { signedIn: boolean }) {
           gap: 2,
           px: { xs: 4, sm: 6 },
           backgroundColor: m3(theme).chrome,
+          borderBottom: `1px solid ${m3(theme).border}`,
         })}
       >
         <Typography variant="subtitle1" component="p" noWrap sx={{ flex: 1, minWidth: 0 }}>
           Moderation Workbench
         </Typography>
         {/* The public page's only way into the app (03 sec. 6.12). */}
-        <Button variant="text" href={signedIn ? '/' : '/sign-in'}>
+        <Button variant="ghost" href={signedIn ? '/' : '/sign-in'}>
           {signedIn ? 'Back to the app' : 'Sign in'}
         </Button>
       </Box>
@@ -175,7 +177,7 @@ export function StatusView({ signedIn }: { signedIn: boolean }) {
           >
             <Typography variant="h1">System status</Typography>
             <Button
-              variant="tonal"
+              variant="secondary"
               startIcon={<RefreshRounded />}
               onClick={() => void query.refetch()}
               loading={query.isFetching}

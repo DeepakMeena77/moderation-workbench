@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Static checks for the design-system rules in docs/03-ui-ux.md:
-// no elevation, no hex colours outside tokens, no raw HTML injection, spacing through the theme,
-// no outlined buttons, no borders on our surfaces.
+// no elevation, no gradients, no hex colours outside tokens, no raw HTML injection, spacing through the theme,
+// and borders only as 1 px hairlines.
 // Usage: node scripts/check-ui-rules.mjs
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -14,7 +14,6 @@ const EXT = new Set(['.ts', '.tsx', '.css']);
 const THEME_DIR = 'src/ui/theme/';
 const TOKENS_FILE = 'src/ui/theme/tokens.ts';
 const isTheme = (file) => file.startsWith(THEME_DIR);
-const isDataTable = (file) => /src\/ui\/components\/DataTable[^/]*$/.test(file);
 
 const RULES = [
   {
@@ -43,16 +42,16 @@ const RULES = [
     skip: (file) => isTheme(file),
   },
   {
-    id: 'outlined-button',
-    message: 'Outlined buttons are not used. Use filled, tonal or text buttons.',
-    pattern: /<(Button|LoadingButton)\b[^>]*variant\s*=\s*['"{]+outlined/,
+    id: 'gradient',
+    message: 'Gradients are not used. Surfaces are flat colours from the tokens.',
+    pattern: /(linear|radial|conic)-gradient\s*\(/,
     skip: () => false,
   },
   {
-    id: 'surface-border',
-    message: 'Borders on surfaces are not used. Separate with tonal colour instead.',
-    pattern: /\bborder(Top|Bottom|Left|Right)?\s*:\s*(?!['"`]?(none|0)['"`]?\s*[,}\n])['"`]?\d*\.?\d*px\s+solid|border-(top|bottom|left|right)?\s*:\s*\d+px\s+solid/,
-    skip: (file) => isTheme(file) || isDataTable(file),
+    id: 'heavy-border',
+    message: 'Borders are 1 px hairlines in a token colour. Thicker lines need a stated reason.',
+    pattern: /\bborder(Top|Bottom|Left|Right)?(Width)?\s*:\s*['"`]?([2-9]|\d{2,})px|border(-(top|bottom|left|right))?\s*:\s*([2-9]|\d{2,})px\s+solid/,
+    skip: (file) => isTheme(file),
   },
 ];
 

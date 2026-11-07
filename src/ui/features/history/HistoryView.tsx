@@ -93,7 +93,7 @@ function AuditTrail({ events }: { events: NonNullable<ContentHistory['auditEvent
     <Card component="section" aria-label="Audit events" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Box>
         <Button
-          variant="text"
+          variant="ghost"
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen((v) => !v)}

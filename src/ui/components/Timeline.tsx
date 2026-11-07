@@ -2,11 +2,11 @@ import Box from '@mui/material/Box';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
 import { cloneElement, type ReactElement, type ReactNode } from 'react';
-import { layout, m3 } from '../theme/theme';
+import { m3 } from '../theme/theme';
 
-// Timeline (03 sec. 4): a vertical 2 dp outlineVariant line with 32 dp icon dots, events as nested sections
-// grouped by day. The line is a filled box, not a border (no borders on surfaces). An ordered list, so screen
-// readers announce the number of events and their order.
+// Timeline (03 sec. 4): a 1 px hairline joining 24 px outlined markers with a 14 px monochrome icon; each event is
+// plain text beside its marker (title, time, details), grouped by day. The line is a filled box, not a border. An
+// ordered list, so screen readers announce the number of events and their order.
 
 export interface TimelineEntry {
   id: string;
@@ -59,50 +59,40 @@ export function Timeline({ entries, label }: { entries: readonly TimelineEntry[]
               <Box
                 component="li"
                 key={entry.id}
-                sx={{ position: 'relative', display: 'flex', gap: 3, pb: index === group.entries.length - 1 ? 0 : 3 }}
+                sx={{ position: 'relative', display: 'flex', gap: 3, pb: index === group.entries.length - 1 ? 0 : 5 }}
               >
                 {index < group.entries.length - 1 ? (
                   <Box
                     aria-hidden
                     sx={(t) => ({
                       position: 'absolute',
-                      left: 15,
-                      top: 32,
-                      bottom: 0,
-                      width: 2,
-                      backgroundColor: m3(t).outlineVariant,
+                      left: 11,
+                      top: 28,
+                      bottom: 4,
+                      width: '1px',
+                      backgroundColor: m3(t).border,
                     })}
                   />
                 ) : null}
                 <Box
                   aria-hidden
                   sx={(t) => ({
-                    width: 32,
-                    height: 32,
+                    width: 24,
+                    height: 24,
                     flexShrink: 0,
-                    borderRadius: 9999,
+                    borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: m3(t).secondaryContainer,
-                    color: m3(t).onSecondaryContainer,
+                    border: `1px solid ${m3(t).border}`,
+                    backgroundColor: m3(t).card,
+                    color: m3(t).onSurfaceVariant,
+                    boxSizing: 'border-box',
                   })}
                 >
-                  {cloneElement(entry.icon, { sx: { fontSize: 18 } })}
+                  {cloneElement(entry.icon, { sx: { fontSize: 14 } })}
                 </Box>
-                <Box
-                  data-ui="section"
-                  sx={(t) => ({
-                    flex: 1,
-                    minWidth: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 1,
-                    p: 3,
-                    borderRadius: `${layout.nestedRadius}px`,
-                    backgroundColor: m3(t).cardNested,
-                  })}
-                >
+                <Box data-ui="section" sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 2 }}>
                     <Typography variant="h4" component="p" sx={{ overflowWrap: 'anywhere' }}>
                       {entry.title}

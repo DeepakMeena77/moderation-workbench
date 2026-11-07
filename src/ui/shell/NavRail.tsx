@@ -7,12 +7,12 @@ import type { Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import Link from 'next/link';
 import type { Role } from '../api/hooks';
-import { m3 } from '../theme/theme';
+import { layer, layout, m3 } from '../theme/theme';
 import { isActive, railDestinations } from './navigation';
 
 /**
- * Icon in a pill indicator above a label: the item shape shared by the navigation bar and rail
- * (03 sec. 3.1). Active: secondaryContainer indicator, label in onSurface.
+ * Icon in an indicator above a label: the item shape shared by the navigation bar and rail (03 sec. 3.1). Active:
+ * the neutral selected fill (radius 6) behind the icon, label in the main text colour at weight 500.
  */
 export function NavItemContent({
   Icon,
@@ -23,21 +23,22 @@ export function NavItemContent({
   Icon: SvgIconComponent;
   label: string;
   active: boolean;
-  indicatorWidth: 56 | 64;
+  indicatorWidth: 48 | 56;
 }) {
   return (
     <>
       <Box
-        className="nav-indicator"
+        className={active ? 'nav-indicator is-active' : 'nav-indicator'}
         sx={(theme) => ({
           width: indicatorWidth,
-          height: 32,
-          borderRadius: 9999,
+          height: 28,
+          borderRadius: `${layout.controlRadius}px`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: active ? m3(theme).secondaryContainer : 'transparent',
-          color: active ? m3(theme).onSecondaryContainer : m3(theme).onSurfaceVariant,
+          backgroundColor: active ? m3(theme).selected : 'transparent',
+          color: active ? m3(theme).onSurface : m3(theme).onSurfaceVariant,
+          '& svg': { fontSize: 20 },
         })}
       >
         <Icon aria-hidden />
@@ -45,7 +46,11 @@ export function NavItemContent({
       <Typography
         variant="overline"
         component="span"
-        sx={(theme) => ({ color: active ? m3(theme).onSurface : m3(theme).onSurfaceVariant, textAlign: 'center' })}
+        sx={(theme) => ({
+          color: active ? m3(theme).onSurface : m3(theme).onSurfaceVariant,
+          fontWeight: active ? 500 : 400,
+          textAlign: 'center',
+        })}
       >
         {label}
       </Typography>
@@ -53,22 +58,20 @@ export function NavItemContent({
   );
 }
 
-/**
- * Hover state layer (onSurface at 8%, 03 sec. 2.5) on the indicator only, as M3 specifies for bar and rail
- * items. A gradient layer sits on top of whatever the indicator colour is, active or not.
- */
+/** A flat hover layer on the indicator only: the text colour mixed into its fill, never a gradient. */
 export const navItemSx = (theme: Theme) => {
-  const layer = `color-mix(in srgb, ${m3(theme).onSurface} 8%, transparent)`;
+  const p = m3(theme);
   return {
     flexDirection: 'column',
     gap: 1,
     minHeight: 56,
-    borderRadius: '12px',
-    '&:hover .nav-indicator': { backgroundImage: `linear-gradient(${layer}, ${layer})` },
+    borderRadius: `${layout.controlRadius}px`,
+    '&:hover .nav-indicator': { backgroundColor: layer(p.onSurface, 'transparent', 6) },
+    '&:hover .nav-indicator.is-active': { backgroundColor: layer(p.onSurface, p.selected, 5) },
   } as const;
 };
 
-// Medium and expanded windows, 600-1199 px (03 sec. 3.1): 80 dp wide, icons with labels.
+// Medium and expanded windows, 600-1199 px (03 sec. 3.1): 80 wide, white with a right hairline, icons with labels.
 export function NavRail({ role, pathname }: { role: Role; pathname: string }) {
   return (
     <Box
@@ -80,6 +83,7 @@ export function NavRail({ role, pathname }: { role: Role; pathname: string }) {
         width: 80,
         flexShrink: 0,
         backgroundColor: m3(theme).chrome,
+        borderRight: `1px solid ${m3(theme).border}`,
       })}
     >
       {/* The column is as tall as the page, so the chrome colour runs the full height; its content stays in view. */}
@@ -109,7 +113,7 @@ export function NavRail({ role, pathname }: { role: Role; pathname: string }) {
               aria-current={active ? 'page' : undefined}
               sx={[navItemSx, { width: 72 }]}
             >
-              <NavItemContent Icon={icon} label={label} active={active} indicatorWidth={56} />
+              <NavItemContent Icon={icon} label={label} active={active} indicatorWidth={48} />
             </ButtonBase>
           );
         })}

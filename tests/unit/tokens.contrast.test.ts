@@ -47,6 +47,8 @@ const NON_TEXT_PAIRS: Array<[Role, Role, string]> = [
   ['secondary', 'canvas', 'focus ring'],
   ['secondary', 'card', 'focus ring'],
   ['onSurfaceVariant', 'field', 'text-field active indicator'],
+  ['fieldBorder', 'field', 'text-field and search border'],
+  ['fieldBorder', 'canvas', 'search border on the page'],
   ['success', 'cardNested', 'confidence bar'],
   ['primary', 'cardNested', 'confidence bar'],
   ['warning', 'cardNested', 'confidence bar'],

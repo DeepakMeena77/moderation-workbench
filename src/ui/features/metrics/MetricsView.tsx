@@ -88,7 +88,7 @@ function BarList({ title, bars, empty }: { title: string; bars: Bar[]; empty: st
                 sx={(t) => ({
                   height: 4,
                   borderRadius: '2px',
-                  backgroundColor: m3(t).surfaceContainerHighest,
+                  backgroundColor: m3(t).surfaceContainerHigh,
                   overflow: 'hidden',
                 })}
               >
@@ -211,7 +211,7 @@ export function MetricsView() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 3 }}>
         <Typography variant="h1">Metrics</Typography>
         <Button
-          variant="tonal"
+          variant="secondary"
           startIcon={<RefreshRounded />}
           onClick={() => void query.refetch()}
           loading={query.isFetching}

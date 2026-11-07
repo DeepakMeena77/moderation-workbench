@@ -3,7 +3,7 @@
 import ExpandMoreRounded from '@mui/icons-material/ExpandMoreRounded';
 import Box from '@mui/material/Box';
 import { Fragment, useId, useState, type ReactNode } from 'react';
-import { m3 } from '../theme/theme';
+import { layer, m3 } from '../theme/theme';
 import { IconButton } from './IconButton';
 
 export interface DataColumn<T> {
@@ -26,8 +26,8 @@ export interface DataTableProps<T> {
   expandLabel?: (row: T) => string;
 }
 
-// Data table (03 sec. 4, audit at >= 840 px): no outer border; header in labelLarge and onSurfaceVariant;
-// 1 px outlineVariant row dividers, the only dividers in the app; a hover state layer on rows. The fixed layout
+// Data table (03 sec. 4, audit at >= 840 px): inside a bordered panel; header in the 12/16 label style and the
+// secondary text colour; 1 px hairlines between rows; a flat hover layer on rows. The fixed layout
 // and wrapping cells keep it inside the pane at every width it is shown. Below 840 px pages show a list instead.
 export function DataTable<T>({ caption, columns, rows, rowKey, renderExpanded, expandLabel }: DataTableProps<T>) {
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -50,10 +50,11 @@ export function DataTable<T>({ caption, columns, rows, rowKey, renderExpanded, e
         borderCollapse: 'collapse',
         color: m3(t).onSurface,
         '& th, & td': { textAlign: 'left', verticalAlign: 'middle', px: 3, py: 2, overflowWrap: 'anywhere' },
-        '& th': { ...t.typography.button, color: m3(t).onSurfaceVariant },
+        '& th': { ...t.typography.overline, color: m3(t).onSurfaceVariant },
         '& td': { ...t.typography.body2 },
-        '& tbody tr': { borderBottom: `1px solid ${m3(t).outlineVariant}` },
-        '& tbody tr.data-row:hover': { backgroundColor: `color-mix(in srgb, ${m3(t).onSurface} 8%, transparent)` },
+        '& thead tr, & tbody tr': { borderBottom: `1px solid ${m3(t).border}` },
+        '& tbody tr:last-of-type': { borderBottom: 0 },
+        '& tbody tr.data-row:hover': { backgroundColor: layer(m3(t).onSurface, 'transparent', 4) },
       })}
     >
       <Box component="caption" sx={visuallyHidden}>

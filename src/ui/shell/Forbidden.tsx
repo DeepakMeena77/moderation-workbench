@@ -25,7 +25,7 @@ export function Forbidden({ role }: { role: Role }) {
             <Typography variant="body2">
               Your role ({ROLE_LABEL[role]}) can&apos;t open this page. Use the navigation to go to a page you can use.
             </Typography>
-            <Button variant="tonal" href={home}>
+            <Button variant="secondary" href={home}>
               Go to {homeLabel}
             </Button>
           </Box>

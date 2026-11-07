@@ -19,7 +19,7 @@ import { useAfterAuthChange, useDemoSignIn, useSignIn, type DemoAccount, type Ro
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { homeFor, ROLE_LABEL } from '../../shell/navigation';
-import { layout, m3 } from '../../theme/theme';
+import { layer, layout, m3 } from '../../theme/theme';
 
 // Sign-in page (03 sec. 6.1): email and password for any seeded account, and in demo mode one-click cards per
 // role (UX-5). Typed input is kept on every error (03 sec. 7).
@@ -148,7 +148,8 @@ export function SignInView({ demoMode, accounts, next }: SignInViewProps) {
                   gap: 3,
                   px: 4,
                   py: 3,
-                  borderRadius: `${layout.nestedRadius}px`,
+                  borderRadius: `${layout.controlRadius}px`,
+                  border: `1px solid ${m3(theme).errorBorder}`,
                   backgroundColor: m3(theme).errorContainer,
                   color: m3(theme).onErrorContainer,
                 })}
@@ -218,24 +219,35 @@ export function SignInView({ demoMode, accounts, next }: SignInViewProps) {
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'flex-start',
+                      justifyContent: 'flex-start',
                       textAlign: 'left',
                       gap: 1,
                       p: 3,
-                      borderRadius: `${layout.nestedRadius}px`,
-                      backgroundColor: m3(theme).cardNested,
+                      borderRadius: `${layout.controlRadius}px`,
+                      border: `1px solid ${m3(theme).border}`,
+                      backgroundColor: m3(theme).card,
                       color: m3(theme).onSurface,
                       '&:hover': {
-                        backgroundImage: `linear-gradient(color-mix(in srgb, ${m3(theme).onSurface} 8%, transparent), color-mix(in srgb, ${m3(theme).onSurface} 8%, transparent))`,
+                        backgroundColor: layer(m3(theme).onSurface, m3(theme).card, 4),
+                        borderColor: m3(theme).borderStrong,
                       },
                     })}
                   >
-                    <Box sx={(theme) => ({ display: 'flex', alignItems: 'center', gap: 2, color: m3(theme).primary })}>
+                    <Box
+                      sx={(theme) => ({
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        color: m3(theme).onSurfaceVariant,
+                        '& svg': { fontSize: 18 },
+                      })}
+                    >
                       {pending ? (
-                        <CircularProgress size={20} aria-label={`Signing in as ${account.name}`} />
+                        <CircularProgress size={16} aria-label={`Signing in as ${account.name}`} />
                       ) : (
                         <Icon aria-hidden />
                       )}
-                      <Typography variant="h3" component="span" sx={(theme) => ({ color: m3(theme).onSurface })}>
+                      <Typography variant="h4" component="span" sx={(theme) => ({ color: m3(theme).onSurface })}>
                         {ROLE_LABEL[account.role]}
                       </Typography>
                     </Box>

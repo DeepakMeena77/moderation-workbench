@@ -9,7 +9,7 @@ import MenuItem from '@mui/material/MenuItem';
 import { useState, type MouseEvent } from 'react';
 import type { Me } from '../api/hooks';
 import { IconButton } from '../components/IconButton';
-import { layout, m3 } from '../theme/theme';
+import { m3 } from '../theme/theme';
 import { ROLE_LABEL } from './navigation';
 import { useThemeChoice } from './ThemeToggle';
 
@@ -42,11 +42,12 @@ export function AccountMenu({
       >
         <Avatar
           sx={(t) => ({
-            width: 32,
-            height: 32,
-            backgroundColor: m3(t).primaryContainer,
-            color: m3(t).onPrimaryContainer,
-            ...t.typography.subtitle1,
+            width: 28,
+            height: 28,
+            backgroundColor: m3(t).surfaceContainer,
+            color: m3(t).onSurface,
+            border: `1px solid ${m3(t).border}`,
+            ...t.typography.overline,
           })}
         >
           {user.name.charAt(0).toUpperCase()}
@@ -60,14 +61,8 @@ export function AccountMenu({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{
-          // The menu sits on the canvas-coloured app bar, so it takes surfaceContainerHigh (03 sec. 9).
-          paper: {
-            sx: (t) => ({
-              backgroundColor: m3(t).surfaceContainerHigh,
-              borderRadius: `${layout.cardRadius}px`,
-              minWidth: 220,
-            }),
-          },
+          // Surface, hairline and radius come from the theme's menu style; only the width is set here.
+          paper: { sx: { minWidth: 220 } },
         }}
       >
         {/* Stays open, so the new theme label is visible after the change. */}

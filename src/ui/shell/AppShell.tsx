@@ -62,7 +62,7 @@ export function AppShell({ user, demoAccounts, children }: AppShellProps) {
           zIndex: theme.zIndex.tooltip,
           px: 4,
           py: 2,
-          borderRadius: 9999,
+          borderRadius: '6px',
           backgroundColor: m3(theme).card,
           color: m3(theme).primary,
           ...theme.typography.button,
@@ -74,13 +74,19 @@ export function AppShell({ user, demoAccounts, children }: AppShellProps) {
       <NavRail role={user.role} pathname={pathname} />
       <NavDrawer role={user.role} pathname={pathname} demoMode={demoMode} onSwitchUser={openSwitcher} />
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <TopAppBar user={user} demoMode={demoMode} onSwitchUser={openSwitcher} onSignOut={handleSignOut} />
+        <TopAppBar
+          user={user}
+          pathname={pathname}
+          demoMode={demoMode}
+          onSwitchUser={openSwitcher}
+          onSignOut={handleSignOut}
+        />
         <Box
           component="main"
           id="content"
           tabIndex={-1}
-          // Room for the fixed bottom bar (80) plus 16 on compact screens, so the last element stays
-          // reachable. Theme spacing units: 24 x 4 px = 96 px.
+          // Room for the fixed bottom bar (64) plus 16 on compact screens, so the last element stays
+          // reachable. Theme spacing units: 20 x 4 px = 80 px.
           sx={{ flex: 1, minWidth: 0, pb: { xs: (NAV_BAR_HEIGHT + 16) / 4, sm: 0 }, '&:focus': { outline: 'none' } }}
         >
           {children}

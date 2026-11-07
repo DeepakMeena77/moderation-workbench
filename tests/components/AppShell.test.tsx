@@ -12,6 +12,7 @@ import { MoreSheet } from '@/ui/shell/MoreSheet';
 import { NavBar } from '@/ui/shell/NavBar';
 import { NavDrawer } from '@/ui/shell/NavDrawer';
 import { NavRail } from '@/ui/shell/NavRail';
+import { pageTrail } from '@/ui/shell/navigation';
 import { theme } from '@/ui/theme/theme';
 
 const nav = vi.hoisted(() => ({ pathname: '/', replace: vi.fn(), refresh: vi.fn() }));
@@ -137,6 +138,14 @@ describe.each(ROLES)('navigation for %s', (role) => {
 });
 
 describe('navigation state', () => {
+  it('[UX-2] the top bar names the current page as a short breadcrumb', () => {
+    expect(pageTrail('/queue')).toEqual(['Queue']);
+    expect(pageTrail('/queue/case-1')).toEqual(['Queue', 'Case']);
+    expect(pageTrail('/appeals/appeal-1')).toEqual(['Appeals', 'Appeal']);
+    expect(pageTrail('/content/item-1/history')).toEqual(['Moderation history']);
+    expect(pageTrail('/no-such-page')).toEqual([]);
+  });
+
   it('[UX-2] marks only the current destination with aria-current="page", including its sub-pages', () => {
     const { container } = renderWithProviders(<NavRail role="moderator" pathname="/queue/case-1" />);
     const current = container.querySelectorAll('[aria-current="page"]');
