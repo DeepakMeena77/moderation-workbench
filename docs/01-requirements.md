@@ -234,7 +234,7 @@ screenshot). Failure cases are part of the criterion, not extras.
 | UX-1 | Every data view has **loading** (skeleton), **empty** (with a next action), **error** (message plus Retry, or Reload on 409) states. Every form has **validation** (inline, by field) and **success** (snackbar) states. Submit buttons show progress and block double submission. | |
 | UX-2 | Responsive from 360 px to 1920 px with **no horizontal scroll**. Navigation: bottom bar (<600 px), rail (600-1199 px), drawer (>=1200 px). List-detail splits into two panes at >=840 px. | |
 | UX-3 | Accessibility: fully usable by keyboard, visible focus, text contrast >= 4.5:1, labels on every input, `aria-live` for snackbars and progress, `prefers-reduced-motion` respected. | |
-| UX-4 | Light and dark themes (system default plus toggle), using Material 3 tokens only. | |
+| UX-4 | Light and dark themes (system default plus toggle), using the design tokens only (no hard-coded colours). | |
 | UX-5 | Demo mode: one-click sign-in cards per role, and a "Switch demo user" menu, so a reviewer can run the whole journey in under 5 minutes. | |
 
 ### 5.11 Operations (OPS)

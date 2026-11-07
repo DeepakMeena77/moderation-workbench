@@ -1,0 +1,153 @@
+# AI notes
+
+How the AI works in this product, what it is allowed to do, how its output is checked, and what it costs.
+Runtime prompts and their refinements are in [PROMPTS_USED.md](PROMPTS_USED.md). How coding agents were used to
+build the app is in [AGENT_USAGE.md](AGENT_USAGE.md).
+
+## 1. Responsibility boundary
+
+| The AI does | The AI never does |
+| --- | --- |
+| Classify text against the active policy version | Change content visibility |
+| Cite clause codes and quote evidence | Resolve a case or an appeal |
+| Separate confirmed evidence from interpretation | Decide whether a human is needed (the server decides) |
+| Propose an action, severity and confidence with reasons | Write anything except its own `AiRun` record |
+| Summarise an appeal neutrally for the second reviewer | Recommend upholding or overturning an appeal |
+
+Release boundary: the AI drafts recommendations for human review. It is not suitable for unattended action, and
+the code makes unattended action impossible (see section 4).
+
+## 2. Provider and models
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| Provider | Google Gemini (`@google/genai`), behind a provider interface | Free tier for the demo; swappable |
+| Primary model | `gemini-3.5-flash-lite` | Fast and cheap; valid structured output in a live check |
+| Fallback model | `gemini-3.6-flash` | Separate quota; used only for transport failures |
+| Test provider | Deterministic mock with failure markers | Tests and CI never call the network |
+| Output mode | JSON with a response schema, then Zod validation | Structured output, still checked by code |
+| Thinking | Minimal thinking level | Lower latency and cost; confirmed accepted live (0 thinking tokens) |
+
+Model probe on the project key before choosing (one tiny JSON request each):
+
+| Model | Result |
+| --- | --- |
+| gemini-3.5-flash-lite | 200, valid JSON, about 2.1 s |
+| gemini-2.5-flash-lite | 404, retired for new keys although still listed |
+| gemini-3.1-flash-lite | 503 at test time |
+| gemini-3.5-flash | 200 but output truncated to `{"` at a 20-token cap: thinking consumed the budget (deprecated; routed to 3.6-flash) |
+
+## 3. Deterministic checks vs AI
+
+| Layer | What it does | Code |
+| --- | --- | --- |
+| Rules | Keywords and patterns from the policy, link count, contact details, repeat posting. Exact offsets, confidence 1 | `src/server/rules/` |
+| AI | Context, sarcasm, quoting, implied threats, missing context | `src/server/ai/` |
+| Combine | Merges both, computes the recommendation and every "needs a human" reason | `src/server/moderation/combine.ts` |
+
+## 4. Safeguards and their evidence
+
+| Safeguard | Where | Test |
+| --- | --- | --- |
+| Only a human moderator can change visibility | `src/server/services/visibility.ts`, DB trigger in the S4 migration | `tests/integration/decisions.test.ts`, `tests/integration/analysis.test.ts` `[HUM-1]` |
+| AI code cannot import visibility or decisions | ESLint rule | `tests/unit/boundaries.test.ts` |
+| Output schema has no decide/approve/status field; unknown keys stripped | `src/server/ai/output.ts` | `tests/unit/output.test.ts` |
+| Server, not model, decides `needsHuman` | `src/server/moderation/combine.ts` | `tests/unit/combine.test.ts` `[AI-6]` |
+| Every clause must exist in that policy version | `src/server/ai/verify.ts` | `tests/unit/verify.test.ts` `[AI-2]` |
+| Confirmed quotes must appear verbatim, else interpretation with confidence <= 0.5 | `src/server/ai/verify.ts` | `tests/unit/verify.test.ts` `[AI-3]` |
+| Proposed action lowered to what the clauses allow, never raised | `src/server/ai/verify.ts` | `tests/unit/combine.test.ts`, `tests/unit/classify.test.ts` `[AI-4]` |
+| Prompt injection treated as content and routed to a human | `src/server/ai/prompts.ts` (`detectInjectionSignals`) | `tests/integration/analysis.test.ts` `[AI-8]` |
+| Parse ladder: direct, fenced, embedded, repaired | `src/server/ai/parse.ts` | `tests/unit/parse.test.ts` `[AI-9]` |
+| At most one repair call, then stop | `src/server/ai/pipeline.ts` | `tests/unit/classify.test.ts` `[AI-9]` |
+| Bounded retries, timeout, overall deadline, fallback model | `src/server/ai/pipeline.ts`, `aiConfig.ts` | `tests/unit/classify.test.ts` `[AI-9]` |
+| Context budget; content never trimmed | `src/server/ai/budget.ts` | `tests/unit/budget.test.ts` `[AI-11]` |
+| Every pipeline run recorded with tokens and cost, success or failure | `src/server/ai/aiRun.ts`, `services/aiRuns.ts` | `tests/integration/analysis.test.ts` `[AI-10]` |
+| AiRun and Analysis rows cannot be updated or deleted | DB triggers in the S3 migration | `tests/integration/audit.test.ts` `[AUD-2]` |
+| Daily AI call budget protects the demo quota | `src/server/ai/pipeline.ts` | `tests/unit/classify.test.ts` |
+| AI call never holds a database transaction | `src/server/jobs/handlers.ts` (three steps) | `tests/integration/analysis.test.ts` |
+| Appeal brief has no outcome field; an added one is stripped | `src/server/ai/appealBrief.ts` | `tests/unit/appealBrief.test.ts` `[AI-12]` |
+| "Policy changed since decision" comes from the database, not the model | `src/server/services/appeals.ts` | `tests/integration/appeals.test.ts` `[AI-12]` |
+| Every AI write and human decision is in a hash-chained, insert-only audit trail | `src/server/services/audit.ts`, S7 migration | `tests/integration/audit.test.ts` `[AUD-3]` |
+
+## 5. Appeal brief
+
+When an author appeals, a job asks the model for a neutral brief for the senior moderator: a summary, up to five
+new points the appeal raises, and which of the original findings each point disputes. It runs through the same
+bounded pipeline as classification (budget, provider chain, parse ladder, Zod, at most one repair, verify) and
+records its own `AiRun` (purpose `appeal_brief`).
+
+- The output contract has no outcome, recommendation, decision or status field, and unknown keys are stripped, so a
+  model that adds "uphold" changes nothing.
+- Verify drops disputed clauses that the original decision never cited.
+- If the AI fails, the appeal page says the summary is unavailable and the review goes on without it.
+- Whether the policy changed since the decision is computed by the server from the stored versions.
+
+## 6. Bounds
+
+| Bound | Default |
+| --- | --- |
+| Per-call timeout | 12 s |
+| Overall deadline per classification | 25 s |
+| Attempts per model (429, 5xx, timeout only) | 3, back-off capped at 10 s |
+| Repair calls | 1 |
+| Input budget | 6,000 tokens (estimated) |
+| Output cap | 2,048 tokens |
+| Pacing between calls | 4 s per instance |
+| Daily calls | 200 |
+
+The prompt carries the content (up to 2,000 characters) and the active policy, which are never trimmed, plus
+optional context that is trimmed first under the input budget: the parent post (up to 1,000 characters), report
+reasons, the rule findings and the author's last 5 final actions.
+
+When every bound is used up, the analysis is saved with rule findings only, marked AI unavailable with a plain
+reason, and routed to a human. AI failure never blocks the workflow.
+
+## 7. Cost and a live run
+
+- Prices are configuration: 0.30 USD per million input tokens and 2.50 USD per million output tokens (thinking
+  tokens billed as output), from Google's published pricing for the primary model.
+- Live smoke run (2026-11-07), "You are a worthless idiot and everyone hates you.":
+  `gemini-3.5-flash-lite`, status ok, 4.4 s, 1 call, 1,735 input / 223 output / 0 thinking tokens,
+  finding HAR-1 (confirmed). Estimated cost about 0.0011 USD.
+
+## 8. Evaluation
+
+`npm run eval` runs 21 labelled cases ([evals/cases.json](evals/cases.json)) through the product's real decision
+path: deterministic rules, the bounded AI pipeline, then the server's `combine()`. The cases cover clean posts,
+clear violations, quoting, sarcasm, banter, missing context, a non-English insult, prompt injection, a
+tag-escape attempt and v2-only clauses. They are kept out of the prompt examples. CI runs the same harness with
+the mock provider as a pipeline check.
+
+Live run, 2026-11-07, `gemini-3.5-flash-lite` (full report:
+[evals/results/2026-11-07-gemini-3.5-flash-lite.md](evals/results/2026-11-07-gemini-3.5-flash-lite.md)):
+
+| Metric | Result |
+| --- | --- |
+| Cases passed | 20 / 21 |
+| Clause precision / recall | 100% / 100% |
+| Must-escalate recall (target 100%) | 100% |
+| False escalation on clean cases | 0 / 5 |
+| AI failures / fallback / repair | 0 / 0 / 0 |
+| Latency p50 / p90 | 4.7 s / 7.9 s |
+| Cost for 21 cases | 0.021 USD |
+
+What the run shows:
+
+- **The one failure is a rules limitation, not the model.** E09 is a news report quoting "I will hurt you".
+  The deterministic THR-1 pattern confirms the quote, so the recommendation is "remove". The case is still
+  escalated to a human (no automatic action), but keyword rules cannot tell a quotation from a threat. Next
+  step: let the AI's "quoting or reporting" interpretation lower a rule-only threat to "label" for human
+  review, instead of tuning the pattern to this case.
+- **Mild over-flagging of banter.** Sarcasm (E10) and friendly banter (E11) were labelled as possible
+  harassment. Both went to a human with only a "label" suggestion, which is the intended failure mode for a
+  human-in-the-loop tool.
+- Prompt injection (E14) and the tag-escape attempt (E15) were classified as content and escalated. Self-harm
+  (E05) was routed to "limit", never "remove".
+
+## 9. Known limitations
+
+- One price pair is used for both models, so fallback runs are under-costed.
+- Pacing is per serverless instance, best effort.
+- English only; other languages are routed to a human.
+- Free-tier quotas are small; the daily budget and the fallback model reduce, but do not remove, the chance of
+  "AI unavailable" during heavy review.
