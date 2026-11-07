@@ -258,8 +258,12 @@ the audit checks our design system and not library internals.
 
 ### 6.6 Visual evidence and regression
 
-- **Screenshots** of each main page at 360 and 1280, light and dark, saved to `docs/screenshots/` (committed;
-  used in the README and slides).
+- **Screenshots** of the main pages for the README and slides, saved to `docs/screenshots/` (committed, light
+  theme, each under about 300 KB): `npx tsx scripts/screenshots.ts` against a running build on a freshly seeded
+  database (`BASE_URL` picks the server). It creates realistic data through the API (posts, a decision, an appeal,
+  policy v2 for the compare view), reuses it on a re-run, and is not part of verify or CI. A production build with
+  the mock AI shows `/status` red by design, so `status.png` is taken from the live URL with `--only=status`, which
+  creates no data.
 - **Visual regression** (`toHaveScreenshot`), optional: baselines only from the CI Linux runner, because font
   rendering differs between operating systems. Allow a 0.2% pixel tolerance; mask dynamic text (times, counts).
 
@@ -275,15 +279,25 @@ the audit checks our design system and not library internals.
 
 ## 7. End-to-end journey (`tests/e2e/journey.spec.ts`, mock AI, seeded database)
 
-The journey runs at 1280 px and at 390 px:
+The journey runs at 1280 px and at 390 px, one serial run per width, against the production build (the same
+`webServer` as the UI suite). Each run posts its own text with a random-word suffix (no digits, which PII-1 would
+read as a phone number), so it needs only a freshly seeded database and never data from an earlier run. The post
+carries `[mock:timeout]`, so the AI step ends at the pipeline's own deadline: "Analysing..." stays visible long
+enough to assert every time, and the case still arrives with its rule finding (DET-5). Each step names its criteria.
 
-1. Author signs in (demo card) -> posts `You are a worthless idiot` -> sees "Analysing..." and then the post.
-2. `senior@` (deciding as first-line moderator) -> Queue shows the case with a HAR-1 tag -> opens it -> the quote is highlighted -> **Modify** to
-   `limit` with a rationale -> snackbar.
-3. Author -> My content shows "Limited" -> **Appeal** with a 20+ character statement.
-4. `senior@` (the original decider) opens the appeal -> sees the blocked message and disabled controls (`SAME_REVIEWER`).
-5. `senior2@` -> Appeals -> **Overturn** with a rationale -> the author's post is visible again.
-6. Admin -> Policy -> Publish v2 -> the progress reaches done -> Audit shows the "intact" banner.
+1. Author signs in (demo card) -> posts a harassing text -> sees "Analysing..." and then the ready post [CNT-1].
+2. `senior@` (deciding as first-line moderator) -> Queue search -> opens the case -> the quote is highlighted with
+   HAR-1 and the needs-human reasons are listed -> **Modify** to `limit` with a rationale -> snackbar [HUM-4, DET-5].
+3. Author -> My content shows the decision with its clause -> **Appeal** with a 20+ character statement [APP-1].
+4. `senior@` (the original decider) opens the appeal -> sees the blocked message and disabled controls; a forced API
+   call gets 403 `SAME_REVIEWER` -> the admin finds that request's `access.denied` event on the audit page
+   [APP-3, AUD-4].
+5. `senior2@` -> Appeals -> **Overturn** with a rationale -> the author's post is visible again and its history shows
+   the outcome [APP-5, CNT-4].
+6. Admin -> Audit shows the "intact" banner -> Metrics shows at least one override [AUD-3, OPS-6].
+
+Publishing v2 is not part of the journey: it can happen only once per database and would change the active policy
+for every later run. The policy integration tests and the policy UI suite cover publishing.
 
 ---
 
