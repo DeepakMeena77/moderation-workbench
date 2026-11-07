@@ -23,7 +23,7 @@ one lives.
 
 **Allowed runtime dependencies:**
 
-- next, react, react-dom
+- next, react, react-dom, @fontsource/roboto (self-hosted Roboto, so builds never download fonts)
 - @mui/material, @mui/icons-material, @mui/material-nextjs, @emotion/react, @emotion/styled, @emotion/cache
 - @tanstack/react-query
 - zod (v3)

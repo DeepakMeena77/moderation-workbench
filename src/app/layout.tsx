@@ -1,12 +1,23 @@
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import type { Metadata, Viewport } from 'next';
-import { Roboto } from 'next/font/google';
+import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
 import { AppProviders } from '@/ui/AppProviders';
 
-const roboto = Roboto({
-  weight: ['400', '500'],
-  subsets: ['latin'],
+// Self-hosted from @fontsource/roboto, so builds never depend on downloading fonts from Google at build time.
+const roboto = localFont({
+  src: [
+    {
+      path: '../../node_modules/@fontsource/roboto/files/roboto-latin-400-normal.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../node_modules/@fontsource/roboto/files/roboto-latin-500-normal.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+  ],
   display: 'swap',
   variable: '--font-roboto',
 });
