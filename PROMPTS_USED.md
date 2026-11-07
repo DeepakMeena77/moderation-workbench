@@ -81,7 +81,7 @@ traced to the exact prompt that produced it.
 ## 4. How malformed output is handled
 
 1. **Parse ladder** (`src/server/ai/parse.ts`): direct JSON, then a fenced block, then the first balanced `{...}`
-   found by a string-aware scan, then conservative repairs (smart quotes, trailing commas). The winning strategy
+   found by a string-aware scan, then conservative repairs (curly double quotes, trailing commas). The winning strategy
    is recorded on the AI run.
 2. **Validation** with Zod against the output contract; unknown keys are stripped.
 3. **At most one repair call** on the same model, carrying the exact validation errors. If it is still invalid,

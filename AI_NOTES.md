@@ -64,7 +64,7 @@ Model probe on the project key before choosing (one tiny JSON request each):
 | Every pipeline run recorded with tokens and cost, success or failure | `src/server/ai/aiRun.ts`, `services/aiRuns.ts` | `tests/integration/analysis.test.ts` `[AI-10]` |
 | AiRun and Analysis rows cannot be updated or deleted | DB triggers in the S3 migration | `tests/integration/audit.test.ts` `[AUD-2]` |
 | Daily AI call budget protects the demo quota | `src/server/ai/pipeline.ts` | `tests/unit/classify.test.ts` |
-| AI call never holds a database transaction | `src/server/jobs/handlers.ts` (three steps) | `tests/integration/analysis.test.ts` |
+| AI call never holds a database transaction | `src/server/jobs/handlers.ts` (prepare, call the model, record) | By construction: the model is called between `prepareAnalysis` and `recordAnalysis`, which each run their own short transaction |
 | Appeal brief has no outcome field; an added one is stripped | `src/server/ai/appealBrief.ts` | `tests/unit/appealBrief.test.ts` `[AI-12]` |
 | "Policy changed since decision" comes from the database, not the model | `src/server/services/appeals.ts` | `tests/integration/appeals.test.ts` `[AI-12]` |
 | Every AI write and human decision is in a hash-chained, insert-only audit trail | `src/server/services/audit.ts`, S7 migration | `tests/integration/audit.test.ts` `[AUD-3]` |
@@ -118,17 +118,20 @@ clear violations, quoting, sarcasm, banter, missing context, a non-English insul
 tag-escape attempt and v2-only clauses. They are kept out of the prompt examples. CI runs the same harness with
 the mock provider as a pipeline check.
 
-Live run, 2026-11-07, `gemini-3.5-flash-lite` (full report:
+Live run, 2026-11-08 (the report file is named by the UTC date), `gemini-3.5-flash-lite` (full report:
 [evals/results/2026-11-07-gemini-3.5-flash-lite.md](evals/results/2026-11-07-gemini-3.5-flash-lite.md)):
 
 | Metric | Result |
 | --- | --- |
 | Cases passed | 20 / 21 |
-| Clause precision / recall | 100% / 100% |
+| Clause recall | 100% |
+| Clause precision, labelled codes | 100% |
+| Clause precision, strict (every unexpected citation counts against it) | 69% (11 of 16) |
+| Action in the expected set | 13 / 14 |
 | Must-escalate recall (target 100%) | 100% |
 | False escalation on clean cases | 0 / 5 |
-| AI failures / fallback / repair | 0 / 0 / 0 |
-| Latency p50 / p90 | 4.7 s / 7.9 s |
+| AI failures / invalid output / fallback / repair | 0 / 0% / 0 / 0 |
+| Latency p50 / p90 | 3.9 s / 4.8 s |
 | Cost for 21 cases | 0.021 USD |
 
 What the run shows:
@@ -138,9 +141,11 @@ What the run shows:
   escalated to a human (no automatic action), but keyword rules cannot tell a quotation from a threat. Next
   step: let the AI's "quoting or reporting" interpretation lower a rule-only threat to "label" for human
   review, instead of tuning the pattern to this case.
-- **Mild over-flagging of banter.** Sarcasm (E10) and friendly banter (E11) were labelled as possible
-  harassment. Both went to a human with only a "label" suggestion, which is the intended failure mode for a
-  human-in-the-loop tool.
+- **Over-citation is the main weakness, and it is why strict precision is 69%.** Sarcasm (E10) and friendly
+  banter (E11) were labelled as possible harassment, a reply that needs its parent post (E12) was cited as THR-1
+  with "remove", and the non-English insult (E13) was cited as HAR-1. All of them went to a human: E10 and E11
+  with only a "label" suggestion, E12 and E13 because their labels require escalation. Precision on the codes the
+  cases were labelled about stays at 100%, which is why both numbers are reported.
 - Prompt injection (E14) and the tag-escape attempt (E15) were classified as content and escalated. Self-harm
   (E05) was routed to "limit", never "remove".
 

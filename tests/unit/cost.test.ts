@@ -49,4 +49,12 @@ describe('cost', () => {
     expect(message).not.toContain('\n');
     expect(message.length).toBeLessThanOrEqual(300);
   });
+
+  it('[AI-10] the newer AQ. key format is redacted too', () => {
+    // Built at runtime so the repository's secret scanner does not see a key-shaped literal.
+    const key = ['AQ', 'x'.repeat(45)].join('.');
+    expect(sanitizeErrorMessage(`provider said: invalid ${key} for project`)).toBe(
+      'provider said: invalid [redacted] for project',
+    );
+  });
 });

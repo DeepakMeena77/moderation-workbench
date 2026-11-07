@@ -166,8 +166,12 @@ async function main(): Promise<void> {
   }
 
   // ---- Metrics -----------------------------------------------------------------------------------------------
+  // Labelled precision counts only codes a case says something about (mustInclude, mustNotInclude, or anything
+  // on a clean case). Strict precision counts every cited code a case did not expect as a false positive, so a
+  // quoted threat confirmed as THR-1, or banter cited as HAR-1, lowers it.
   let tp = 0;
   let fp = 0;
+  let fpStrict = 0;
   let fn = 0;
   for (const c of cases) {
     const row = rows.find((r) => r.id === c.id);
@@ -176,7 +180,10 @@ async function main(): Promise<void> {
     const notExpected = new Set([...(c.expect.mustNotInclude ?? []), ...(c.expect.clean ? row.found : [])]);
     for (const code of row.found) {
       if (expected.has(code)) tp++;
-      else if (notExpected.has(code)) fp++;
+      else {
+        fpStrict++;
+        if (notExpected.has(code)) fp++;
+      }
     }
     for (const code of expected) if (!row.found.includes(code)) fn++;
   }
@@ -196,7 +203,8 @@ async function main(): Promise<void> {
 
   const metrics = [
     ['Cases passed', `${passed} / ${rows.length}`],
-    ['Clause precision', pct(tp, tp + fp)],
+    ['Clause precision, labelled codes', pct(tp, tp + fp)],
+    ['Clause precision, strict (every unexpected citation is a false positive)', pct(tp, tp + fpStrict)],
     ['Clause recall', pct(tp, tp + fn)],
     ['Action in expected set', `${actionOk.length} / ${withAction.length}`],
     ['Must-escalate recall (target 100%)', pct(escOk.length, mustEsc.length)],

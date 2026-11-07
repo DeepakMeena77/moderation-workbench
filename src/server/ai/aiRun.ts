@@ -61,7 +61,8 @@ export class InMemoryCallCounter implements CallCounter {
   }
 }
 
-const KEY_LIKE = /AIza[0-9A-Za-z_-]{20,}|key=[^&\s]+/g;
+// Both Google key formats (the older AIza... and the newer AQ.... keys) and key= query parameters.
+const KEY_LIKE = /AIza[0-9A-Za-z_-]{20,}|\bAQ\.[A-Za-z0-9_-]{20,}|key=[^&\s]+/g;
 
 /** Error text for storage: one line, no keys, bounded length. Provider messages never contain the content. */
 export function sanitizeErrorMessage(message: string): string {

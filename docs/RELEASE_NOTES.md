@@ -1,5 +1,17 @@
 # Release notes
 
+## 1.0.1 (2026-11-08)
+
+- A finding that verification had to drop, or a proposed action lowered to what the cited clauses allow, is now a
+  "needs a human" reason, so such a case can never be auto-cleared (14 reasons in total).
+- Stored AI error messages redact the newer `AQ.` Google key format as well as `AIza...` keys.
+- `.env.example` carries the public model ids and prices, so a fresh clone starts in mock mode without edits to
+  the AI settings; a unit test parses it.
+- The evaluation reports strict clause precision (every unexpected citation counts against it) next to the
+  labelled-codes precision, and the live results were re-run.
+
+No database migration.
+
 ## 1.0.0 (2026-11-08)
 
 Production: https://moderation-workbench.vercel.app (Vercel `sin1`, Neon Postgres in Singapore).
@@ -27,12 +39,16 @@ Production: https://moderation-workbench.vercel.app (Vercel `sin1`, Neon Postgre
 | `20261108110000_s7_audit_chain` | Audit hash chain; existing events chained in SQL; audit made insert-only |
 | `20261108120000_s5_appeals` | Appeals; a resolved appeal is final |
 
+Migration folders sort by name. S3 and S4 share a timestamp and sort by their suffix; S5 was renamed at review to
+sort after S6 and S7, because production had already applied S6 when S5 was merged.
+
 All migrations only add tables, columns, constraints and triggers. None drops or rewrites user data, except the
 one-time hash backfill of existing audit events.
 
 ### Post-deploy checks
 
-Run on 2026-11-08 against release `d970152`.
+Run on 2026-11-08 against release `d970152`. Later commits on `main` change documentation, screenshots and the
+fixes listed under 1.0.1; each was verified by CI before deploy.
 
 | Check | How | Result |
 | --- | --- | --- |

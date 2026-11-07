@@ -142,6 +142,22 @@ describe('combine: needs human (AI-6)', () => {
     expect(rec.reasons).toContain('AI quotes not found in the content (HAR-1); treated as interpretation.');
   });
 
+  it('[AI-6] a finding dropped by verification needs a human and is never auto-cleared', () => {
+    const rec = run({ ai: aiOk({}, { verification: { ...NO_ISSUES, droppedFindings: 1 } }) });
+    expect(rec.reasons).toContain('AI made 1 finding with no verifiable quote or explanation (removed).');
+    expect(rec.needsHuman).toBe(true);
+    expect(rec.autoClear).toBe(false);
+  });
+
+  it('[AI-6] [AI-4] an action lowered by verification needs a human and is never auto-cleared', () => {
+    const rec = run({
+      ai: aiOk({}, { verification: { ...NO_ISSUES, actionLowered: { from: 'remove', to: 'none' } } }),
+    });
+    expect(rec.reasons).toContain('AI proposed "remove", more than the cited clauses allow; lowered to "none".');
+    expect(rec.needsHuman).toBe(true);
+    expect(rec.autoClear).toBe(false);
+  });
+
   it('[AI-6] reported content needs a human', () => {
     expect(run({ reportCount: 1 }).reasons).toContain('Reported by 1 user.');
     expect(run({ reportCount: 3 }).reasons).toContain('Reported by 3 users.');

@@ -361,7 +361,7 @@ job failure.**
 2. `direct`: `JSON.parse(text)`
 3. `fenced`: the first fenced ```` ```json ```` (or plain ```` ``` ````) block
 4. `embedded`: the first balanced `{...}`, found by a string-aware brace scan
-5. `repaired`: the embedded candidate after conservative fixes (smart quotes -> `"`, trailing commas removed,
+5. `repaired`: the embedded candidate after conservative fixes (curly double quotes -> `"`, trailing commas removed,
    BOM stripped)
 
 The ladder returns `{value, strategy}`. Any strategy other than `direct` logs `ai.parse_fallback`. Valid JSON
@@ -377,16 +377,18 @@ that fails Zod is **not** sent down the ladder again; it goes to the repair call
 
 ### 5.6 Combine (`moderation/combine.ts`) [AI-6, AI-7, Q-2]
 
-`needsHuman` has **12 conditions**: the 11 of AI-6 (the AI is unavailable; the action is not `none`; the AI asked
+`needsHuman` has **14 conditions**: the 11 of AI-6 (the AI is unavailable; the action is not `none`; the AI asked
 for review; confidence below `HUMAN_CONFIDENCE_THRESHOLD`; a `high` severity finding; an `alwaysEscalate` clause;
-rules and AI disagree; an invalid citation; an unverified quote; the case was reported; `insufficientContext`) plus
-the AI-8 injection signal from `ai/prompts.ts`. Each adds one or more plain-language reasons.
+rules and AI disagree; an invalid citation; an unverified quote; the case was reported; `insufficientContext`), the
+AI-8 injection signal from `ai/prompts.ts`, and two from verification (AI-3, AI-4): a finding dropped because nothing
+verifiable was left, and a proposed action lowered to what the cited clauses allow. A model that saw something it
+could not back up therefore never auto-clears. Each condition adds one or more plain-language reasons.
 
 ```
 action     = max(lowered AI action, defaultAction of each rule-hit clause)   // never above allowed
 severity   = max over findings
 confidence = AI overall confidence (after caps), or null when the AI is unavailable
-needsHuman = any of 12 conditions -> reasons[] in plain language (AI reasons prefixed "AI:")
+needsHuman = any of 14 conditions -> reasons[] in plain language (AI reasons prefixed "AI:")
 autoClear  = AUTO_CLEAR_ENABLED && AI ok && 0 findings && 0 reports && confidence >= 0.85 && reasons empty
 priority   = Q-2 formula
 ```
@@ -738,7 +740,7 @@ Demo sign-in is not limited: it takes no credentials.
 | 8 | Insert-only tables + hash-chained audit | Mutable rows | A complete, tamper-evident audit trail |
 | 9 | New analysis version on re-evaluate or re-analyse | Overwrite | History stays explainable; "stale analysis" protection becomes possible |
 | 10 | Appeal brief never recommends an outcome | AI suggests uphold or overturn | Avoids anchoring the second reviewer. The AI must not reject appeals. |
-| 11 | MUI themed to M3 tokens | `@material/web` (Lit; awkward with React and server rendering); Tailwind with custom components (slower to make accessible) | Accessible, complete component set, with M3 look through tokens |
+| 11 | MUI themed with our own design tokens (docs/03) | `@material/web` (Lit; awkward with React and server rendering); Tailwind with custom components (slower to make accessible) | Accessible, complete component set; the look comes entirely from tokens and component overrides |
 | 12 | Own minimal session | Auth.js | Credentials-only demo; fewer moving parts to explain |
 
 ---

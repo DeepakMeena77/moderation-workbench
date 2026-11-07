@@ -120,6 +120,18 @@ export function combine(input: CombineInput): Recommendation {
       `AI quotes not found in the content (${[...new Set(unverified)].join(', ')}); treated as interpretation.`,
     );
   }
+  // A finding the model made but verification had to drop, or an action it proposed beyond what the clauses
+  // allow, means the model saw something it could not back up: never auto-clear on that.
+  const dropped = ai.verification?.droppedFindings ?? 0;
+  if (dropped > 0) {
+    reasons.push(
+      `AI made ${dropped} ${dropped === 1 ? 'finding' : 'findings'} with no verifiable quote or explanation (removed).`,
+    );
+  }
+  const lowered = ai.verification?.actionLowered ?? null;
+  if (lowered) {
+    reasons.push(`AI proposed "${lowered.from}", more than the cited clauses allow; lowered to "${lowered.to}".`);
+  }
   if (input.reportCount > 0)
     reasons.push(`Reported by ${input.reportCount} ${input.reportCount === 1 ? 'user' : 'users'}.`);
   if (ai.injectionSignals.length > 0) {

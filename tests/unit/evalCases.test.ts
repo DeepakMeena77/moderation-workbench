@@ -79,7 +79,8 @@ describe('evaluation runner (EVAL-2)', () => {
     expect(run.status, run.stderr).toBe(0);
     const out = run.stdout;
     for (const metric of [
-      'Clause precision',
+      'Clause precision, labelled codes',
+      'Clause precision, strict (every unexpected citation is a false positive)',
       'Clause recall',
       'Action in expected set',
       'Must-escalate recall (target 100%)',

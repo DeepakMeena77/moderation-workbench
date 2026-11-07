@@ -85,6 +85,9 @@ How AI coding tools were used to build this project, what they got wrong, and ho
 
 ## Running log
 
+Test counts are per branch: S3 to S7 were built on parallel branches, so a later slice can show fewer tests
+until the branches were merged.
+
 | Slice | Result | Verified by |
 | --- | --- | --- |
 | S0 | Scaffold, theme, logging, http wrapper, status page, CI | verify (85 tests), test:ui 13/13, CI, live /api/health |
@@ -93,7 +96,7 @@ How AI coding tools were used to build this project, what they got wrong, and ho
 | S3 | AI core and job wiring | unit 217, verify (362), live smoke |
 | S4 | Queue, case page, decisions | verify (412 after merging S3), test:ui 142 |
 | S5 | Appeals, second review, AI appeal brief, My content, history | verify (468), test:ui 155, trace S5 8/8; migration renamed at review so it sorts after S6 and S7 |
-| S6 | Policy versions, compare, publish, re-evaluation runs | verify, test:ui, trace S6 |
+| S6 | Policy versions, compare, publish, re-evaluation runs | verify (389), test:ui 139, trace S6: POL-2..5 covered |
 | S7 | Hash-chained audit, access.denied, audit and metrics pages | verify (463), trace S7 8/8; one ui failure traced to leftover dev data, re-checked on a fresh database |
 | S8 | Evaluation set and runner; cross-role e2e journey; screenshot script | live eval 20/21; e2e 12/12 at 1280 and 390 px; trace S8 6/6 |
 | S9 | Job admin routes, policy-change notices, page access audit, docs aligned with code | verify (533), test:ui 202, e2e 12/12, `check:trace --strict` 65 covered, 5 manual, 0 missing |

@@ -3,12 +3,15 @@
 [![CI](https://github.com/DeepakMeena77/moderation-workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/DeepakMeena77/moderation-workbench/actions/workflows/ci.yml)
 
 A text moderation app where deterministic rules and an AI reviewer check posts and comments against a
-versioned policy, and **humans make every decision**. Authors can appeal; appeals go to a different senior
+versioned policy, and **humans make every moderation decision**. Authors can appeal; appeals go to a different senior
 moderator. Every state change is written to a tamper-evident audit trail.
 
-> **The AI recommends; humans decide.** Only one function can change what users see, it refuses any actor that
-> is not a human moderator, and a database trigger enforces the same rule. The AI cannot remove content or
-> resolve an appeal.
+> **The AI recommends; humans decide.** Only one function can change what users see, and it refuses any actor
+> that is not a human moderator. A database trigger adds defence in depth: it rejects a visibility change in any
+> transaction that did not pass through that function. The AI cannot label, limit or remove content, or resolve an
+> appeal. The only thing that happens without a person is **auto-clear**: a case with no rule or AI findings, no
+> reports and AI confidence of at least 0.85 is closed as "auto-cleared" without changing what anyone sees. It can
+> be turned off with `AUTO_CLEAR_ENABLED=false`, and a moderator can reopen any auto-cleared case.
 
 | | |
 | --- | --- |
@@ -24,7 +27,7 @@ moderator. Every state change is written to a tamper-evident audit trail.
 | 2 | `senior@example.com` | Queue: open the new case. The quote is highlighted, the clause is cited, and "Why a human must decide" lists the reasons. Approve, modify or reject. |
 | 3 | `author@example.com` | My content: the post shows the decision in plain words. Appeal it with a statement of 20+ characters. |
 | 4 | `senior@example.com` | Open the appeal: you made the original decision, so the review controls are off and the API refuses a resolve with `SAME_REVIEWER`. Refusals are written to the audit trail. |
-| 5 | `senior2@example.com` | Appeals: open it, read the AI's neutral summary (it never recommends an outcome), then uphold, overturn or modify. |
+| 5 | `senior2@example.com` | Appeals: open it, read the AI's neutral summary (its output has no outcome field and the prompt forbids recommending one), then uphold, overturn or modify. |
 | 6 | `admin@example.com` | Policy: upload [policies/policy.v2.json](policies/policy.v2.json), review the clause diff and impact, and publish; unresolved cases are re-analysed with progress (the waiting crypto post, which v1 does not cover, is then cited under the new SCAM-1). Audit: the chain shows "intact". Metrics: agreement, overrides, failures, latency and cost. |
 | 7 | anyone | `/status`: app, database, AI model, jobs, policy and AI usage, checked live. |
 
@@ -37,7 +40,7 @@ Demo accounts: `author@`, `author2@`, `moderator@`, `senior@`, `senior2@`, `admi
   exact character offsets.
 - **AI review (Gemini):** cites the exact clause behind every finding, separates confirmed evidence (verbatim
   quotes, verified by code) from interpretation, proposes an action, explains severity and confidence, and says
-  when human judgement is needed. The **server** makes the final "needs a human" call from 12 explicit reasons.
+  when human judgement is needed. The **server** makes the final "needs a human" call from 14 explicit reasons.
 - **Human decisions:** approve, reject or modify the recommendation, with the policy version stored on every
   decision and protection against deciding on an outdated analysis (409).
 - **Appeals:** author only, once, within 14 days; routed to a senior moderator who did not make the decision; the
@@ -119,8 +122,10 @@ See [AI_NOTES.md](AI_NOTES.md) for the model choice, every safeguard with its fi
 and the evaluation results, and [PROMPTS_USED.md](PROMPTS_USED.md) for the runtime prompts and how they were
 refined.
 
-Evaluation (`npm run eval`, 21 labelled cases, live `gemini-3.5-flash-lite`): 20/21 pass, 100% clause precision
-and recall, 100% must-escalate recall, no false escalation on clean posts, 0.021 USD for the run.
+Evaluation (`npm run eval`, 21 labelled cases, live `gemini-3.5-flash-lite`): 20/21 pass, 100% clause recall,
+100% must-escalate recall, no false escalation on clean posts, 0 invalid outputs, 0.021 USD for the run. Clause
+precision is 100% on labelled codes and 69% strict, where every unexpected citation counts against it (a quoted
+threat, banter, an ambiguous reply, a non-English insult); every one of those cases went to a human.
 
 ## Setup
 
@@ -166,6 +171,15 @@ content (evidence stays stable), notifications, real-time push (pages poll while
 
 ## Known limitations
 
+- The appeal brief's output has no outcome field and its prompt forbids recommending one, but its free-text
+  summary is not machine-checked for recommending language; the page labels it "Does not recommend an outcome",
+  and a senior moderator decides.
+- The audit chain detects changed, rewritten or deleted rows. A `TRUNCATE` by the table owner bypasses row
+  triggers (the integration tests reset tables this way), and an empty chain verifies as intact; the app's own
+  code never truncates.
+- The single repair call goes through the same provider chain, so a transient error during repair is retried
+  within the same bounds. Tokens and cost are recorded from responses that report usage; an attempt that times
+  out reports none.
 - Deterministic threat patterns cannot tell a quotation from a threat (evaluation case E09). Such cases still go
   to a human; no action is taken automatically.
 - The AI over-flags some friendly banter as possible harassment (label only, sent to a human).
@@ -182,7 +196,9 @@ content (evidence stays stable), notifications, real-time push (pages poll while
 Vercel (region `sin1`) with Neon Postgres (Singapore). Production and preview use separate database branches;
 the build runs `prisma generate && prisma migrate deploy && next build`. Pushes to `main` deploy production.
 
-Post-deploy verification and the release record are in [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md).
+Post-deploy verification of the current release: `/api/health` reports the deployed commit; `/status` shows all
+six checks operational; the audit chain verifies as intact; live Gemini runs are recorded with tokens and cost;
+CI is green on the commit. The full record, with numbers, is in [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md).
 
 ## Documents
 
@@ -191,6 +207,8 @@ Post-deploy verification and the release record are in [docs/RELEASE_NOTES.md](d
 | [docs/01-requirements.md](docs/01-requirements.md) | Numbered acceptance criteria |
 | [docs/02-system-design.md](docs/02-system-design.md) | Architecture, data model, AI pipeline, API, decisions |
 | [docs/03-ui-ux.md](docs/03-ui-ux.md) | Design system and screens |
+| [docs/00-process.md](docs/00-process.md) | How the work was organised: slices, gates, git workflow |
+| [docs/04-build-plan.md](docs/04-build-plan.md) | Slice plan with scope and exit checks |
 | [docs/05-test-plan.md](docs/05-test-plan.md) | Test strategy and evaluation set |
 | [docs/trace.md](docs/trace.md) | Generated criterion-to-test table |
 | [AI_NOTES.md](AI_NOTES.md) | AI design, safeguards, cost, evaluation |
