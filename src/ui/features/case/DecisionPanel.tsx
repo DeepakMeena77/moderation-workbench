@@ -12,7 +12,7 @@ import { Card } from '../../components/Card';
 import { ChoiceChips, type ChoiceChipsHandle } from '../../components/ChoiceChips';
 import { ACTION_LABEL } from '../../components/ModerationTags';
 import { useSnackbar } from '../../components/SnackbarProvider';
-import { m3 } from '../../theme/theme';
+import { layout, m3 } from '../../theme/theme';
 import {
   actionDisabledReason,
   FIELD_ORDER,
@@ -140,7 +140,7 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
   const reasons = draft?.mode === 'reject' ? REJECT_REASONS : MODIFY_REASONS;
 
   return (
-    <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box>
         <Typography id={headingId} variant="h3" component="h2">
           Your decision
@@ -210,8 +210,8 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
             display: 'flex',
             flexDirection: 'column',
             gap: 4,
-            p: 4,
-            borderRadius: '12px',
+            p: 3,
+            borderRadius: `${layout.nestedRadius}px`,
             backgroundColor: m3(t).cardNested,
           })}
         >
@@ -272,7 +272,6 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
                 </span>
               </Box>
             }
-            slotProps={{ formHelperText: { sx: (t) => ({ ...t.typography.caption, mx: 4 }) } }}
           />
           <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 2 }}>
             <Button variant="text" onClick={() => setDraft(null)} disabled={decide.isPending}>

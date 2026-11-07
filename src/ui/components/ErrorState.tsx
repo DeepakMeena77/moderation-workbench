@@ -18,25 +18,25 @@ export function ErrorState({ error, onRetry, retrying = false }: ErrorStateProps
   const actionLabel = apiError?.status === 409 ? 'Reload' : 'Retry';
 
   return (
-    <Box
-      role="alert"
-      data-ui="stack"
-      sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2, py: 8 }}
-    >
-      <ErrorOutlineRounded aria-hidden sx={{ fontSize: 48, color: 'text.secondary' }} />
-      <Typography variant="h3" component="p">
-        {message}
-      </Typography>
-      {onRetry ? (
-        <Button variant="tonal" onClick={onRetry} loading={retrying}>
-          {actionLabel}
-        </Button>
-      ) : null}
-      {apiError?.requestId ? (
-        <Typography variant="caption" color="text.secondary">
-          Request ID: {apiError.requestId}
+    <Box role="alert" data-ui="stack" sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, py: 1 }}>
+      <ErrorOutlineRounded aria-hidden sx={{ fontSize: 20, color: 'error.main' }} />
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, minWidth: 0 }}>
+        <Typography variant="h3" component="p" sx={{ overflowWrap: 'anywhere' }}>
+          {message}
         </Typography>
-      ) : null}
+        {apiError?.requestId ? (
+          <Typography variant="caption" color="text.secondary">
+            Request ID: {apiError.requestId}
+          </Typography>
+        ) : null}
+        {onRetry ? (
+          <Box sx={{ mt: 1 }}>
+            <Button variant="tonal" onClick={onRetry} loading={retrying}>
+              {actionLabel}
+            </Button>
+          </Box>
+        ) : null}
+      </Box>
     </Box>
   );
 }

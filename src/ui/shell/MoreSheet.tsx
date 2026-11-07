@@ -48,8 +48,8 @@ export function MoreSheet({
           'aria-modal': true,
           'aria-labelledby': 'more-sheet-title',
           sx: (theme) => ({
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
             backgroundColor: m3(theme).surfaceContainerLow,
             px: 3,
             pb: 6,

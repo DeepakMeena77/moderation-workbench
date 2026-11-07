@@ -3,6 +3,8 @@
 import AdminPanelSettingsRounded from '@mui/icons-material/AdminPanelSettingsRounded';
 import CloudOffRounded from '@mui/icons-material/CloudOffRounded';
 import HourglassTopRounded from '@mui/icons-material/HourglassTopRounded';
+import LockOpenRounded from '@mui/icons-material/LockOpenRounded';
+import RefreshRounded from '@mui/icons-material/RefreshRounded';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { ApiError } from '../../api/client';
@@ -23,6 +25,7 @@ import {
   FindingsCard,
   RecommendationCard,
 } from './CaseSections';
+import { layout } from '../../theme/theme';
 import { DecisionPanel } from './DecisionPanel';
 
 // The case page (03 sec. 6.6). One column until the detail pane is wide enough, then a main column with a sticky
@@ -33,12 +36,15 @@ const SUPPORTING_PANE_MIN = 760;
 
 function CaseSkeleton() {
   return (
-    <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
       <CardSkeleton height={200} />
       <CardSkeleton height={240} />
     </Box>
   );
 }
+
+/** Header actions sit in the chip row, so they keep tight side padding next to the 24 dp tags. */
+const COMPACT_BUTTON = { pr: 4 } as const;
 
 function CaseActions({ detail }: { detail: CaseDetail }) {
   const reanalyze = useReanalyze(detail.id);
@@ -52,6 +58,8 @@ function CaseActions({ detail }: { detail: CaseDetail }) {
       {detail.permissions.canReopen ? (
         <Button
           variant="tonal"
+          startIcon={<LockOpenRounded />}
+          sx={COMPACT_BUTTON}
           loading={reopen.isPending}
           onClick={() =>
             reopen.mutate(undefined, {
@@ -66,6 +74,8 @@ function CaseActions({ detail }: { detail: CaseDetail }) {
       {detail.permissions.canReanalyze ? (
         <Button
           variant="tonal"
+          startIcon={<RefreshRounded />}
+          sx={COMPACT_BUTTON}
           loading={reanalyze.isPending}
           disabled={detail.analysisPending}
           onClick={() =>
@@ -129,20 +139,33 @@ export function CaseBody({ detail, onReload }: { detail: CaseDetail; onReload: (
         sx={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr)',
-          gap: 4,
+          gap: layout.stackGap,
           [`@container (min-width: ${SUPPORTING_PANE_MIN}px)`]: {
             gridTemplateColumns: 'minmax(0, 1fr) 360px',
             alignItems: 'start',
           },
         }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
-            <StatusTag status={detail.status} />
-            <Tag label={`P ${detail.priority}`} tone="neutral" title="Queue priority, 0-100" />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap, minWidth: 0 }}>
+          {/* One header row: status and priority on the left, actions on the right. When it wraps (phones), the
+              actions start a new line at the left edge, under the tags. */}
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              columnGap: 3,
+              rowGap: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
+              <StatusTag status={detail.status} />
+              <Tag label={`P ${detail.priority}`} tone="neutral" title="Queue priority, 0-100" />
+            </Box>
+            <CaseActions detail={detail} />
           </Box>
           <CaseBanners detail={detail} />
-          <CaseActions detail={detail} />
           <ContentCard detail={detail} />
           <FindingsCard detail={detail} />
           <AnalysisVersions detail={detail} />
@@ -152,9 +175,9 @@ export function CaseBody({ detail, onReload }: { detail: CaseDetail; onReload: (
           sx={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 4,
+            gap: layout.stackGap,
             minWidth: 0,
-            [`@container (min-width: ${SUPPORTING_PANE_MIN}px)`]: { position: 'sticky', top: 80 },
+            [`@container (min-width: ${SUPPORTING_PANE_MIN}px)`]: { position: 'sticky', top: layout.appBarHeight + 16 },
           }}
         >
           {detail.analysis ? (

@@ -6,7 +6,6 @@ import PersonRounded from '@mui/icons-material/PersonRounded';
 import TouchAppRounded from '@mui/icons-material/TouchAppRounded';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import NextLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppeals, type AppealRow, type AppealStatus } from '../../api/hooks';
 import { Banner } from '../../components/Banner';
@@ -14,10 +13,12 @@ import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { FilterChip } from '../../components/FilterChip';
 import { IconButton } from '../../components/IconButton';
+import { ListRow } from '../../components/ListRow';
 import { ACTION_LABEL } from '../../components/ModerationTags';
 import { QueryState } from '../../components/QueryState';
+import { RowList } from '../../components/RowList';
 import { Tag } from '../../components/Tag';
-import { m3 } from '../../theme/theme';
+import { layout, pageSx, titleGap } from '../../theme/theme';
 import { relativeTime } from '../feed/format';
 import { AppealReview } from './AppealReview';
 
@@ -45,56 +46,20 @@ function RowTag({ row }: { row: AppealRow }) {
 
 function AppealListRow({ row, selected, href }: { row: AppealRow; selected: boolean; href: string }) {
   return (
-    <Box component="li" sx={{ listStyle: 'none' }}>
-      <Box
-        component={NextLink}
-        href={href}
-        scroll={false}
-        aria-current={selected ? 'page' : undefined}
-        data-ui="section"
-        sx={(t) => {
-          const bg = selected ? m3(t).selected : m3(t).card;
-          return {
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            minHeight: 88,
-            px: 4,
-            py: 3,
-            borderRadius: '12px',
-            backgroundColor: bg,
-            color: m3(t).onSurface,
-            textDecoration: 'none',
-            '&:hover': { backgroundColor: `color-mix(in srgb, ${m3(t).onSurface} 8%, ${bg})` },
-          };
-        }}
-      >
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            variant="body2"
-            component="p"
-            sx={{
-              overflowWrap: 'anywhere',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {row.content.excerpt}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ overflowWrap: 'anywhere' }}>
-            {appealSupportingText(row)}
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, flexShrink: 0 }}>
+    <ListRow
+      href={href}
+      selected={selected}
+      headline={row.content.excerpt}
+      supporting={appealSupportingText(row)}
+      trailing={
+        <>
           <RowTag row={row} />
           <Typography variant="caption" color="text.secondary">
             <time dateTime={row.resolvedAt ?? row.createdAt}>{relativeTime(row.resolvedAt ?? row.createdAt)}</time>
           </Typography>
-        </Box>
-      </Box>
-    </Box>
+        </>
+      }
+    />
   );
 }
 
@@ -107,12 +72,12 @@ export function AppealsView({ selectedId }: { selectedId: string | null }) {
   const appeals = useAppeals(status);
 
   return (
-    <Box data-ui="section" sx={{ px: { xs: 4, sm: 6 }, py: 6 }}>
-      <Box sx={{ display: { xs: selectedId ? 'none' : 'block', md: 'block' }, mb: 4 }}>
+    <Box data-ui="section" sx={pageSx}>
+      <Box sx={{ display: { xs: selectedId ? 'none' : 'block', md: 'block' }, mb: titleGap }}>
         <Typography variant="h1">Appeals</Typography>
       </Box>
       {selectedId ? (
-        <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 2, mb: 4, ml: -3 }}>
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 2, mb: titleGap, ml: -3 }}>
           <IconButton label="Back to appeals" onClick={() => router.push(`/appeals${search}`, { scroll: false })}>
             <ArrowBackRounded />
           </IconButton>
@@ -124,7 +89,7 @@ export function AppealsView({ selectedId }: { selectedId: string | null }) {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '360px minmax(0, 1fr)', lg: '400px minmax(0, 1fr)' },
-          gap: 6,
+          gap: { md: 4, lg: 6 },
           alignItems: 'start',
         }}
       >
@@ -134,7 +99,7 @@ export function AppealsView({ selectedId }: { selectedId: string | null }) {
           sx={{
             display: { xs: selectedId ? 'none' : 'flex', md: 'flex' },
             flexDirection: 'column',
-            gap: 4,
+            gap: layout.stackGap,
             minWidth: 0,
           }}
         >
@@ -176,7 +141,7 @@ export function AppealsView({ selectedId }: { selectedId: string | null }) {
           >
             {(data) => (
               <>
-                <Box component="ul" sx={{ m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <RowList component="ul" aria-label="Appeals">
                   {data.items.map((row) => (
                     <AppealListRow
                       key={row.id}
@@ -185,7 +150,7 @@ export function AppealsView({ selectedId }: { selectedId: string | null }) {
                       href={`/appeals/${row.id}${search}`}
                     />
                   ))}
-                </Box>
+                </RowList>
                 <Typography variant="caption" color="text.secondary" role="status">
                   Showing {data.items.length} of {data.total}
                 </Typography>

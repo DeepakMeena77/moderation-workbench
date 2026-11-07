@@ -7,10 +7,10 @@ import Typography from '@mui/material/Typography';
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { ApiError } from '../../api/client';
 import { Button } from '../../components/Button';
-import { m3 } from '../../theme/theme';
+import { layout, m3 } from '../../theme/theme';
 import { thousands } from './format';
 
-// The post and comment composer (03 sec. 6.2, CNT-1, CNT-2): a filled text field with a 0/2000 counter,
+// The post and comment composer (03 sec. 6.2, CNT-1, CNT-2): an outlined multi-line field with a 0/2000 counter,
 // inline validation by field, a submit button that shows progress and blocks double submission, and a
 // retryable error that keeps the typed text (03 sec. 7).
 
@@ -99,9 +99,6 @@ export function Composer({ label, submitLabel, onSubmit, minRows = 3 }: Composer
             </span>
           </Box>
         }
-        slotProps={{
-          formHelperText: { sx: (theme) => ({ ...theme.typography.caption, mx: 4 }) },
-        }}
       />
       {formError ? (
         <Box
@@ -111,8 +108,8 @@ export function Composer({ label, submitLabel, onSubmit, minRows = 3 }: Composer
             display: 'flex',
             alignItems: 'flex-start',
             gap: 3,
-            p: 4,
-            borderRadius: '12px',
+            p: 3,
+            borderRadius: `${layout.nestedRadius}px`,
             backgroundColor: m3(theme).errorContainer,
             color: m3(theme).onErrorContainer,
           })}

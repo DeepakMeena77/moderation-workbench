@@ -23,6 +23,7 @@ import { Card } from '../../components/Card';
 import { IconButton } from '../../components/IconButton';
 import { ActionTag, PolicyVersionTag, StatusTag } from '../../components/ModerationTags';
 import { QueryState } from '../../components/QueryState';
+import { layout, pageSx } from '../../theme/theme';
 import { CardSkeleton } from '../../components/Skeletons';
 import { Timeline } from '../../components/Timeline';
 import { relativeTime } from '../feed/format';
@@ -113,7 +114,7 @@ export function HistoryBody({ history }: { history: ContentHistory }) {
   const headingId = useId();
   const noun = history.content.type === 'post' ? 'Post' : 'Comment';
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
       <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
           <Typography id={headingId} variant="h3" component="h2">
@@ -153,9 +154,9 @@ export function HistoryView({ contentId }: { contentId: string }) {
   const query = useHistory(contentId);
   const router = useRouter();
   return (
-    <Box data-ui="section" sx={{ px: { xs: 4, sm: 6 }, py: 6 }}>
-      <Box sx={{ maxWidth: 680, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: -3 }}>
+    <Box data-ui="section" sx={pageSx}>
+      <Box sx={{ maxWidth: layout.readingWidth, display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: -3, my: -1 }}>
           <IconButton label="Back" onClick={() => router.back()}>
             <ArrowBackRounded />
           </IconButton>
@@ -165,7 +166,7 @@ export function HistoryView({ contentId }: { contentId: string }) {
           query={query}
           loadingLabel="Loading the history"
           skeleton={
-            <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
               <CardSkeleton height={140} />
               <CardSkeleton height={280} />
             </Box>

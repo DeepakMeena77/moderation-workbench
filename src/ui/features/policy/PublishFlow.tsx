@@ -11,8 +11,9 @@ import type { Theme } from '@mui/material/styles';
 import { useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { ApiError } from '../../api/client';
 import { Button } from '../../components/Button';
+import { Stepper } from '../../components/Stepper';
 import { useSnackbar } from '../../components/SnackbarProvider';
-import { m3 } from '../../theme/theme';
+import { layout, m3 } from '../../theme/theme';
 import { usePublishPolicy, useValidatePolicy, type PolicyValidation } from './api';
 import { DiffView } from './DiffView';
 
@@ -22,30 +23,6 @@ import { DiffView } from './DiffView';
 
 export const MAX_POLICY_CHARS = 90_000;
 const STEPS = ['Paste or upload JSON', 'Validate', 'Review changes and impact', 'Confirm'] as const;
-
-function StepList({ current }: { current: number }) {
-  return (
-    <Box component="ol" aria-label="Publish steps" sx={{ m: 0, pl: 5, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-      {STEPS.map((label, index) => {
-        const active = index + 1 === current;
-        return (
-          <Typography
-            key={label}
-            component="li"
-            variant="body2"
-            aria-current={active ? 'step' : undefined}
-            sx={(t) => ({
-              fontWeight: active ? 500 : 400,
-              color: active ? m3(t).primary : m3(t).onSurfaceVariant,
-            })}
-          >
-            {label}
-          </Typography>
-        );
-      })}
-    </Box>
-  );
-}
 
 function Banner({ tone, children }: { tone: 'error' | 'warning' | 'info'; children: ReactNode }) {
   return (
@@ -63,8 +40,9 @@ function Banner({ tone, children }: { tone: 'error' | 'warning' | 'info'; childr
           display: 'flex',
           alignItems: 'flex-start',
           gap: 3,
-          p: 4,
-          borderRadius: '12px',
+          px: 4,
+          py: 3,
+          borderRadius: `${layout.nestedRadius}px`,
           backgroundColor: bg,
           color: fg,
         };
@@ -151,7 +129,7 @@ export function PublishFlow({ onPublished }: { onPublished: (runId: string) => v
 
   return (
     <Box data-ui="stack" sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <StepList current={step} />
+      <Stepper label="Publish steps" steps={STEPS} current={step} />
 
       <TextField
         inputRef={fieldRef}

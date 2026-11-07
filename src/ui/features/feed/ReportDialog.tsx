@@ -47,8 +47,8 @@ export function ReportDialog({ target, onClose }: { target: ReportTarget | null;
             'aria-modal': true,
             'aria-labelledby': titleId,
             sx: (t: Theme) => ({
-              borderTopLeftRadius: 28,
-              borderTopRightRadius: 28,
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
               backgroundColor: m3(t).surfaceContainerLow,
               px: 4,
               pb: 6,
@@ -236,7 +236,6 @@ function ReportForm({ target, titleId, onDone }: { target: ReportTarget; titleId
             </span>
           </Box>
         }
-        slotProps={{ formHelperText: { sx: (t) => ({ ...t.typography.caption, mx: 4 }) } }}
       />
 
       {formError ? (

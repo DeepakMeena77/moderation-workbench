@@ -3,7 +3,7 @@ import SearchRounded from '@mui/icons-material/SearchRounded';
 import Box from '@mui/material/Box';
 import InputBase from '@mui/material/InputBase';
 import { useEffect, useRef, useState } from 'react';
-import { m3 } from '../theme/theme';
+import { layout, m3 } from '../theme/theme';
 import { IconButton } from './IconButton';
 
 export interface SearchBarProps {
@@ -17,7 +17,7 @@ export interface SearchBarProps {
 
 export const SEARCH_DEBOUNCE_MS = 300; // 03 sec. 4
 
-// Search bar (03 sec. 4): height 56, full radius, field fill, leading search icon, trailing clear button.
+// Search bar (03 sec. 4): 40 high with the text-field radius, so search and fields read as one family; field fill, leading search icon, trailing clear button.
 // Typing is debounced; the committed value lives in the URL, so a reload or a shared link keeps the search.
 export function SearchBar({ value, onSearch, label, placeholder, debounceMs = SEARCH_DEBOUNCE_MS }: SearchBarProps) {
   const [draft, setDraft] = useState(value);
@@ -46,10 +46,10 @@ export function SearchBar({ value, onSearch, label, placeholder, debounceMs = SE
         display: 'flex',
         alignItems: 'center',
         gap: 1,
-        height: 56,
+        height: layout.searchHeight,
         pl: 4,
         pr: 1,
-        borderRadius: 9999,
+        borderRadius: `${layout.fieldRadius}px`,
         backgroundColor: m3(t).field,
         color: m3(t).onSurfaceVariant,
         '&:focus-within': { outline: `3px solid ${m3(t).secondary}`, outlineOffset: 2 },
@@ -79,6 +79,7 @@ export function SearchBar({ value, onSearch, label, placeholder, debounceMs = SE
       />
       {draft ? (
         <IconButton
+          sx={{ width: 40, height: 40 }}
           label="Clear search"
           onClick={() => {
             setDraft('');

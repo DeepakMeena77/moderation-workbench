@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { Tag } from '../../components/Tag';
-import { m3 } from '../../theme/theme';
+import { layout, m3 } from '../../theme/theme';
 import type { PolicyDiff } from './api';
 
 // DiffView (03 sec. 6.9, POL-5): clauses added, removed and changed, the changed ones field by field with
@@ -28,7 +28,13 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-const nested = { borderRadius: '12px', p: 4, display: 'flex', flexDirection: 'column', gap: 2 } as const;
+const nested = {
+  borderRadius: `${layout.nestedRadius}px`,
+  p: 3,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2,
+} as const;
 
 export function DiffView({ diff, fromLabel, toLabel }: { diff: PolicyDiff; fromLabel: string; toLabel: string }) {
   const empty = diff.added.length === 0 && diff.removed.length === 0 && diff.changed.length === 0;

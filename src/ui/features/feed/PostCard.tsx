@@ -11,11 +11,11 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useId, useState } from 'react';
 import { useCreateComment, type FeedItem, type FeedPost } from '../../api/hooks';
+import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
 import { Tag } from '../../components/Tag';
 import { useSnackbar } from '../../components/SnackbarProvider';
-import { m3 } from '../../theme/theme';
+import { layout, m3 } from '../../theme/theme';
 import { Composer } from './Composer';
 import { relativeTime, shortDate } from './format';
 import type { ReportTarget } from './ReportDialog';
@@ -36,27 +36,34 @@ export function removedNotice(item: FeedItem): string {
     : `${under}.`;
 }
 
+function AuthorAvatar({ item }: { item: FeedItem }) {
+  return (
+    <Avatar
+      aria-hidden
+      sx={(theme) => ({
+        width: 32,
+        height: 32,
+        ...theme.typography.h4,
+        backgroundColor: m3(theme).primaryContainer,
+        color: m3(theme).onPrimaryContainer,
+      })}
+    >
+      {item.author.name.trim().charAt(0).toUpperCase() || '?'}
+    </Avatar>
+  );
+}
+
+/** Avatar, then the name and the relative time on one line (metadata in bodySmall). */
 function ItemHeader({ item }: { item: FeedItem }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, minWidth: 0 }}>
-      <Avatar
-        aria-hidden
-        sx={(theme) => ({
-          width: 40,
-          height: 40,
-          ...theme.typography.h3,
-          backgroundColor: m3(theme).primaryContainer,
-          color: m3(theme).onPrimaryContainer,
-        })}
-      >
-        {item.author.name.trim().charAt(0).toUpperCase() || '?'}
-      </Avatar>
-      <Box sx={{ minWidth: 0 }}>
+      <AuthorAvatar item={item} />
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 2, minWidth: 0 }}>
         <Typography variant="h4" component="p" sx={{ overflowWrap: 'anywhere' }}>
           {item.author.name}
           {item.isOwn ? ' (you)' : ''}
         </Typography>
-        <Typography variant="caption" color="text.secondary" component="p">
+        <Typography variant="caption" color="text.secondary" component="p" sx={{ whiteSpace: 'nowrap' }}>
           <time dateTime={item.createdAt} title={new Date(item.createdAt).toLocaleString('en-GB')}>
             {relativeTime(item.createdAt)}
           </time>
@@ -81,9 +88,6 @@ function ItemTags({ item }: { item: FeedItem }) {
       />,
     );
   }
-  if (item.visibility === 'limited') {
-    tags.push(<Tag key="limited" label="Limited" tone="warning" icon={<VisibilityOffRounded />} />);
-  }
   if (item.visibility === 'removed' && !item.isOwn) {
     tags.push(<Tag key="removed" label="Removed - staff view" tone="error" icon={<DeleteRounded />} />);
   }
@@ -97,42 +101,39 @@ function ItemBody({ item, size }: { item: FeedItem; size: 'post' | 'comment' }) 
   const collapsed = item.visibility === 'limited' && !revealed;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       {item.visibility === 'removed' && item.isOwn ? (
-        <Box
-          data-ui="section"
-          role="note"
-          sx={(theme) => ({
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 3,
-            p: 3,
-            borderRadius: '12px',
-            backgroundColor: m3(theme).errorContainer,
-            color: m3(theme).onErrorContainer,
-          })}
-        >
-          <DeleteRounded aria-hidden sx={{ fontSize: 20 }} />
-          <Typography variant="body2">{removedNotice(item)}</Typography>
-        </Box>
+        <Banner tone="error" icon={<DeleteRounded />}>
+          {removedNotice(item)}
+        </Banner>
       ) : null}
       {collapsed ? (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            This {item.type} has limited reach under {clauseText(item.moderation.clauseCodes)}.
-          </Typography>
-          <Button variant="text" aria-controls={bodyId} aria-expanded={false} onClick={() => setRevealed(true)}>
-            Show anyway
-          </Button>
-        </Box>
-      ) : (
-        <Typography
-          id={bodyId}
-          variant={size === 'post' ? 'body1' : 'body2'}
-          sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+        <Banner
+          tone="neutral"
+          icon={<VisibilityOffRounded />}
+          action={
+            <Button variant="text" aria-controls={bodyId} aria-expanded={false} onClick={() => setRevealed(true)}>
+              Show anyway
+            </Button>
+          }
         >
-          {item.body}
-        </Typography>
+          This {item.type} has limited reach under {clauseText(item.moderation.clauseCodes)}.
+        </Banner>
+      ) : (
+        <>
+          {item.visibility === 'limited' ? (
+            <Box>
+              <Tag label="Limited reach" tone="warning" icon={<VisibilityOffRounded />} />
+            </Box>
+          ) : null}
+          <Typography
+            id={bodyId}
+            variant={size === 'post' ? 'body1' : 'body2'}
+            sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+          >
+            {item.body}
+          </Typography>
+        </>
       )}
     </Box>
   );
@@ -176,15 +177,27 @@ export function PostCard({ post, canComment, onReport }: PostCardProps) {
   const commentLabel = count > 0 ? `Comments (${count})` : 'Comment';
 
   return (
-    <Card
+    // A row inside the feed region (03 sec. 6.2): the region is the card, rows are split by a 1 px tonal step.
+    <Box
       component="article"
       aria-label={`Post by ${post.author.name}`}
-      sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+      sx={(theme) => ({
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        px: layout.cardPadding,
+        pt: 3,
+        pb: 1,
+        backgroundColor: m3(theme).card,
+        minWidth: 0,
+      })}
     >
       <ItemHeader item={post} />
       <ItemTags item={post} />
       <ItemBody item={post} size="post" />
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, ml: -3 }}>
+      {/* Text buttons keep their 40 px height; the row is pulled out by their own padding so the labels line up
+            with the text above and the card keeps an even margin below. */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, ml: -3, mt: -1 }}>
         {count > 0 || canComment ? (
           <Button
             variant="text"
@@ -200,7 +213,7 @@ export function PostCard({ post, canComment, onReport }: PostCardProps) {
       </Box>
 
       {open ? (
-        <Box id={commentsId} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box id={commentsId} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pb: 2 }}>
           {post.comments.map((comment) => (
             <Box
               key={comment.id}
@@ -211,15 +224,17 @@ export function PostCard({ post, canComment, onReport }: PostCardProps) {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 2,
-                p: 4,
-                borderRadius: '12px',
+                px: 3,
+                pt: 3,
+                pb: 1,
+                borderRadius: `${layout.nestedRadius}px`,
                 backgroundColor: m3(theme).cardNested,
               })}
             >
               <ItemHeader item={comment} />
               <ItemTags item={comment} />
               <ItemBody item={comment} size="comment" />
-              <Box sx={{ display: 'flex', ml: -3 }}>
+              <Box sx={{ display: 'flex', ml: -3, minHeight: 8 }}>
                 <ReportButton item={comment} onReport={onReport} />
               </Box>
             </Box>
@@ -237,6 +252,6 @@ export function PostCard({ post, canComment, onReport }: PostCardProps) {
           ) : null}
         </Box>
       ) : null}
-    </Card>
+    </Box>
   );
 }

@@ -197,7 +197,6 @@ export function AppealForm({ target, titleId, onDone }: { target: AppealTarget; 
             </span>
           </Box>
         }
-        slotProps={{ formHelperText: { sx: (t) => ({ ...t.typography.caption, mx: 4 }) } }}
       />
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -268,7 +267,6 @@ export function AppealForm({ target, titleId, onDone }: { target: AppealTarget; 
             </span>
           </Box>
         }
-        slotProps={{ formHelperText: { sx: (t) => ({ ...t.typography.caption, mx: 4 }) } }}
       />
 
       {failure ? (

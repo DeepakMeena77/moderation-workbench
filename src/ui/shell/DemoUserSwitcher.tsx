@@ -12,7 +12,7 @@ import ListItemText from '@mui/material/ListItemText';
 import { useAfterAuthChange, useDemoSignIn, type DemoAccount } from '../api/hooks';
 import { Button } from '../components/Button';
 import { useSnackbar } from '../components/SnackbarProvider';
-import { m3 } from '../theme/theme';
+import { layout, m3 } from '../theme/theme';
 import { homeFor, ROLE_LABEL } from './navigation';
 
 // "Switch demo user" (UX-5): change role without going back to the sign-in page, so a reviewer can walk the
@@ -70,7 +70,7 @@ export function DemoUserSwitcher({
                   disabled={demoSignIn.isPending}
                   aria-current={current ? 'true' : undefined}
                   sx={(theme) => ({
-                    borderRadius: '12px',
+                    borderRadius: `${layout.nestedRadius}px`,
                     ...(current
                       ? { backgroundColor: m3(theme).secondaryContainer, color: m3(theme).onSecondaryContainer }
                       : {}),

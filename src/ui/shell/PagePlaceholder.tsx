@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
+import { layout, pageSx, titleGap } from '../theme/theme';
 
 // Stand-in body for a destination whose screen arrives in a later slice. It keeps every navigation target
 // real (keyboard, layout and access checks run against it) and is replaced page by page.
@@ -15,12 +16,19 @@ export function PagePlaceholder({
 }: {
   title: string;
   description: string;
-  /** Reading pages (feed, my content) are 680 wide and centred; work pages are fluid (03 sec. 5). */
+  /** Reading pages (feed, my content) have a max width and start next to the navigation (03 sec. 5). */
   reading?: boolean;
 }) {
   return (
-    <Box data-ui="section" sx={{ px: { xs: 4, sm: 6 }, py: 6 }}>
-      <Box sx={{ maxWidth: reading ? 680 : 'none', mx: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <Box data-ui="section" sx={pageSx}>
+      <Box
+        sx={{
+          maxWidth: reading ? layout.readingWidth : 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: titleGap,
+        }}
+      >
         <Typography variant="h1">{title}</Typography>
         <Card>
           <EmptyState

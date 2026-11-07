@@ -2,7 +2,7 @@ import Box from '@mui/material/Box';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
 import { cloneElement, type ReactElement, type ReactNode } from 'react';
-import { m3 } from '../theme/theme';
+import { layout, m3 } from '../theme/theme';
 
 // Timeline (03 sec. 4): a vertical 2 dp outlineVariant line with 32 dp icon dots, events as nested sections
 // grouped by day. The line is a filled box, not a border (no borders on surfaces). An ordered list, so screen
@@ -98,8 +98,8 @@ export function Timeline({ entries, label }: { entries: readonly TimelineEntry[]
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 1,
-                    p: 4,
-                    borderRadius: '12px',
+                    p: 3,
+                    borderRadius: `${layout.nestedRadius}px`,
                     backgroundColor: m3(t).cardNested,
                   })}
                 >
