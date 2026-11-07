@@ -106,7 +106,9 @@ describe('verify', () => {
     expect(report.actionLowered).toEqual({ from: 'remove', to: 'limit' });
   });
 
-  it('[AI-4] an action weaker than allowed is never raised', () => {
+  it('[AI-4] an action below every allowed action is never raised: it goes to none', () => {
+    // THR-1 allows limit and remove only. "label" is not allowed, and the only allowed action at or below it is
+    // "none"; raising it to "limit" would be the AI's action made stronger. THR-1 always goes to a human anyway.
     const content = 'I will hurt you';
     const { output: out, report } = verifyOutput(
       output([finding({ clauseCode: 'THR-1', quotes: ['I will hurt you'], severity: 'high' })], {
@@ -115,8 +117,31 @@ describe('verify', () => {
       POLICY,
       content,
     );
+    expect(out.proposedAction).toBe('none');
+    expect(report.actionLowered).toEqual({ from: 'label', to: 'none' });
+  });
+
+  // Clauses that allow label and remove but not limit: the lowering target is the strongest allowed action at or
+  // below the proposal, not simply the strongest allowed action.
+  const GAPPED = {
+    ...POLICY,
+    clauses: POLICY.clauses.map((c) =>
+      c.code === 'HAR-1' ? { ...c, allowedActions: ['label', 'remove'] as Array<'label' | 'remove'> } : c,
+    ),
+  };
+
+  it('[AI-4] limit proposed where only label and remove are allowed is lowered to label, never raised to remove', () => {
+    const { output: out, report } = verifyOutput(output([finding()], { proposedAction: 'limit' }), GAPPED, CONTENT);
     expect(out.proposedAction).toBe('label');
-    expect(report.actionLowered).toBeNull();
+    expect(report.actionLowered).toEqual({ from: 'limit', to: 'label' });
+  });
+
+  it('[AI-4] an allowed proposal is kept as it is, at either end of a gapped set', () => {
+    for (const proposedAction of ['label', 'remove', 'none'] as const) {
+      const { output: out, report } = verifyOutput(output([finding()], { proposedAction }), GAPPED, CONTENT);
+      expect(out.proposedAction).toBe(proposedAction);
+      expect(report.actionLowered).toBeNull();
+    }
   });
 
   it('[AI-4] with every finding removed, any proposed action is lowered to none', () => {

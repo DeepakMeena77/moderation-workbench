@@ -632,6 +632,8 @@ export type AppealBriefView =
       newPoints: string[];
       disputedFindings: Array<{ clauseCode: string; authorClaim: string }>;
       droppedClauses: string[];
+      /** The summary or a new point reads like a recommendation (AI-12). */
+      outcomeLanguage: boolean;
       model: string | null;
       costUsd: number | null;
     };

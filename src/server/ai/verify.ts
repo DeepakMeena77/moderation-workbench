@@ -116,15 +116,20 @@ export function verifyOutput(output: ClassifyOutput, policy: PolicyView, content
     findings.push(verified);
   }
 
-  // 4. The action may be lowered to what the remaining clauses allow, never raised (AI-4).
+  // 4. The action may be lowered to what the remaining clauses allow, never raised (AI-4): the strongest allowed
+  // action whose rank is at or below the proposal. Comparing with the strongest allowed action alone would keep
+  // a "limit" that clauses allowing only label and remove never permit. "none" is always allowed, so there is
+  // always a target.
   const allowed = new Set<ModAction>(['none']);
   for (const f of findings) for (const a of clauses.get(f.clauseCode)?.allowedActions ?? []) allowed.add(a);
-  const strongestAllowed = [...allowed].reduce((a, b) => (actionRank(a) >= actionRank(b) ? a : b));
+  const target = [...allowed]
+    .filter((a) => actionRank(a) <= actionRank(output.proposedAction))
+    .reduce((a, b) => (actionRank(a) >= actionRank(b) ? a : b));
   let proposedAction = output.proposedAction;
   let actionLowered: VerificationReport['actionLowered'] = null;
-  if (actionRank(proposedAction) > actionRank(strongestAllowed)) {
-    actionLowered = { from: proposedAction, to: strongestAllowed };
-    proposedAction = strongestAllowed;
+  if (target !== proposedAction) {
+    actionLowered = { from: proposedAction, to: target };
+    proposedAction = target;
   }
 
   return {

@@ -38,7 +38,8 @@ export function escapeForPrompt(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function escapeAttr(text: string): string {
+/** For attribute values: also escapes the double quote, so a value can never close its attribute. */
+export function escapeAttr(text: string): string {
   return escapeForPrompt(text).replace(/"/g, '&quot;');
 }
 

@@ -481,10 +481,13 @@ describe('appeal brief job', () => {
       'aiStatus',
       'disputedFindings',
       'droppedClauses',
+      'flags',
       'newPoints',
       'summary',
       'unavailableReason',
     ]);
+    // flags is set by the server's verify step, not the model, and holds only the outcome-language check.
+    expect((appeal.brief as { flags: unknown }).flags).toEqual({ outcomeLanguage: false });
     // HUM-1: the job changed nothing a human owns.
     expect(appeal).toMatchObject({ status: 'pending', outcome: null, finalAction: null });
     expect(await visibilityOf(c.contentId)).toBe('limited');

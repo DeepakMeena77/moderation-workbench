@@ -166,6 +166,12 @@ function BriefCard({ detail }: { detail: AppealDetail }) {
           Does not recommend an outcome. A senior moderator decides.
         </Typography>
       </TagRow>
+      {brief.state === 'ready' && brief.outcomeLanguage ? (
+        // AI-12: the server's verify step found recommending language in the summary or a new point.
+        <Banner tone="warning" role="note">
+          This summary may contain a recommendation. Decide from the evidence.
+        </Banner>
+      ) : null}
       {brief.state === 'pending' ? (
         <Typography variant="body2" role="status">
           Writing the summary... This updates by itself.

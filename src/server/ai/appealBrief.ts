@@ -16,7 +16,8 @@ import {
   type Pacer,
   type PipelineDeps,
 } from './pipeline';
-import { escapeForPrompt, loadPrompt, type LoadedPrompt } from './prompts';
+import { escapeAttr, escapeForPrompt, loadPrompt, type LoadedPrompt } from './prompts';
+import { pricesForModel } from './cost';
 import type { AiProvider } from './provider';
 import type { AiStatus, ModAction, PolicyView } from './types';
 
@@ -43,6 +44,28 @@ export const appealBriefOutputSchema = z.object({
 });
 
 export type AppealBrief = z.infer<typeof appealBriefOutputSchema>;
+
+/**
+ * Set by the server's verify step, never by the model (the output schema has no such field). outcomeLanguage
+ * means the summary or a new point reads like a recommendation; the brief is kept and the reviewer is warned.
+ */
+export interface BriefFlags {
+  outcomeLanguage: boolean;
+}
+
+export type VerifiedAppealBrief = AppealBrief & { flags: BriefFlags };
+
+/**
+ * Recommending language in the model's own voice (AI-12): "I recommend", "should be overturned", "recommends
+ * reinstating". Reporting what the author asks for ("the author asks for the label to be removed") does not match.
+ * Applied to summary and newPoints only: authorClaim restates the author's position by design.
+ */
+export const OUTCOME_LANGUAGE =
+  /\b(i|we) (recommend|suggest)\b|\b(should|must|ought to) (be )?(upheld|overturned|reversed|reinstated|restored|kept|removed)\b|\brecommend(s|ed)? (upholding|overturning|reinstating|removing)\b/i;
+
+export function hasOutcomeLanguage(brief: Pick<AppealBrief, 'summary' | 'newPoints'>): boolean {
+  return [brief.summary, ...brief.newPoints].some((text) => OUTCOME_LANGUAGE.test(text));
+}
 
 const str = (maxLength: number) => ({ type: 'string', maxLength });
 
@@ -103,8 +126,8 @@ export interface AppealBriefDeps {
 
 export interface AppealBriefResult {
   status: AiStatus;
-  /** Verified brief; null unless status is ok. */
-  brief: AppealBrief | null;
+  /** Verified brief with the server's flags; null unless status is ok. */
+  brief: VerifiedAppealBrief | null;
   /** Disputed clause codes removed because they are not among the original findings or decision clauses. */
   droppedClauses: string[];
   unavailableReason: string | null;
@@ -130,7 +153,7 @@ export function buildAppealBriefUserMessage(input: AppealBriefInput): string {
       section(
         'clause',
         `<title>${escapeForPrompt(c.title)}</title>\n<text>${escapeForPrompt(c.text)}</text>`,
-        ` code="${escapeForPrompt(c.code)}" allowed_actions="${c.allowedActions.join(' ')}"`,
+        ` code="${escapeAttr(c.code)}" allowed_actions="${c.allowedActions.join(' ')}"`,
       ),
     )
     .join('\n');
@@ -147,7 +170,7 @@ export function buildAppealBriefUserMessage(input: AppealBriefInput): string {
             return section(
               'finding',
               [quotes, interpretation].filter(Boolean).join('\n') || 'no quote',
-              ` clause="${escapeForPrompt(f.clauseCode)}" source="${f.source}" evidence="${f.evidenceType}"`,
+              ` clause="${escapeAttr(f.clauseCode)}" source="${f.source}" evidence="${f.evidenceType}"`,
             );
           })
           .join('\n');
@@ -178,11 +201,14 @@ export function buildAppealBriefUserMessage(input: AppealBriefInput): string {
   ].join('\n\n');
 }
 
-/** Verify step: a disputed finding must name a clause the original findings or decision actually cited. */
+/**
+ * Verify step: a disputed finding must name a clause the original findings or decision actually cited, and the
+ * free text is checked for recommending language (flagged, not removed: the reviewer still sees what was written).
+ */
 export function verifyBrief(
   brief: AppealBrief,
   input: Pick<AppealBriefInput, 'findings' | 'decision'>,
-): { brief: AppealBrief; droppedClauses: string[] } {
+): { brief: VerifiedAppealBrief; droppedClauses: string[] } {
   const citable = citableClauses(input);
   const droppedClauses: string[] = [];
   const disputedFindings = brief.disputedFindings.flatMap((d) => {
@@ -191,7 +217,10 @@ export function verifyBrief(
     droppedClauses.push(d.clauseCode);
     return [];
   });
-  return { brief: { ...brief, disputedFindings }, droppedClauses };
+  return {
+    brief: { ...brief, disputedFindings, flags: { outcomeLanguage: hasOutcomeLanguage(brief) } },
+    droppedClauses,
+  };
 }
 
 export async function generateAppealBrief(input: AppealBriefInput, deps: AppealBriefDeps): Promise<AppealBriefResult> {
@@ -216,7 +245,7 @@ export async function generateAppealBrief(input: AppealBriefInput, deps: AppealB
   let status: AiStatus = 'ok';
   let errorCode: string | null = null;
   let errorMessage: string | null = null;
-  let brief: AppealBrief | null = null;
+  let brief: VerifiedAppealBrief | null = null;
   let droppedClauses: string[] = [];
 
   // AI-11: the inputs are bounded on write (content and statement <= 2,000 characters, <= 3 links, a short note),
@@ -255,6 +284,10 @@ export async function generateAppealBrief(input: AppealBriefInput, deps: AppealB
           'appeal brief disputed clauses that were not cited',
         );
       }
+      if (brief.flags.outcomeLanguage) {
+        // Never the text itself: it is built from user content (SEC-5).
+        logger.warn({ event: 'ai.brief_outcome_language', requestId }, 'appeal brief reads like a recommendation');
+      }
     } catch (error) {
       if (!(error instanceof PipelineStop)) throw error;
       status = error.status;
@@ -270,7 +303,7 @@ export async function generateAppealBrief(input: AppealBriefInput, deps: AppealB
     prompt,
     policyVersion: input.policy.version,
     state,
-    prices: config.prices,
+    pricesFor: (model) => pricesForModel(config, model),
     now: clock.now(),
     trimmedContext: false,
     outcome: { status, errorCode, errorMessage },

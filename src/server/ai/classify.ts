@@ -2,6 +2,7 @@ import { getLogger } from '../logger';
 import type { AiConfig } from './aiConfig';
 import type { AiRunRecord, AiRunSink, CallCounter } from './aiRun';
 import { fitContext } from './budget';
+import { pricesForModel } from './cost';
 import { GeminiProvider } from './gemini';
 import { MockProvider } from './mock';
 import { classifyOutputSchema, classifyResponseJsonSchema } from './output';
@@ -190,7 +191,7 @@ export async function classify(input: ClassifyInput, deps: ClassifyDeps): Promis
     prompt,
     policyVersion: input.policy.version,
     state,
-    prices: config.prices,
+    pricesFor: (model) => pricesForModel(config, model),
     now: clock.now(),
     trimmedContext: trimmed.length > 0,
     outcome: { status, errorCode, errorMessage },

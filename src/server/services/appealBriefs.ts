@@ -1,6 +1,6 @@
 import type { AiStatus, Prisma } from '@prisma/client';
 import { z } from 'zod';
-import type { AppealBrief, AppealBriefInput, AppealBriefResult, BriefFinding } from '../ai/appealBrief';
+import type { AppealBrief, AppealBriefInput, AppealBriefResult, BriefFinding, BriefFlags } from '../ai/appealBrief';
 import { getDb } from '../db';
 import { getLogger } from '../logger';
 import { clausesSchema } from '../policy/schema';
@@ -21,6 +21,8 @@ export interface StoredBrief {
   newPoints: string[];
   disputedFindings: AppealBrief['disputedFindings'];
   droppedClauses: string[];
+  /** Server flags from the verify step (AI-12); briefs stored before the flag existed read as false. */
+  flags: BriefFlags;
 }
 
 const AI_STATUSES = [
@@ -42,6 +44,7 @@ const storedBriefSchema = z.object({
   newPoints: z.array(z.string()).catch([]),
   disputedFindings: z.array(z.object({ clauseCode: z.string(), authorClaim: z.string() })).catch([]),
   droppedClauses: z.array(z.string()).catch([]),
+  flags: z.object({ outcomeLanguage: z.boolean().catch(false) }).catch({ outcomeLanguage: false }),
 });
 
 export function parseStoredBrief(value: unknown): StoredBrief | null {
@@ -137,6 +140,7 @@ export async function recordAppealBrief(
     newPoints: result.brief?.newPoints ?? [],
     disputedFindings: result.brief?.disputedFindings ?? [],
     droppedClauses: result.droppedClauses,
+    flags: result.brief?.flags ?? { outcomeLanguage: false },
   };
   const written = await getDb().$transaction(async (tx) => {
     const updated = await tx.appeal.updateMany({
@@ -156,6 +160,7 @@ export async function recordAppealBrief(
         newPoints: stored.newPoints.length,
         disputedFindings: stored.disputedFindings.length,
         droppedClauses: stored.droppedClauses.length,
+        outcomeLanguage: stored.flags.outcomeLanguage,
       },
       policyVersion: result.aiRun.policyVersion,
       requestId,

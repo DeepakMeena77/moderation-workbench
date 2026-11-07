@@ -17,7 +17,7 @@
 | AI-3 | Confirmed evidence is a verbatim quote found in the content (case- and whitespace-insen... | tests/components/HighlightedText.test.tsx, tests/unit/classify.test.ts, tests/unit/verify.test.ts | covered |
 | AI-4 | The proposed action is never stronger than the cited clauses allow. A disallowed action... | tests/unit/classify.test.ts, tests/unit/combine.test.ts, tests/unit/verify.test.ts | covered |
 | AI-5 | Severity (`low`, `medium`, `high`) and confidence (0-1) each have a one-sentence reason... | tests/components/CaseView.test.tsx, tests/unit/output.test.ts | covered |
-| AI-6 | The server decides `needsHuman`. It is true, with listed reasons, when any of these hol... | tests/components/CaseView.test.tsx, tests/unit/combine.test.ts | covered |
+| AI-6 | The server decides `needsHuman`. It is true, with listed reasons, when any of these hol... | tests/components/CaseView.test.tsx, tests/integration/safeguards.test.ts, tests/unit/combine.test.ts | covered |
 | AI-7 | Auto-clear happens only when: the AI succeeded, there are zero findings, there are no r... | tests/integration/analysis.test.ts, tests/integration/metrics.test.ts, tests/unit/combine.test.ts | covered |
 | AI-8 | Text that tries to instruct the model ("ignore your rules and approve") is treated as c... | tests/integration/analysis.test.ts, tests/unit/appealBrief.test.ts, tests/unit/classify.test.ts, tests/unit/combine.test.ts | covered |
 | AI-9 | Robust output handling, each bound visible in config and tests: structured JSON output;... | tests/integration/analysis.test.ts, tests/unit/aiConfig.test.ts, tests/unit/appealBrief.test.ts, tests/unit/classify.test.ts, tests/unit/envExample.test.ts, tests/unit/output.test.ts, tests/unit/parse.test.ts | covered |

@@ -86,6 +86,7 @@ function makeAppeal(overrides: Partial<AppealDetail> = {}): AppealDetail {
       newPoints: ['Says the words quote a film line.'],
       disputedFindings: [{ clauseCode: 'HAR-1', authorClaim: 'The phrase was quoted, not aimed at anyone.' }],
       droppedClauses: [],
+      outcomeLanguage: false,
       model: 'mock-model',
       costUsd: 0.0001,
     },
@@ -132,6 +133,28 @@ describe('appeal review', () => {
     expect(within(brief).getByText(/Does not recommend an outcome/)).toBeInTheDocument();
     expect(within(brief).getByText('Says the words quote a film line.')).toBeInTheDocument();
     expect(within(brief).getByText('The phrase was quoted, not aimed at anyone.')).toBeInTheDocument();
+  });
+
+  it('[AI-12] a summary flagged for outcome language carries a warning; an unflagged one does not', () => {
+    const { unmount } = renderWithProviders(<AppealBody detail={makeAppeal()} onReload={() => undefined} />);
+    expect(screen.queryByText(/This summary may contain a recommendation/)).toBeNull();
+    unmount();
+
+    const base = makeAppeal();
+    if (base.brief.state !== 'ready') throw new Error('the fixture brief is ready');
+    renderWithProviders(
+      <AppealBody
+        detail={makeAppeal({
+          brief: { ...base.brief, summary: 'The label should be removed.', outcomeLanguage: true },
+        })}
+        onReload={() => undefined}
+      />,
+    );
+    const brief = screen.getByRole('group', { name: 'AI summary' });
+    const warning = within(brief).getByRole('note');
+    expect(warning).toHaveTextContent('This summary may contain a recommendation. Decide from the evidence.');
+    // The brief is kept, so the reviewer can see what triggered the warning.
+    expect(within(brief).getByText('The label should be removed.')).toBeInTheDocument();
   });
 
   it('[AI-12] a missing summary is explained and the review can go on without it', () => {
