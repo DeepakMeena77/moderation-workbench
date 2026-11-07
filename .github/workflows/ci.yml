@@ -1,6 +1,6 @@
 # CI staged by slice (docs/05-test-plan.md sec. 11). S0: verify + the UI suite for /status. S1: the demo
 # users are seeded before the UI suite, which adds the sign-in page and the app shell.
-# S8 adds `npm run eval -- --mock` (verify job) and `npm run test:e2e` (browser job).
+# S8: the verify job also runs the AI evaluation with the mock provider, as a pipeline check.
 name: CI
 
 on:
@@ -52,6 +52,7 @@ jobs:
       - run: npm ci
       - run: npx prisma migrate deploy
       - run: npm run verify
+      - run: npm run eval -- --mock
 
   browser:
     needs: verify
