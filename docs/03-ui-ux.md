@@ -241,7 +241,7 @@ Navigation surfaces use the `canvas` colour, so the rail and drawer blend into t
 
 | Screen | Compact (< 600) | Medium (600-839) | Expanded (840-1199) | Large and up (>= 1200) |
 | --- | --- | --- | --- | --- |
-| Queue -> case | List; tap opens the case full screen | Same | **List-detail**: list 360 + case | List 400 + case with a **supporting pane** (decision panel 360, sticky) |
+| Queue -> case | List; tap opens the case full screen | Same | **List-detail**: list 360 + case | List 400 + case; the case shows a **supporting pane** (recommendation and decision panel 360, sticky) once the detail pane itself is >= 760 wide (a container query: with the drawer and the list beside it, that is from about 1480 px) |
 | Case detail | Tabs (Content, Findings, History) + bottom action bar (Approve, Modify, Reject) | Single column + bottom action bar | Single column in the detail pane, decision card at the end | Main column + sticky decision pane |
 | Appeals -> review | List -> full-screen review, stacked panels, bottom bar "Resolve" | Same | List-detail; review shows the panels stacked | 2 columns (Original, Appeal) + Outcome and resolve full width below; **>= 1600: 3 columns** |
 | Feed | Single column, FAB to compose | Centred 680 | Centred 680 | Centred 680 (composer card at the top) |

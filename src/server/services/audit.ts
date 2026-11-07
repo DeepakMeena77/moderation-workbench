@@ -12,6 +12,9 @@ export type AuditAction =
   | 'case.opened'
   | 'case.reopened'
   | 'analysis.created'
+  | 'analysis.requested'
+  | 'decision.created'
+  | 'visibility.changed'
   | 'job.failed'
   | 'policy.published'
   | 'reevaluation.started'
@@ -21,7 +24,7 @@ export interface AuditEventInput {
   actorId: string | null;
   actorType: ActorType;
   action: AuditAction;
-  entityType: 'content' | 'report' | 'case' | 'analysis' | 'job' | 'policy' | 'reevaluation';
+  entityType: 'content' | 'report' | 'case' | 'analysis' | 'decision' | 'job' | 'policy' | 'reevaluation';
   entityId: string;
   /** Short summaries only: never the content text (SEC-5). */
   before?: Prisma.InputJsonObject;

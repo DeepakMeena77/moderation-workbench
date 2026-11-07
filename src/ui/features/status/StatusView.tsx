@@ -28,7 +28,14 @@ const OVERALL_TEXT: Record<CheckState, string> = {
   fail: 'Outage: at least one check is failing',
 };
 
-const CHECK_TITLE: Record<string, string> = { app: 'App', database: 'Database' };
+const CHECK_TITLE: Record<string, string> = {
+  app: 'App',
+  database: 'Database',
+  llm: 'AI model',
+  jobs: 'Background jobs',
+  policy: 'Policy',
+  aiUsage: 'AI usage (24 h)',
+};
 
 const DETAIL_LABEL: Record<string, string> = {
   release: 'Release',
@@ -36,6 +43,25 @@ const DETAIL_LABEL: Record<string, string> = {
   uptimeS: 'Uptime (s)',
   latencyMs: 'Latency (ms)',
   reason: 'Reason',
+  provider: 'Provider',
+  model: 'Model',
+  fallbackModel: 'Fallback model',
+  lastSuccess: 'Last success',
+  lastError: 'Last error',
+  lastErrorAt: 'Last error at',
+  callsToday: 'Calls today',
+  queued: 'Queued',
+  running: 'Running',
+  failed24h: 'Failed (24 h)',
+  stuck: 'Stuck',
+  oldestQueuedS: 'Oldest queued (s)',
+  activeVersion: 'Active version',
+  publishedAt: 'Published',
+  runs24h: 'Runs',
+  inputTokens: 'Input tokens',
+  outputTokens: 'Output tokens',
+  costUsd: 'Cost (USD)',
+  avgLatencyMs: 'Avg latency (ms)',
 };
 
 function formatDetail(key: string, value: string | number | null): string {
