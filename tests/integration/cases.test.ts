@@ -53,10 +53,10 @@ describe('queue', () => {
   it('[Q-1] lists awaiting_review by default, ordered by priority then age, with filters and search', async () => {
     const asha = await createUser('author');
     const ben = await createUser('author');
-    const insult = await postAs(asha, 'You are a worthless idiot');
-    const threat = await postAs(ben, "I'm going to hurt you");
-    const spam = await postAs(asha, 'Visit http://a.example http://b.example http://c.example now');
-    await postAs(ben, 'A lovely day at the lake');
+    const insult = await postAs(asha, 'You are a worthless idiot [mock:invalid]');
+    const threat = await postAs(ben, "I'm going to hurt you [mock:invalid]");
+    const spam = await postAs(asha, 'Visit http://a.example http://b.example http://c.example now [mock:invalid]');
+    await postAs(ben, 'A lovely day at the lake [mock:invalid]');
     await runPendingJobs();
 
     const page = await list();
@@ -67,7 +67,7 @@ describe('queue', () => {
       status: 'awaiting_review',
       priority: 100,
       content: { authorName: ben.name, type: 'post' },
-      analysis: { seq: 1, policyVersion: 1, aiStatus: 'unavailable', action: 'remove', clauseCodes: ['THR-1'] },
+      analysis: { seq: 1, policyVersion: 1, aiStatus: 'invalid_output', action: 'remove', clauseCodes: ['THR-1'] },
     });
 
     expect((await list('?severity=high')).items.map((r) => r.id)).toEqual([threat.caseId]);
@@ -85,7 +85,7 @@ describe('queue', () => {
 
   it('[Q-1] pages with a cursor and never repeats a row', async () => {
     const author = await createUser('author');
-    for (let i = 0; i < 5; i++) await postAs(author, `Plain post number ${i} about gardening`);
+    for (let i = 0; i < 5; i++) await postAs(author, `Plain post number ${i} about gardening [mock:invalid]`);
     await runPendingJobs();
     const first = await list('?limit=2');
     const second = await list(`?limit=2&cursor=${first.nextCursor}`);
@@ -115,18 +115,18 @@ describe('case detail', () => {
   it('[DET-5] shows rule findings and the recommendation when the AI result is missing', async () => {
     const author = await createUser('author');
     const reporter = await createUser('author');
-    const created = await postAs(author, 'You are a worthless idiot');
+    const created = await postAs(author, 'You are a worthless idiot [mock:invalid]');
     await getDb().report.create({ data: { contentId: created.id, reporterId: reporter.id, reason: 'harassment' } });
     await runPendingJobs();
     const data = await detail(created.caseId);
     expect(data.analysis).toMatchObject({
       seq: 1,
       policyVersion: 1,
-      aiStatus: 'unavailable',
       ai: null,
-      aiRun: null,
       recommendation: { action: 'label', needsHuman: true },
     });
+    expect(data.analysis?.aiStatus).not.toBe('ok');
+    expect(data.analysis?.aiRun).toMatchObject({ status: 'invalid_output' });
     expect(data.analysis?.ruleFindings[0]).toMatchObject({
       source: 'rule',
       clauseCode: 'HAR-1',

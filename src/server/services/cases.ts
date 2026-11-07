@@ -405,14 +405,31 @@ async function policyClauses(tx: Tx | PrismaClient, version: number | null): Pro
   return { version: row.version, clauses };
 }
 
-/**
- * The AiRun record arrives with S3 (its table and the job wiring). Until then no analysis has an aiRunId and
- * the page shows "AI review pending or unavailable"; S3 replaces this lookup with a read of its table.
- */
+/** The AI run behind an analysis, for the "AI run details" panel. null when no AI step ran. */
 async function loadAiRun(aiRunId: string | null): Promise<AiRunView | null> {
   if (!aiRunId) return null;
-  getLogger().warn({ event: 'case.ai_run_unavailable', aiRunId });
-  return null;
+  const run = await getDb().aiRun.findUnique({ where: { id: aiRunId } });
+  if (!run) {
+    getLogger().warn({ event: 'case.ai_run_missing', aiRunId });
+    return null;
+  }
+  return {
+    provider: run.provider,
+    model: run.model,
+    modelsTried: run.modelsTried,
+    fallbackUsed: run.fallbackUsed,
+    promptVersion: run.promptVersion,
+    inputTokens: run.inputTokens,
+    outputTokens: run.outputTokens,
+    thinkingTokens: run.thinkingTokens,
+    costUsd: Number(run.costUsd),
+    latencyMs: run.latencyMs,
+    attempts: run.attempts,
+    parseStrategy: run.parseStrategy,
+    repairUsed: run.repairUsed,
+    status: run.status,
+    errorCode: run.errorCode,
+  };
 }
 
 export async function getCase(actor: Actor, caseId: string): Promise<CaseDetail> {

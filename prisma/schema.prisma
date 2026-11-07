@@ -179,7 +179,8 @@ model Case {
   @@index([status, priority(sort: Desc), createdAt])
 }
 
-// Insert-only and versioned: re-analysis adds seq + 1 and never overwrites (POL-3). The trigger arrives in S3.
+// Insert-only and versioned: re-analysis adds seq + 1 and never overwrites (POL-3). A database trigger rejects
+// UPDATE and DELETE (AUD-2).
 model Analysis {
   id             String   @id @default(cuid())
   caseId         String
@@ -197,8 +198,41 @@ model Analysis {
   case       Case       @relation(fields: [caseId], references: [id])
   currentFor Case?      @relation("CurrentAnalysis")
   decisions  Decision[]
+  aiRun      AiRun?     @relation(fields: [aiRunId], references: [id])
 
   @@unique([caseId, seq])
+}
+
+// One row per AI pipeline run (AI-10): tokens and cost summed over every attempt, repair and fallback. Rows that
+// made no call (invalid_input, budget_exhausted) are kept with 0 tokens. Insert-only (AUD-2). The daily budget
+// (AI_MAX_CALLS_PER_DAY) sums `attempts` over today's rows.
+model AiRun {
+  id             String   @id @default(cuid())
+  purpose        String
+  provider       String
+  model          String
+  modelsTried    String[]
+  promptVersion  String
+  promptHash     String
+  policyVersion  Int?
+  inputTokens    Int
+  outputTokens   Int
+  thinkingTokens Int
+  costUsd        Decimal  @db.Decimal(10, 6)
+  latencyMs      Int
+  attempts       Int
+  repairUsed     Boolean
+  fallbackUsed   Boolean
+  parseStrategy  String?
+  trimmedContext Boolean
+  status         AiStatus
+  errorCode      String?
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  analyses Analysis[]
+
+  @@index([createdAt])
 }
 
 // Database-backed queue (OPS-4, docs/02-system-design.md sec. 6). dedupeKey makes enqueueing idempotent.

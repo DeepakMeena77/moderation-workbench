@@ -1,5 +1,6 @@
 import { after } from 'next/server';
 import type { Logger } from 'pino';
+import { getAiConfig } from '../ai/aiConfig';
 import { getConfig } from '../config';
 import { getLogger } from '../logger';
 import { HANDLERS, type JobHandler } from './handlers';
@@ -33,6 +34,8 @@ export async function runPendingJobs(options: RunOptions = {}): Promise<RunSumma
   const budgetMs = options.budgetMs ?? config.jobs.budgetMs;
   const maxJobs = options.maxJobs ?? MAX_JOBS_PER_TICK;
   const log = getLogger().child({ component: 'job-runner' });
+  // AI_DEADLINE_MS has one source: the AI settings (src/server/ai/aiConfig.ts).
+  const aiDeadlineMs = getAiConfig().bounds.deadlineMs;
   const started = Date.now();
   const summary: RunSummary = { claimed: 0, succeeded: 0, requeued: 0, failed: 0, exhausted: 0 };
 
@@ -41,7 +44,7 @@ export async function runPendingJobs(options: RunOptions = {}): Promise<RunSumma
 
   while (summary.claimed < maxJobs) {
     const remaining = budgetMs - (Date.now() - started);
-    if (remaining < config.ai.deadlineMs + START_MARGIN_MS) break;
+    if (remaining < aiDeadlineMs + START_MARGIN_MS) break;
     const job = await claimNextJob(config.jobs.leaseMs);
     if (!job) break;
     summary.claimed += 1;

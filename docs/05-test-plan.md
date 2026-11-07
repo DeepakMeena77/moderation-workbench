@@ -96,7 +96,10 @@ URLs with a password, and `SESSION_SECRET=` with a value. It must find nothing.
 - `beforeEach` runs `TRUNCATE ... RESTART IDENTITY CASCADE` on every table. TRUNCATE does not fire the
   row-level insert-only triggers, so cleanup still works.
 - Seed helpers create only what each test needs.
-- **Never call live Gemini in tests.** The mock provider and its markers force each failure path.
+- **Never call live Gemini in tests.** The mock provider and its markers force each failure path. The integration
+  setup forces `AI_PROVIDER=mock` (and nominal prices, no pacing) whatever the env file says.
+- The live check is manual: `npx tsx scripts/ai-smoke.mjs` makes one real classify call with `.env` and prints only
+  the model, status, latency, tokens and finding codes (`--dry-run` uses the mock).
 
 ---
 

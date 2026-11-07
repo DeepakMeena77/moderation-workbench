@@ -17,8 +17,6 @@ const envSchema = z.object({
   // Jobs (S2, docs/02-system-design.md sec. 6).
   JOB_LEASE_MS: z.coerce.number().int().min(1000).max(900_000).default(120_000),
   JOB_BUDGET_MS: z.coerce.number().int().min(1000).max(300_000).default(50_000),
-  // The runner starts a job only if this much plus 5 s of its budget is left (the AI pipeline uses it in S3).
-  AI_DEADLINE_MS: z.coerce.number().int().min(1000).max(120_000).default(25_000),
 });
 
 // Error messages describe what is expected, never the value that was supplied: a misconfigured
@@ -33,7 +31,6 @@ const EXPECTED: Record<string, string> = {
   BUILD_TIME: 'a non-empty timestamp',
   JOB_LEASE_MS: 'milliseconds between 1000 and 900000',
   JOB_BUDGET_MS: 'milliseconds between 1000 and 300000',
-  AI_DEADLINE_MS: 'milliseconds between 1000 and 120000',
 };
 
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -54,9 +51,6 @@ export interface AppConfig {
     leaseMs: number;
     /** Wall-clock budget of one runner tick, under the route's maxDuration. */
     budgetMs: number;
-  };
-  ai: {
-    deadlineMs: number;
   };
 }
 
@@ -89,7 +83,6 @@ export function parseConfig(env: Record<string, string | undefined>): AppConfig 
       buildTime: value.BUILD_TIME ?? null,
     },
     jobs: { leaseMs: value.JOB_LEASE_MS, budgetMs: value.JOB_BUDGET_MS },
-    ai: { deadlineMs: value.AI_DEADLINE_MS },
   };
 }
 

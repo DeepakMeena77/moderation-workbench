@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { getAiConfig } from '@/server/ai/aiConfig';
 import { getConfig } from '@/server/config';
 import { getDb } from '@/server/db';
 import { claimNextJob, enqueue, RETRY_DELAYS_MS } from '@/server/jobs/queue';
@@ -25,22 +26,17 @@ beforeEach(async () => {
   await installPolicy(1);
 });
 
-describe('analyse job (rule-only until S3)', () => {
-  it('[DET-5] a post gets analysis seq 1 with stored rule findings while the AI is unavailable', async () => {
+describe('analyse job (rules + mock AI)', () => {
+  it('[DET-5] a post gets analysis seq 1 with stored rule findings and the AI result', async () => {
     const created = await postAs('You are a worthless idiot');
     const summary = await runPendingJobs();
     expect(summary).toMatchObject({ claimed: 1, succeeded: 1, failed: 0 });
 
     const db = getDb();
     const analysis = await db.analysis.findFirstOrThrow({ where: { caseId: created.caseId } });
-    expect(analysis).toMatchObject({
-      seq: 1,
-      policyVersion: 1,
-      reason: 'initial',
-      aiStatus: 'unavailable',
-      aiRunId: null,
-    });
-    expect(analysis.aiFindings).toBeNull();
+    expect(analysis).toMatchObject({ seq: 1, policyVersion: 1, reason: 'initial', aiStatus: 'ok' });
+    expect(analysis.aiRunId).toEqual((await db.aiRun.findFirstOrThrow()).id);
+    expect(analysis.aiFindings).toMatchObject({ findings: [expect.objectContaining({ clauseCode: 'HAR-1' })] });
     expect(analysis.ruleFindings).toEqual([
       {
         ruleId: 'keyword',
@@ -166,7 +162,7 @@ describe('job queue', () => {
 
   it('[OPS-4] a tick stops starting jobs when its budget cannot fit a full AI deadline', async () => {
     await queueJob('budget-test');
-    const summary = await runPendingJobs({ budgetMs: getConfig().ai.deadlineMs });
+    const summary = await runPendingJobs({ budgetMs: getAiConfig().bounds.deadlineMs });
     expect(summary.claimed).toBe(0);
     expect((await getDb().job.findFirstOrThrow()).status).toBe('queued');
   });

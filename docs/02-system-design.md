@@ -99,8 +99,8 @@ src/
     auth/      token.ts (edge-safe JWT and cookie)  session.ts  guards.ts  demo.ts
     policy/    schema.ts  diff.ts
     rules/     index.ts keyword.ts pattern.ts links.ts contact.ts repeat.ts
-    ai/        provider.ts gemini.ts mock.ts prompts.ts parse.ts output.ts verify.ts budget.ts cost.ts
-               classify.ts appealBrief.ts
+    ai/        aiConfig.ts types.ts provider.ts gemini.ts mock.ts prompts.ts parse.ts output.ts verify.ts
+               budget.ts cost.ts aiRun.ts pipeline.ts classify.ts appealBrief.ts
     moderation/ combine.ts priority.ts
     services/  content.ts reports.ts cases.ts analysis.ts decisions.ts visibility.ts appeals.ts
                policy.ts reevaluation.ts audit.ts metrics.ts status.ts rateLimit.ts auth.ts
@@ -325,14 +325,17 @@ Severity starts from the cited clause's `defaultSeverity`; the model moves it up
 }
 ```
 
-### 5.3 Execution bounds [AI-9, AI-11] (all in `config.ts`, all tested)
+### 5.3 Execution bounds [AI-9, AI-11] (all in `ai/aiConfig.ts`, all tested)
+
+The AI and moderation settings are parsed with Zod in `src/server/ai/aiConfig.ts`, separate from `config.ts`.
+`ai/pipeline.ts` applies them to every AI call (classify now, the appeal brief later).
 
 | Bound | Default | Behaviour |
 | --- | --- | --- |
 | Input budget | `AI_MAX_INPUT_TOKENS=6000` (estimated as chars / 4) | Trim author history, then the parent post, then reports. Set `trimmedContext=true`. Never trim the content or the policy. If still over budget, record an `AiRun` with status `invalid_input` and 0 tokens, and make no call. |
 | Output cap | `AI_MAX_OUTPUT_TOKENS=2048` | A `MAX_TOKENS` finish usually means truncated JSON, which goes into the parse ladder and then repair. |
 | Per-call timeout | `AI_TIMEOUT_MS=12000` | AbortController plus `Promise.race` (in case the SDK ignores the signal) |
-| Transient retries | `AI_MAX_ATTEMPTS=3` per model | 429, 5xx and timeouts only. Back-off 1 s, 2 s with jitter, or the server's `retryDelay` if <= 10 s. **No retry on 400, 401, 403 or 404.** |
+| Transient retries | `AI_MAX_ATTEMPTS=3` per model | 429, 5xx and timeouts only. Back-off 1 s, 2 s with +-25% jitter, capped at 10 s, or the server's `retryDelay` if <= 10 s (a longer hint moves to the fallback model). **No retry on 400, 401, 403 or 404.** The SDK's own retry is turned off. |
 | Daily budget | `AI_MAX_CALLS_PER_DAY=200` | Counted from `AiRun` rows. Above it, no call is made: status `budget_exhausted`, rule findings only, routed to a human. Protects the free quota on a public demo. |
 | Fallback model | `GEMINI_FALLBACK_MODEL` | Used once the primary model has used its retries, or immediately on 404 (model retired) or a daily-quota 429 |
 | Repair | `AI_MAX_REPAIRS=1` | One extra call with the exact Zod error paths and the previous output. Then **stop**. |
@@ -340,7 +343,9 @@ Severity starts from the cited clause's `defaultSeverity`; the model moves it up
 | Pacing | `AI_MIN_INTERVAL_MS=4000` | Spaces calls to stay under the free-tier requests-per-minute limit |
 
 When every bound is exhausted, the result is `aiStatus = unavailable`: rule findings only, `needsHuman`, and a
-plain reason ("AI quota reached - retry later"). **AI failure is a successful job with a degraded analysis, not a
+plain reason ("AI quota reached - retry later"). Where the cause is known, the status names it: `timeout` (including
+the deadline), `rate_limited`, `provider_error` (400/401/403), `invalid_output`, `invalid_input` or
+`budget_exhausted`. Combine treats every status other than `ok` the same way. **AI failure is a successful job with a degraded analysis, not a
 job failure.**
 
 ### 5.4 Parse ladder (`ai/parse.ts`) [AI-9]
@@ -369,7 +374,7 @@ that fails Zod is **not** sent down the ladder again; it goes to the repair call
 action     = max(lowered AI action, defaultAction of each rule-hit clause)   // never above allowed
 severity   = max over findings
 confidence = AI overall confidence (after caps), or null when the AI is unavailable
-needsHuman = any(AI-6 reasons) -> reasons[] in plain language (AI reasons prefixed "AI:")
+needsHuman = any(AI-6 reasons, or an AI-8 injection signal from ai/prompts.ts) -> reasons[] in plain language (AI reasons prefixed "AI:")
 autoClear  = AUTO_CLEAR_ENABLED && AI ok && 0 findings && 0 reports && confidence >= 0.85 && reasons empty
 priority   = Q-2 formula
 ```
@@ -418,7 +423,16 @@ priority   = Q-2 formula
 
   Each job increments `done` or `failed`. The UI polls the run every 2 s. **Retry failed** re-enqueues the failed
   items. Publishing an identical `contentHash` returns 409 `POLICY_UNCHANGED`.
-- **Analyse job.** Load the case, content and **active** policy. Run rules and the AI. Insert `Analysis(seq+1)`.
+- **Analyse job** (`jobs/handlers.ts#runAnalyzeJob`). Three steps, so no transaction is held open during the AI
+  call (up to `AI_DEADLINE_MS`):
+  1. `services/analysis.ts#prepareAnalysis`: load the case, content and **active** policy without a lock; run the
+     rules.
+  2. `ai/classify.ts`, called by the job handler (services never call the LLM): the bounded pipeline writes its
+     own `AiRun` row (`services/aiRuns.ts`; the daily budget sums today's `AiRun.attempts`, UTC day).
+  3. `services/analysis.ts#recordAnalysis`, one transaction: lock the case, re-read its status and report count,
+     combine, insert `Analysis(seq+1)` with `aiStatus`, `aiFindings` and `aiRunId`. If the case was closed while
+     the AI ran, nothing is written to the case (the `AiRun` row stays).
+
   Set `currentAnalysisId`. Set the status:
   - `pending_analysis` or `awaiting_review` -> `awaiting_review` or `auto_cleared`
   - `appealed` -> stays `appealed`; the new analysis is shown to the appeal reviewer
