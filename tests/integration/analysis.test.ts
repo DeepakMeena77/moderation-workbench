@@ -1,5 +1,7 @@
+import { PrismaClient } from '@prisma/client';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getAiConfig, type AiConfig } from '@/server/ai/aiConfig';
+import { getConfig } from '@/server/config';
 import { loadPrompt } from '@/server/ai/prompts';
 import { MockProvider } from '@/server/ai/mock';
 import type { AiProvider } from '@/server/ai/provider';
@@ -232,6 +234,102 @@ describe('analysis with the mock AI', () => {
     expect(await db.analysis.count()).toBe(0);
     expect(await db.aiRun.count()).toBe(1);
     expect((await db.content.findUniqueOrThrow({ where: { id: created.id } })).visibility).toBe('visible');
+  });
+});
+
+describe('the AI call and database transactions (AI-9)', () => {
+  /** A promise and the function that settles it, so the test decides when a paused step may go on. */
+  function gate(): { opened: Promise<void>; open: () => void } {
+    let open = () => undefined as void;
+    const opened = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    return { opened, open };
+  }
+
+  /** Our sessions that sit inside an open transaction: same database, same role, same application, not this one. */
+  async function idleInTransaction(observer: PrismaClient): Promise<number> {
+    const rows = await observer.$queryRaw<Array<{ n: number }>>`
+      SELECT count(*)::int AS n FROM pg_stat_activity
+      WHERE datname = current_database()
+        AND usename = current_user
+        AND application_name = current_setting('application_name')
+        AND pid <> pg_backend_pid()
+        AND state LIKE 'idle in transaction%'`;
+    return rows[0]?.n ?? 0;
+  }
+
+  /** Locks the case row from another connection without waiting; throws if anyone else holds it. */
+  function lockCaseNowait(observer: PrismaClient, caseId: string) {
+    return observer.$transaction(
+      (tx) => tx.$queryRaw<Array<{ id: string }>>`SELECT "id" FROM "Case" WHERE "id" = ${caseId} FOR UPDATE NOWAIT`,
+    );
+  }
+
+  it('[AI-9] the AI call never holds a database transaction: while the model call is paused, no session of ours is idle in transaction and the case row can be locked', async () => {
+    const created = await post('You are a worthless idiot');
+    const caseId = created.caseId;
+    const entered = gate();
+    const release = gate();
+    const mock = new MockProvider();
+    // A provider double that stops inside the model call until the test releases it.
+    const provider: AiProvider = {
+      name: 'mock',
+      generateJson: async (request) => {
+        entered.open();
+        await release.opened;
+        return mock.generateJson(request);
+      },
+    };
+    // Generous bounds, so the pause can never turn into a timeout while the test looks around.
+    const base = getAiConfig();
+    const aiConfig: AiConfig = {
+      ...base,
+      fallbackModel: null,
+      bounds: { ...base.bounds, timeoutMs: 60_000, deadlineMs: 60_000, minIntervalMs: 0 },
+    };
+    const observer = new PrismaClient({ datasourceUrl: getConfig().databaseUrl });
+    try {
+      const job = runAnalyzeJob(initial(caseId), { provider, aiConfig });
+      await Promise.race([
+        entered.opened,
+        job.then(() => {
+          throw new Error('The job finished without calling the model.');
+        }),
+      ]);
+
+      // The model call is in flight: nothing of ours holds a transaction, and the case row is free to lock.
+      expect(await idleInTransaction(observer)).toBe(0);
+      expect(await lockCaseNowait(observer, caseId)).toEqual([{ id: caseId }]);
+
+      release.open();
+      const result = await job;
+      expect(result).toMatchObject({ status: 'created', seq: 1, aiStatus: 'ok', caseStatus: 'awaiting_review' });
+      const analysis = await getDb().analysis.findFirstOrThrow({ where: { caseId } });
+      expect(analysis.aiRunId).toBe(result.aiRunId);
+      expect((await getDb().case.findUniqueOrThrow({ where: { id: caseId } })).currentAnalysisId).toBe(analysis.id);
+
+      // Control: the same two checks do see a transaction that holds the case row, so the result above is not
+      // a blind spot of the checks.
+      const holding = gate();
+      const done = gate();
+      const held = getDb().$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Case" WHERE "id" = ${caseId} FOR UPDATE`;
+        holding.open();
+        await done.opened;
+      });
+      await holding.opened;
+      try {
+        expect(await idleInTransaction(observer)).toBeGreaterThanOrEqual(1);
+        await expect(lockCaseNowait(observer, caseId)).rejects.toThrow(/could not obtain lock/);
+      } finally {
+        done.open();
+        await held;
+      }
+    } finally {
+      release.open();
+      await observer.$disconnect();
+    }
   });
 });
 

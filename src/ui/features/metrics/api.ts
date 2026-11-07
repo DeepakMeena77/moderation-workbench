@@ -19,6 +19,7 @@ export interface Metrics {
   overrides: { total: number; byReason: Array<{ reason: string; count: number }> };
   aiFailures: { runs: number; failed: number; rate: number | null; byStatus: Array<{ status: string; count: number }> };
   latency: { runs: number; p50Ms: number | null; p90Ms: number | null };
+  autoClear: { cleared: number; revisited: number; rate: number | null };
   usage: { last24h: UsageTotals; last7d: UsageTotals; byDay: Array<UsageTotals & { day: string }> };
 }
 

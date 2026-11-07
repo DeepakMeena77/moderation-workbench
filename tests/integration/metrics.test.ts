@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET as metricsRoute } from '@/app/api/metrics/route';
 import { getDb } from '@/server/db';
 import { runPendingJobs } from '@/server/jobs/runner';
+import { reopenCase } from '@/server/services/cases';
 import { createPost } from '@/server/services/content';
 import { decide } from '@/server/services/decisions';
 import { getMetrics } from '@/server/services/metrics';
+import { createReport } from '@/server/services/reports';
 import { actorFor, installPolicy } from './helpers/moderation';
 import { apiRequest, createUser, readJson, sessionCookieFor } from './helpers/users';
 
@@ -119,10 +121,39 @@ describe('metrics (OPS-6)', () => {
     expect(metrics.usage.byDay.reduce((sum, d) => sum + d.runs, 0)).toBe(6);
   });
 
+  it('[AI-7] [OPS-6] auto-cleared cases in the window, and how many came back through a report or a reopen', async () => {
+    const db = getDb();
+    const reporter = await createUser('author');
+    const moderator = await createUser('moderator');
+    const reported = await analysedCase('Lovely weather at the lake today, see you all on Sunday!');
+    const reopened = await analysedCase('The bakery on the corner has fresh rye bread again this week.');
+    const untouched = await analysedCase('Our choir meets on Thursday evening in the old library hall.');
+    for (const c of [reported, reopened, untouched]) {
+      expect((await db.case.findUniqueOrThrow({ where: { id: c.caseId } })).status).toBe('auto_cleared');
+    }
+    // Reported and reopened after the auto-clear: both count as revisited. A reported case that was never
+    // auto-cleared does not count at all.
+    const reportedContent = await db.case.findUniqueOrThrow({ where: { id: reported.caseId } });
+    await createReport(actorFor(reporter), reportedContent.contentId, { reason: 'spam' }, 'req-metrics-02');
+    await reopenCase(actorFor(moderator), reopened.caseId, 'req-metrics-03');
+    const flagged = await analysedCase('You are a worthless idiot');
+    const flaggedContent = await db.case.findUniqueOrThrow({ where: { id: flagged.caseId } });
+    expect(flaggedContent.status).toBe('awaiting_review');
+    await createReport(actorFor(reporter), flaggedContent.contentId, { reason: 'harassment' }, 'req-metrics-04');
+
+    const metrics = await getMetrics();
+    expect(metrics.autoClear).toEqual({ cleared: 3, revisited: 2, rate: 2 / 3 });
+
+    // Ten days on, every auto-clear is outside the 7-day window.
+    const later = await getMetrics(new Date(Date.now() + 10 * 24 * HOUR));
+    expect(later.autoClear).toEqual({ cleared: 0, revisited: 0, rate: null });
+  });
+
   it('[OPS-6] with no data every rate is null rather than a division by zero', async () => {
     const metrics = await getMetrics();
     expect(metrics.agreement.rate).toBeNull();
     expect(metrics.aiFailures.rate).toBeNull();
+    expect(metrics.autoClear).toEqual({ cleared: 0, revisited: 0, rate: null });
     expect(metrics.latency).toEqual({ runs: 0, p50Ms: null, p90Ms: null });
     expect(metrics.usage.byDay.every((d) => d.runs === 0 && d.costUsd === 0)).toBe(true);
   });

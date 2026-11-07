@@ -200,10 +200,17 @@ model RateLimit { key String; windowStart DateTime; count Int @default(0); @@id(
 1. A partial unique index `ON policy(status) WHERE status = 'active'`.
 2. A trigger function `forbid_mutation()` (created with `CREATE OR REPLACE` in S4, reused by later migrations) on `AuditEvent`, `Decision`, `Analysis` and `AiRun`: `BEFORE UPDATE OR DELETE ->
    RAISE EXCEPTION` [AUD-2].
-3. A trigger on `Content`: `BEFORE UPDATE OF visibility` requires `current_setting('app.actor_type', true) =
-   'human'`. This is defence in depth for HUM-1. `setVisibility` runs `set_config('app.actor_type','human', true)`
-   inside its transaction. Nothing else does. The same trigger refuses an `INSERT` with a visibility other than
-   `visible`, and the flag is transaction-local, so it never outlives the decision that set it.
+3. A trigger on `Content` (`Content_visibility_human_only`, function `require_human_visibility_change()`), defence
+   in depth for HUM-1. On `BEFORE UPDATE OF visibility`, when the value changes, and on an `INSERT` with a
+   visibility other than `visible`, it refuses the row unless both hold:
+   - `current_setting('app.actor_type', true) = 'human'`, and
+   - `current_setting('app.actor_id', true)` names an existing `User` whose role is `moderator` or
+     `senior_moderator` (the trigger looks the role up itself; the flag alone, an unknown id, or an author's or
+     admin's id is refused).
+
+   `setVisibility` sets both with `set_config(..., true)` inside its transaction, right before its `UPDATE`. Nothing
+   else sets them. Both settings are transaction-local, so they never outlive the decision or appeal resolution that
+   set them. The role check was added in `20261108130000_visibility_actor_role`, which replaces only the function.
 4. Indexes: `Case(status, priority DESC, createdAt)`, `Job(status, runAfter)`, `AuditEvent(entityType, entityId)`,
    `AuditEvent(at)`.
 5. S7: `audit_canonical_json(jsonb)` and `audit_event_hash(prevHash, "AuditEvent")`, which chained the existing
@@ -522,7 +529,9 @@ Lists use `?cursor=&limit=`.
 - **`services/visibility.ts -> setVisibility(tx, {contentId, visibility, actor})`** is the only writer of
   `Content.visibility`. It:
   - throws `HUMAN_REQUIRED` unless `actor.type === 'human'` and the role is `moderator` or `senior_moderator`
-  - sets `app.actor_type='human'` for the database trigger
+  - sets `app.actor_type='human'` and `app.actor_id=<actor id>` (both transaction-local) for the database trigger,
+    which refuses the change unless that user's role, read from `User`, is `moderator` or `senior_moderator`
+    (sec. 3, item 3)
   - writes the audit event
 
   Callers: `decisions.decide()` and `appeals.resolve()` only.
@@ -701,6 +710,10 @@ Demo sign-in is not limited: it takes no credentials.
   - overrides = decisions that rejected or modified the recommendation, grouped by `reasonCategory`
   - AI failures by status, and the failure rate over all runs
   - p50 and p90 latency over runs that reached a provider (`invalid_input` and `budget_exhausted` make no call)
+  - auto-clear revisited [AI-7]: `cleared` = cases whose `analysis.created` audit event in the window set the
+    case status to `auto_cleared` (each case once, from its first such event); `revisited` = those with a `Report`
+    on their content or a `case.reopened` event after that auto-clear (a report on an auto-cleared case, or a
+    moderator's Reopen); `rate` = revisited / cleared, `null` when nothing was auto-cleared
   - tokens and cost by day (every day listed, zeros included), plus the last 24 hours
 - **Mock provider:** deterministic keyword heuristics plus markers that force each path:
 
