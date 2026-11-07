@@ -12,6 +12,10 @@
 
 No database migration.
 
+Post-deploy checks for `69681bd`: `/api/health` reports `69681bd...` with the database connected; `/status` shows
+all six checks operational; `/api/audit/verify` reports `intact: true` over 43 events; GitHub Actions run
+42416623073 succeeded (verify and browser jobs).
+
 ## 1.0.0 (2026-11-08)
 
 Production: https://moderation-workbench.vercel.app (Vercel `sin1`, Neon Postgres in Singapore).

@@ -377,11 +377,11 @@ that fails Zod is **not** sent down the ladder again; it goes to the repair call
 
 ### 5.6 Combine (`moderation/combine.ts`) [AI-6, AI-7, Q-2]
 
-`needsHuman` has **14 conditions**: the 11 of AI-6 (the AI is unavailable; the action is not `none`; the AI asked
+`needsHuman` has **14 conditions**: the 13 of AI-6 (the AI is unavailable; the action is not `none`; the AI asked
 for review; confidence below `HUMAN_CONFIDENCE_THRESHOLD`; a `high` severity finding; an `alwaysEscalate` clause;
-rules and AI disagree; an invalid citation; an unverified quote; the case was reported; `insufficientContext`), the
-AI-8 injection signal from `ai/prompts.ts`, and two from verification (AI-3, AI-4): a finding dropped because nothing
-verifiable was left, and a proposed action lowered to what the cited clauses allow. A model that saw something it
+rules and AI disagree; an invalid citation; an unverified quote; the case was reported; `insufficientContext`; a
+finding dropped because nothing verifiable was left; a proposed action lowered to what the cited clauses allow)
+plus the AI-8 injection signal from `ai/prompts.ts`. A model that saw something it
 could not back up therefore never auto-clears. Each condition adds one or more plain-language reasons.
 
 ```

@@ -65,6 +65,7 @@ Model probe on the project key before choosing (one tiny JSON request each):
 | AiRun and Analysis rows cannot be updated or deleted | DB triggers in the S3 migration | `tests/integration/audit.test.ts` `[AUD-2]` |
 | Daily AI call budget protects the demo quota | `src/server/ai/pipeline.ts` | `tests/unit/classify.test.ts` |
 | AI call never holds a database transaction | `src/server/jobs/handlers.ts` (prepare, call the model, record) | By construction: the model is called between `prepareAnalysis` and `recordAnalysis`, which each run their own short transaction |
+| A finding dropped by verification, or an action lowered to what the clauses allow, always goes to a human (never auto-cleared) | `src/server/moderation/combine.ts` | `tests/unit/combine.test.ts` `[AI-6]` `[AI-4]` |
 | Appeal brief has no outcome field; an added one is stripped | `src/server/ai/appealBrief.ts` | `tests/unit/appealBrief.test.ts` `[AI-12]` |
 | "Policy changed since decision" comes from the database, not the model | `src/server/services/appeals.ts` | `tests/integration/appeals.test.ts` `[AI-12]` |
 | Every AI write and human decision is in a hash-chained, insert-only audit trail | `src/server/services/audit.ts`, S7 migration | `tests/integration/audit.test.ts` `[AUD-3]` |
@@ -118,7 +119,7 @@ clear violations, quoting, sarcasm, banter, missing context, a non-English insul
 tag-escape attempt and v2-only clauses. They are kept out of the prompt examples. CI runs the same harness with
 the mock provider as a pipeline check.
 
-Live run, 2026-11-08 (the report file is named by the UTC date), `gemini-3.5-flash-lite` (full report:
+Live run on 2026-11-07 UTC (8 Nov in India), `gemini-3.5-flash-lite` (full report:
 [evals/results/2026-11-07-gemini-3.5-flash-lite.md](evals/results/2026-11-07-gemini-3.5-flash-lite.md)):
 
 | Metric | Result |
@@ -127,7 +128,7 @@ Live run, 2026-11-08 (the report file is named by the UTC date), `gemini-3.5-fla
 | Clause recall | 100% |
 | Clause precision, labelled codes | 100% |
 | Clause precision, strict (every unexpected citation counts against it) | 69% (11 of 16) |
-| Action in the expected set | 13 / 14 |
+| Action agreement with each case's acceptable set | 13 / 14 |
 | Must-escalate recall (target 100%) | 100% |
 | False escalation on clean cases | 0 / 5 |
 | AI failures / invalid output / fallback / repair | 0 / 0% / 0 / 0 |

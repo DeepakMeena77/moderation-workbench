@@ -57,7 +57,7 @@ Demo accounts: `author@`, `author2@`, `moderator@`, `senior@`, `senior2@`, `admi
 
 Every acceptance criterion in [docs/01-requirements.md](docs/01-requirements.md) has an ID, and tests carry the
 ID in their name. `npm run check:trace -- --strict` maps each criterion to its tests and writes
-[docs/trace.md](docs/trace.md): 65 of 70 criteria are covered by tests, and the other 5 are checked by hand.
+[docs/trace.md](docs/trace.md): 66 of 70 criteria are covered by tests, and the other 4 are checked by hand.
 
 | Area | Criteria | Evidence |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ ID in their name. `npm run check:trace -- --strict` maps each criterion to its t
 | UI and UX | UX-1..5 | 5 of 5 |
 | Operations | OPS-1..6 | 5 of 6; OPS-5 (deployment) in [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) |
 | Evaluation | EVAL-1..2 | 2 of 2 |
-| Documents and CI | DOC-1..4 | By hand: these documents and [.github/workflows/ci.yml](.github/workflows/ci.yml) |
+| Documents and CI | DOC-1..4 | DOC-3 by a test that parses `.env.example`; the rest by hand: these documents and [.github/workflows/ci.yml](.github/workflows/ci.yml) |
 
 ## Screenshots
 
@@ -174,9 +174,10 @@ content (evidence stays stable), notifications, real-time push (pages poll while
 - The appeal brief's output has no outcome field and its prompt forbids recommending one, but its free-text
   summary is not machine-checked for recommending language; the page labels it "Does not recommend an outcome",
   and a senior moderator decides.
-- The audit chain detects changed, rewritten or deleted rows. A `TRUNCATE` by the table owner bypasses row
-  triggers (the integration tests reset tables this way), and an empty chain verifies as intact; the app's own
-  code never truncates.
+- The audit chain detects a changed or rewritten row and a row removed from the middle of the chain. Rows are
+  insert-only by trigger, so removing any row needs the table owner to bypass the trigger; rows removed from the
+  end, a `TRUNCATE` (the integration tests reset tables this way) or an empty chain still verify as intact. An
+  external anchor of the latest hash would close that gap; the app's own code never deletes or truncates.
 - The single repair call goes through the same provider chain, so a transient error during repair is retried
   within the same bounds. Tokens and cost are recorded from responses that report usage; an attempt that times
   out reports none.

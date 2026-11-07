@@ -62,7 +62,7 @@
 | UX-5 | Demo mode: one-click sign-in cards per role, and a "Switch demo user" menu, so a review... | tests/components/AppShell.test.tsx, tests/components/SignInView.test.tsx, tests/integration/auth.test.ts, tests/ui/shell.spec.ts, tests/ui/signin.spec.ts, tests/unit/config.test.ts | covered |
 | OPS-1 | `/status` page (public, no secrets). It checks the whole journey, not only the web proc... | tests/integration/status.test.ts, tests/ui/status.spec.ts, tests/unit/status.test.ts | covered |
 | OPS-2 | `/api/health` returns JSON (`200` or `503`) for uptime monitors. | tests/integration/status.test.ts, tests/unit/status.test.ts | covered |
-| OPS-3 | Structured JSON logs (pino) with `requestId`, user ID and event names (`http.request`, ... | tests/integration/audit.test.ts, tests/unit/envExample.test.ts | covered |
+| OPS-3 | Structured JSON logs (pino) with `requestId`, user ID and event names (`http.request`, ... | tests/integration/audit.test.ts | covered |
 | OPS-4 | Jobs never get lost: they are database-backed; a job running more than 5 minutes is re-... | tests/integration/content.test.ts, tests/integration/jobs.test.ts, tests/ui/status.spec.ts | covered |
 | OPS-5 | Deployed on Vercel with Neon Postgres. The README records the post-deploy verification ... | - | manual |
 | OPS-6 | The metrics page shows: AI vs human agreement rate; override reasons (from HUM-3 and HU... | tests/e2e/journey.spec.ts, tests/integration/metrics.test.ts, tests/ui/metrics.spec.ts | covered |
@@ -70,5 +70,5 @@
 | EVAL-2 | `npm run eval` runs them through the real pipeline (`--mock` in CI). It reports clause ... | tests/unit/evalCases.test.ts | covered |
 | DOC-1 | `README.md` covers setup, architecture, scope (completed and excluded), tests, limitati... | - | manual |
 | DOC-2 | `AGENT_USAGE.md` covers tools, representative prompts, delegated work, mistakes and rej... | - | manual |
-| DOC-3 | `PROMPTS_USED.md`, `AI_NOTES.md`, `ABOUTME.md` and `.env.example` exist and are complete. | - | manual |
+| DOC-3 | `PROMPTS_USED.md`, `AI_NOTES.md`, `ABOUTME.md` and `.env.example` exist and are complete. | tests/unit/envExample.test.ts | covered |
 | DOC-4 | CI (GitHub Actions) runs lint, typecheck, unit and integration tests, and the mock eval... | - | manual |
