@@ -21,6 +21,8 @@ export type AnalysisReason = (typeof ANALYSIS_REASONS)[number];
 export const analyzePayloadSchema = z.object({
   caseId: z.string().min(1),
   reason: z.enum(ANALYSIS_REASONS),
+  /** Re-evaluation jobs (POL-3) carry their run; the queue counts the outcome, the analysis does not need it. */
+  runId: z.string().min(1).optional(),
 });
 
 /** Cases a new analysis may update. Others (resolved, auto-cleared...) are left as they are. */

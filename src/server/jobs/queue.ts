@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { JobType, Prisma } from '@prisma/client';
 import { getDb } from '../db';
 import { append, type Tx } from '../services/audit';
+import { recordRunOutcome } from '../services/reevaluation';
 
 // Database-backed job queue (docs/02-system-design.md sec. 6, OPS-4). Jobs are enqueued inside the
 // transaction of the change that needs them, claimed with FOR UPDATE SKIP LOCKED under a lease, retried with
@@ -10,6 +11,8 @@ import { append, type Tx } from '../services/audit';
 export interface AnalyzePayload {
   caseId: string;
   reason: 'initial' | 'report' | 'reanalyze' | 'policy_change';
+  /** Set on re-evaluation jobs (POL-3); the same id is stored in Job.runId. */
+  runId?: string;
 }
 
 export interface ClaimedJob {
@@ -18,6 +21,8 @@ export interface ClaimedJob {
   payload: unknown;
   attempts: number;
   maxAttempts: number;
+  /** The re-evaluation run this job counts towards, if any (POL-3). */
+  runId: string | null;
 }
 
 /** Re-queue delays after a failed attempt: +30 s, then +2 min (02 sec. 6). */
@@ -40,12 +45,12 @@ export function analyzeDedupeKey(
  */
 export async function enqueue(
   tx: Tx,
-  job: { type: JobType; payload: Prisma.InputJsonObject; dedupeKey: string },
+  job: { type: JobType; payload: Prisma.InputJsonObject; dedupeKey: string; runId?: string },
 ): Promise<void> {
   await tx.$executeRaw`
-    INSERT INTO "Job" ("id", "type", "payload", "dedupeKey", "runAfter", "createdAt", "updatedAt")
+    INSERT INTO "Job" ("id", "type", "payload", "dedupeKey", "runId", "runAfter", "createdAt", "updatedAt")
     VALUES (${randomUUID()}, ${job.type}::"JobType", ${JSON.stringify(job.payload)}::jsonb, ${job.dedupeKey},
-            now(), now(), now())
+            ${job.runId ?? null}, now(), now(), now())
     ON CONFLICT ("dedupeKey") DO NOTHING`;
 }
 
@@ -69,7 +74,7 @@ export async function claimNextJob(leaseMs: number): Promise<ClaimedJob | null> 
       FOR UPDATE SKIP LOCKED
       LIMIT 1
     )
-    RETURNING "id", "type", "payload", "attempts", "maxAttempts"`;
+    RETURNING "id", "type", "payload", "attempts", "maxAttempts", "runId"`;
   return rows[0] ?? null;
 }
 
@@ -83,10 +88,17 @@ export async function hasRunnableJobs(): Promise<boolean> {
   return rows.length > 0;
 }
 
-export async function completeJob(id: string): Promise<void> {
-  await getDb().job.updateMany({
-    where: { id, status: 'running' },
-    data: { status: 'succeeded', lockedUntil: null, lastError: null },
+/**
+ * Marks a job succeeded. A re-evaluation job also counts as done in its run, in the same transaction; the
+ * status guard means a job completed twice (a runner that outlived its lease) is counted once.
+ */
+export async function completeJob(job: Pick<ClaimedJob, 'id' | 'runId'>): Promise<void> {
+  await getDb().$transaction(async (tx) => {
+    const updated = await tx.job.updateMany({
+      where: { id: job.id, status: 'running' },
+      data: { status: 'succeeded', lockedUntil: null, lastError: null },
+    });
+    if (updated.count === 1 && job.runId) await recordRunOutcome(tx, job.runId, 'done');
   });
 }
 
@@ -111,13 +123,20 @@ export async function failJobAttempt(job: ClaimedJob, error: unknown): Promise<'
       WHERE "id" = ${job.id} AND "status" = 'running'`;
     return 'queued';
   }
-  await markFailed(job.id, job.type, job.attempts, lastError);
+  await markFailed(job.id, job.type, job.attempts, lastError, job.runId);
   return 'failed';
 }
 
-async function markFailed(id: string, type: JobType, attempts: number, lastError: string): Promise<void> {
+async function markFailed(
+  id: string,
+  type: JobType,
+  attempts: number,
+  lastError: string,
+  runId: string | null,
+): Promise<void> {
   await getDb().$transaction(async (tx) => {
     await tx.job.update({ where: { id }, data: { status: 'failed', lockedUntil: null, lastError } });
+    if (runId) await recordRunOutcome(tx, runId, 'failed');
     await append(tx, {
       actorId: null,
       actorType: 'system',
@@ -137,12 +156,13 @@ export async function failExhaustedJobs(): Promise<number> {
   const lastError = 'Lease expired on the last attempt.';
   return getDb().$transaction(async (tx) => {
     // One UPDATE ... RETURNING: two runners doing this at once cannot both fail (and audit) the same job.
-    const failed = await tx.$queryRaw<Array<{ id: string; type: JobType; attempts: number }>>`
+    const failed = await tx.$queryRaw<Array<{ id: string; type: JobType; attempts: number; runId: string | null }>>`
       UPDATE "Job"
       SET "status" = 'failed', "lockedUntil" = NULL, "lastError" = ${lastError}, "updatedAt" = now()
       WHERE "status" = 'running' AND "lockedUntil" < now() AND "attempts" >= "maxAttempts"
-      RETURNING "id", "type", "attempts"`;
+      RETURNING "id", "type", "attempts", "runId"`;
     for (const job of failed) {
+      if (job.runId) await recordRunOutcome(tx, job.runId, 'failed');
       await append(tx, {
         actorId: null,
         actorType: 'system',

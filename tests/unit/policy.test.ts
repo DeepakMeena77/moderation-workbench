@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { isEmptyDiff, policyChangeSince, policyDiff } from '@/server/policy/diff';
 import { canonicalJson, policyContentHash, policyFileSchema } from '@/server/policy/schema';
 
 // POL-1: policy files are validated against a Zod schema; validation errors carry their JSON paths.
@@ -64,5 +65,65 @@ describe('policy files', () => {
     const reordered = v1.clauses.map((c) => Object.fromEntries(Object.entries(c).reverse())) as typeof v1.clauses;
     expect(canonicalJson({ b: 1, a: [2, { d: 3, c: 4 }] })).toBe('{"a":[2,{"c":4,"d":3}],"b":1}');
     expect(policyContentHash(reordered)).toBe(policyContentHash(v1.clauses));
+  });
+});
+
+// POL-5: policyDiff(a, b) lists clauses added, removed and changed, field by field (02 sec. 4).
+
+describe('policyDiff', () => {
+  it('[POL-5] v1 -> v2: SCAM-1 added, SPAM-1 and PII-1 changed at field level, the rest unchanged', () => {
+    const diff = policyDiff(parse(1).clauses, parse(2).clauses);
+    expect(diff.added.map((c) => c.code)).toEqual(['SCAM-1']);
+    expect(diff.removed).toEqual([]);
+    expect(diff.unchanged).toEqual(['HAR-1', 'THR-1', 'HATE-1', 'SH-1']);
+    const spam = diff.changed.find((c) => c.code === 'SPAM-1');
+    expect(spam?.changes).toEqual([
+      { field: 'signals.linkThreshold', before: 3, after: 2 },
+      { field: 'text', before: expect.any(String), after: expect.stringContaining('Two or more links') },
+      { field: 'title', before: 'Spam and link flooding (3+ links)', after: 'Spam and link flooding (2+ links)' },
+    ]);
+    const pii = diff.changed.find((c) => c.code === 'PII-1');
+    expect(pii?.changes).toContainEqual({ field: 'signals.addressPattern', before: null, after: expect.any(String) });
+  });
+
+  it('[POL-5] the reverse direction reports the clause as removed', () => {
+    const diff = policyDiff(parse(2).clauses, parse(1).clauses);
+    expect(diff.removed.map((c) => c.code)).toEqual(['SCAM-1']);
+    expect(diff.added).toEqual([]);
+  });
+
+  it('[POL-5] identical clauses give an empty diff, whatever the key order', () => {
+    const v1 = parse(1).clauses;
+    const reordered = v1.map((c) => Object.fromEntries(Object.entries(c).reverse())) as typeof v1;
+    const diff = policyDiff(v1, reordered);
+    expect(isEmptyDiff(diff)).toBe(true);
+    expect(diff.unchanged).toHaveLength(6);
+  });
+
+  it('[POL-5] array fields such as allowedActions are reported whole, before and after', () => {
+    const [har] = parse(1).clauses;
+    if (!har) throw new Error('v1 has no clauses');
+    const changed = { ...har, allowedActions: ['label', 'limit'] as typeof har.allowedActions, alwaysEscalate: true };
+    expect(policyDiff([har], [changed]).changed).toEqual([
+      {
+        code: 'HAR-1',
+        title: har.title,
+        changes: [
+          { field: 'allowedActions', before: ['label', 'limit', 'remove'], after: ['label', 'limit'] },
+          { field: 'alwaysEscalate', before: false, after: true },
+        ],
+      },
+    ]);
+  });
+});
+
+describe('policyChangeSince', () => {
+  it('[POL-4] a decision under v1 shows "Policy changed since this decision (v1 -> v2)" once v2 is active', () => {
+    expect(policyChangeSince(1, 2)).toEqual({
+      fromVersion: 1,
+      toVersion: 2,
+      message: 'Policy changed since this decision (v1 -> v2)',
+    });
+    expect(policyChangeSince(2, 2)).toBeNull();
   });
 });

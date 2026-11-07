@@ -323,7 +323,7 @@ Each screen uses QueryState plus the states in sec. 7.
    - "Policy changed since decision" banner when applicable.
 9. **Policy** `/policy`
    - The versions list (active tag); clauses as cards or accordion; **Compare** (two selects + DiffView).
-   - **Publish** (admin), a 4-step flow: 1 Paste or upload JSON (a monospace field, no editor dependency) -> 2
+   - **Publish** (admin), a 4-step flow: 1 Paste or upload JSON (a plain multi-line field in the theme font, as the style audit allows only Roboto; no editor dependency) -> 2
      Validate (error list with JSON paths) -> 3 Review the diff and the impact ("12 unresolved cases will be
      re-analysed under v2") -> 4 Confirm dialog.
    - Then a re-evaluation progress card (linear progress, done/failed counts, **Retry failed**).

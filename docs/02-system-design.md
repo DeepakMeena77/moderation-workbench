@@ -464,8 +464,8 @@ Lists use `?cursor=&limit=`.
 | GET `/api/appeals`, GET `/api/appeals/:id` | senior, admin (and moderator read) | appeals | [APP-4] |
 | POST `/api/appeals/:id/resolve` | senior != decider | appeals | 403 `SAME_REVIEWER` [APP-3, 5] |
 | GET `/api/policies`, GET `/api/policies/:version`, GET `/api/policies/compare?from=&to=` | any | policy | [POL-5] |
-| POST `/api/policies/validate`, POST `/api/policies` | admin | policy | Validate returns errors and the diff preview [POL-2, 3] |
-| GET `/api/reevaluations/:id`, POST `/api/reevaluations/:id/retry` | staff, admin | reevaluation | |
+| POST `/api/policies/validate`, POST `/api/policies` | admin | policy | Body `{json}`: the pasted text, so a syntax error is reported like any other. Validate answers 200 with `{valid, errors: [{path, message}], preview: {fromVersion, nextVersion, diff, sameAsVersion, impact: {unresolvedCases}}}` and writes nothing. Publish answers `{version, run}`; 400 `VALIDATION_FAILED` with the same paths; 409 `POLICY_UNCHANGED` when the clauses match **any** existing version (`contentHash` is unique) [POL-2, 3] |
+| GET `/api/reevaluations/:id`, POST `/api/reevaluations/:id/retry` | staff, admin | reevaluation | `{id, fromVersion, toVersion, total, done, failed, state: running, finished or finished_with_failures}`. Retry answers `{run, retried}`; with nothing failed it is a no-op [POL-3] |
 | GET `/api/audit`, GET `/api/audit/verify` | staff | audit | [AUD-3, 5] |
 | GET `/api/metrics` | staff | metrics | [OPS-6] |
 | GET `/api/status` (public), GET `/api/health` (public) | - | status | [OPS-1, 2] |

@@ -7,13 +7,21 @@ import type { ActorType, Prisma } from '@prisma/client';
 export type Tx = Prisma.TransactionClient;
 
 export type AuditAction =
-  'content.created' | 'report.created' | 'case.opened' | 'case.reopened' | 'analysis.created' | 'job.failed';
+  | 'content.created'
+  | 'report.created'
+  | 'case.opened'
+  | 'case.reopened'
+  | 'analysis.created'
+  | 'job.failed'
+  | 'policy.published'
+  | 'reevaluation.started'
+  | 'reevaluation.retried';
 
 export interface AuditEventInput {
   actorId: string | null;
   actorType: ActorType;
   action: AuditAction;
-  entityType: 'content' | 'report' | 'case' | 'analysis' | 'job';
+  entityType: 'content' | 'report' | 'case' | 'analysis' | 'job' | 'policy' | 'reevaluation';
   entityId: string;
   /** Short summaries only: never the content text (SEC-5). */
   before?: Prisma.InputJsonObject;

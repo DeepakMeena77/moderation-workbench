@@ -52,7 +52,7 @@ export async function runPendingJobs(options: RunOptions = {}): Promise<RunSumma
     const jobStarted = Date.now();
     try {
       await handlers[job.type](job);
-      await completeJob(job.id);
+      await completeJob(job);
       summary.succeeded += 1;
       log.info({ event: 'job.succeeded', jobId: job.id, type: job.type, durationMs: Date.now() - jobStarted });
     } catch (error) {
