@@ -80,7 +80,7 @@ Everything else is borderless.
 
 ### 2.3 Semantic colour mapping (always icon + text, never colour alone)
 
-| Concept | Value | Container / content colours | Icon (Material Symbols Rounded) |
+| Concept | Value | Container / content colours | Icon (Material Icons Rounded) |
 | --- | --- | --- | --- |
 | Severity | high | errorContainer / onErrorContainer | `report` |
 | | medium | warningContainer / onWarningContainer | `warning` |
@@ -101,8 +101,8 @@ Everything else is borderless.
 | AI state | unavailable | errorContainer | `cloud_off` |
 | | fallback model | surfaceContainerHighest | `alt_route` |
 | | insufficient context | warningContainer | `help` |
-| Confidence | >= 0.85 | success | Bar plus text label |
-| | 0.7-0.84 | primary | Bar plus text label |
+| Confidence | >= 0.9 | success | Bar plus text label |
+| | 0.7-0.89 | primary | Bar plus text label |
 | | 0.4-0.69 | warning | Bar plus text label |
 | | < 0.4 | error | Bar plus text label |
 
@@ -118,13 +118,12 @@ Everything else is borderless.
 | bodyMedium | 14 / 20 | 400 | Default text | `body2` |
 | bodySmall | 12 / 16 | 400 | Supporting text, timestamps | `caption` |
 | labelLarge | 14 / 20 | 500 | Buttons, tabs | `button` (no uppercase) |
-| labelMedium | 12 / 16 | 500 | Chips, tags, navigation labels | `overline` (restyled, no uppercase) |
+| labelMedium | 12 / 16 | 500 | Tags, navigation labels (chips use labelLarge) | `overline` (restyled, no uppercase) |
 | displaySmall | 36 / 44 | 400 | Stat values on metrics and status | custom `display` |
 
 ### 2.5 Shape, spacing, state layers, motion
 
-- **Shape:** extra-small 4, small 8 (chips, tags, tooltips), medium 12 (cards, list rows, menus), large 16 (FAB,
-  navigation drawer items' container), extra-large 28 (dialogs, bottom sheets), **full** (buttons, search bar,
+- **Shape:** extra-small 4, small 8 (chips, tags, tooltips), medium 12 (cards, list rows, menus), large 16 (FAB; drawer items use a full pill), extra-large 28 (dialogs, bottom sheets), **full** (buttons, search bar,
   navigation indicators, segmented controls).
 - **Spacing (4 dp grid):** 4, 8, 12, 16, 24, 32, 48. Card padding 16 (compact) or 24 (medium and up).
   Gap between cards 16 or 24.
@@ -136,7 +135,7 @@ Everything else is borderless.
   - emphasised accelerate `cubic-bezier(0.3,0,0.8,0.15)`, 200 ms (exit)
 
   `prefers-reduced-motion`: no shimmer, no slide, instant changes.
-- **Icons:** Material Symbols **Rounded** (`@mui/icons-material/*Rounded`), 24 dp (20 inside chips, 18 inside
+- **Icons:** Material Icons **Rounded** (`@mui/icons-material/*Rounded`), 24 dp (20 inside chips, 18 inside
   tags).
 
 ---
@@ -177,7 +176,7 @@ Navigation surfaces use the `canvas` colour, so the rail and drawer blend into t
 | author | Feed, My content, Policy, More | **Community:** Feed, My content, **Governance:** Policy, **System:** Status |
 | moderator | Queue(n), Audit, Metrics, More | **Moderation:** Queue, **Governance:** Policy, Audit, Metrics, **System:** Status |
 | senior_moderator | Queue(n), Appeals(n), Audit, More | **Moderation:** Queue, Appeals, **Governance:** Policy, Audit, Metrics, **System:** Status |
-| admin | Policy, Queue, Appeals, More | **Governance:** Policy, Audit, Metrics, **Oversight:** Queue, Appeals, **System:** Status, Jobs |
+| admin | Policy, Queue, Appeals, More | **Governance:** Policy, Audit, Metrics, **Oversight:** Queue, Appeals, **System:** Status (job controls live on the status page) |
 
 - **More** opens a modal bottom sheet: remaining destinations, theme toggle, "Switch demo user" (demo mode),
   sign out.
@@ -387,6 +386,7 @@ createTheme({
   colorSchemes: { light: { palette: paletteFrom(tokens.light) }, dark: { palette: paletteFrom(tokens.dark) } },
   breakpoints: { values: { xs: 0, sm: 600, md: 840, lg: 1200, xl: 1600 } },
   shape: { borderRadius: 12 },
+  spacing: 4,                                              // 1 unit = 4 px (M3 4 dp grid); check-ui-rules relies on it
   typography: { fontFamily: roboto.style.fontFamily, button: { textTransform: 'none', fontWeight: 500 } /* + M3 scale */ },
   components: {
     MuiPaper:   { defaultProps: { elevation: 0 } },

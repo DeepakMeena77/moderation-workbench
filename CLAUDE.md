@@ -20,7 +20,7 @@ If the docs and the code disagree, **stop and ask**. Do not guess.
 1. **Plan first.** List the files to create or change, the tests to write and the commands to run. Wait for
    approval.
 2. Implement in small steps: schema -> service -> route -> UI -> tests. Stay inside the current slice.
-3. Run `npm run verify` (ASCII check, UI rules, lint, typecheck, tests) before saying a step is done. Report failures as they are.
+3. Run `npm run verify` (repo guard, ASCII check, UI rules, lint, typecheck, tests) before saying a step is done. Report failures as they are.
    Never weaken, skip or delete a test to make it pass.
 4. **Never commit, push or deploy.** The human does that. Read-only git (`status`, `diff`, `log`, `show`) is fine.
    Write commands are denied in `.claude/settings.json`. Do not try to work around that.
@@ -32,7 +32,9 @@ If the docs and the code disagree, **stop and ask**. Do not guess.
    - At the end of each step, list every created, changed or deleted file.
 8. Never touch `.githooks/`, the `scripts/check-*.mjs` guards, `.claude/`, `.gitignore` or `ABOUTME.md`. If one
    of them seems to block legitimate work, stop and explain why.
-9. Never read, print or create `.env` files. Ask the human to set values; use `.env.example` for names only.
+9. End every step with: the list of touched files, the check results, and a one-line draft for the `AGENT_USAGE.md` log (the human writes the log; do not edit `AGENT_USAGE.md`).
+10. Run one command per shell call where you can; long chained commands are harder to review and may be denied.
+11. Never read, print or create `.env` files. Ask the human to set values; use `.env.example` for names only.
 
 ## Invariants (never break these; each one has a test)
 
@@ -107,7 +109,7 @@ If the docs and the code disagree, **stop and ask**. Do not guess.
 | Command | Does |
 | --- | --- |
 | `npm run dev` | Local app |
-| `npm run verify` | ASCII check, UI-rules check, lint, typecheck and tests |
+| `npm run verify` | Repo guard, ASCII check, UI-rules check, lint, typecheck and tests |
 | `npm run test:e2e` | Playwright journey |
 | `npm run test:ui` | Playwright UI quality suite (axe, layout, style audit) |
 | `npm run check:trace -- --slice S3` | Which acceptance criteria of a slice have tests |

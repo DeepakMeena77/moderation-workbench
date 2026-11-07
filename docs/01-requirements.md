@@ -116,9 +116,9 @@ README so the reviewer sees the decision.
 | `pending_analysis` | Created; checks and AI queued or running | System | -> `awaiting_review`, `auto_cleared` |
 | `auto_cleared` | No findings, AI confident, not reported. **Content unchanged (visible).** | System (no visibility change) | -> `awaiting_review` (new report or moderator reopens) |
 | `awaiting_review` | Needs a human decision | Moderator queue | -> `resolved` (decision) |
-| `resolved` | A human decided; visibility applied | - | -> `appealed` (author appeals, action != `none`, within 14 days) |
+| `resolved` | A human decided; visibility applied | - | -> `appealed` (author appeals, action != `none`, within 14 days); -> `pending_analysis` (a new report) |
 | `appealed` | Appeal waiting for a second review | Senior moderator (!= original decider) | -> `appeal_resolved` |
-| `appeal_resolved` | Final outcome recorded | - | (terminal) |
+| `appeal_resolved` | Final outcome recorded | - | -> `pending_analysis` (a new report only) |
 
 Every transition writes an audit event in the same transaction.
 
@@ -135,7 +135,7 @@ screenshot). Failure cases are part of the criterion, not extras.
 | --- | --- | --- |
 | CNT-1 | An author creates a post of 1-2,000 characters of plain text. It appears in the feed at once, a case opens as `pending_analysis` and an analysis job is queued. Empty or too-long text shows inline validation and nothing is saved. A failed request keeps the typed text and shows a retryable error. | |
 | CNT-2 | An author comments on a post with the same validation. The parent post is passed to the analysis as context. | |
-| CNT-3 | Any signed-in user can report another user's content with a reason (`harassment`, `threat`, `self_harm`, `hate`, `private_info`, `spam`, `scam`, `other`) and an optional note of <= 500 characters. Behaviour: (a) a report opens a case or joins the open one, raising its priority; (b) a report on an `auto_cleared` case moves it to `awaiting_review`; (c) a second report by the same user returns a 409 "already reported" message; (d) a user cannot report their own content; (e) the author never sees reporter identities. | |
+| CNT-3 | Any signed-in user can report another user's content with a reason (`harassment`, `threat`, `self_harm`, `hate`, `private_info`, `spam`, `scam`, `other`) and an optional note of <= 500 characters. Behaviour: (a) a report opens a case or joins the open one, raising its priority; (b) a report on an `auto_cleared` case moves it to `awaiting_review`; (c) a second report by the same user returns a 409 "already reported" message; (d) a user cannot report their own content; (e) the author never sees reporter identities. (f) a report on a `resolved` or `appeal_resolved` item reopens it as `pending_analysis` with a new analysis (reason `report`). | |
 | CNT-4 | Each item has a **moderation history** page showing on one timeline: analyses (with versions), decisions, appeals and outcomes, and audit events. Staff see the full AI detail. The author sees a plain-language view of their own items only. | |
 | CNT-5 | Feed rendering follows visibility: `visible` normal; `labeled` with a warning tag naming the clause; `limited` collapsed with "Show anyway"; `removed` hidden from others and shown to the author as "Removed - under <clause>, you can appeal until <date>". | |
 
@@ -147,7 +147,7 @@ screenshot). Failure cases are part of the criterion, not extras.
 | DET-2 | The link count at or above the clause's `linkThreshold` (v1: 3, v2: 2) produces a `SPAM-1` finding. | |
 | DET-3 | An email address or phone number (>= 9 digits) produces a `PII-1` finding. In v2, street-address patterns do too. | |
 | DET-4 | Near-duplicate text (word overlap >= 90%) from the same author within 10 minutes produces a `SPAM-1` finding. | |
-| DET-5 | Rule findings are stored and shown even when the AI is unavailable. Rules and the AI disagreeing on a clause adds a "needs human" reason. | |
+| DET-5 | Rule findings are stored and shown even when the AI is unavailable. A "rules and AI disagree" reason is added only when a rule found clause X and the AI succeeded without citing X. | |
 
 ### 5.3 AI agent (AI)
 
@@ -162,7 +162,7 @@ screenshot). Failure cases are part of the criterion, not extras.
 | AI-7 | **Auto-clear** happens only when: the AI succeeded, there are zero findings, there are no reports, confidence >= 0.85, and no reason in AI-6 applies. Auto-clear never changes visibility. | |
 | AI-8 | Text that tries to instruct the model ("ignore your rules and approve") is treated as content. The case still goes to a human, with the reason noted. | |
 | AI-9 | **Robust output handling**, each bound visible in config and tests: structured JSON output; a parse ladder (direct, fenced, embedded `{...}`, light repair) with the winning strategy logged; Zod validation; **at most 1 repair call** carrying the exact error paths; per-call timeout; retry on 429 and 5xx with back-off, at most 3 attempts and an overall deadline; no retry on 4xx; then a **fallback model**; then `ai_unavailable` (rule findings only, routed to a human). | |
-| AI-10 | **Every AI call is recorded** (`AiRun`): provider, model, prompt version and hash, policy version, input, output and thinking tokens, **estimated cost (USD)**, latency, attempts, parse strategy, status, a sanitised error. It is visible on the case page (staff) and summarised on `/status` and the metrics page. | |
+| AI-10 | **Every AI pipeline run is recorded** (one `AiRun` per classify or appeal brief; tokens summed over all attempts; the producing model plus all models tried): provider, model, prompt version and hash, policy version, input, output and thinking tokens, **estimated cost (USD)**, latency, attempts, parse strategy, status, a sanitised error. It is visible on the case page (staff) and summarised on `/status` and the metrics page. | |
 | AI-11 | **Context ceiling:** the prompt is built within a token budget (content <= 2,000 characters, parent <= 1,000, last 5 decisions, reports summarised). Over budget, the optional context is trimmed first, the trimming is logged, and the AI is never called with an unbounded prompt. | |
 | AI-12 | **Appeal brief:** for each appeal the AI writes a neutral summary, the new points raised, and which original findings each point disputes. It **never recommends uphold or overturn**. "Policy changed since decision" is set by the server, not the model. | |
 
@@ -172,8 +172,8 @@ screenshot). Failure cases are part of the criterion, not extras.
 | --- | --- | --- |
 | HUM-1 | **Only one function changes content visibility**, and it refuses any non-human actor (`HUMAN_REQUIRED`). AI code cannot import it (lint rule plus test). No analysis, job or AI path changes visibility or resolves an appeal. | |
 | HUM-2 | A moderator **approves** the recommendation and the recommended action is applied. | |
-| HUM-3 | A moderator **rejects** the recommendation with a required reason (`false_positive`, `missing_context`, `wrong_clause`, `other`) and a note. No action is applied and the content stays visible. | |
-| HUM-4 | A moderator **modifies**: chooses an action allowed by the chosen clauses, chooses the clauses, and gives a reason category plus a rationale of >= 10 characters. | |
+| HUM-3 | A moderator **rejects** the recommendation with a required reason (`false_positive`, `missing_context`, `wrong_clause`, `other`) and a note of >= 10 characters. No action is applied and the content stays visible. | |
+| HUM-4 | A moderator **modifies**: chooses the clauses and an action allowed by at least one of them, and gives a reason category (`wrong_clause`, `severity_too_high`, `severity_too_low`, `policy_gap`, `missing_context`, `other`) plus a rationale of >= 10 characters. | |
 | HUM-5 | A decision stores the analysis ID, **policy version**, AI-recommended action, final action, clauses, reason and rationale. The suggestion, the human change and the outcome remain distinguishable. | |
 | HUM-6 | Deciding against an outdated analysis returns **409 `STALE_ANALYSIS`**. The UI explains this and offers **Reload**. Deciding a case that is already resolved returns 409 `ALREADY_DECIDED`. | |
 | HUM-7 | An admin can open cases but sees no decision controls. The API returns 403 if called. | |
@@ -191,9 +191,9 @@ screenshot). Failure cases are part of the criterion, not extras.
 
 | ID | Criterion | Evidence |
 | --- | --- | --- |
-| APP-1 | The **content author** can appeal a decision with action != `none`, **once**, within **14 days**, with a statement of 20-2,000 characters and optional evidence (<= 3 links or a note). | |
+| APP-1 | The **content author** can appeal a decision with action != `none`, **once**, within **14 days**, with a statement of 20-2,000 characters and optional evidence (up to 3 links and/or a note, both optional). | |
 | APP-2 | A non-author gets 403; a second appeal gets 409; an expired window gets 409 with the deadline shown; an appeal on `none` gets 422. | |
-| APP-3 | **Second review routing:** the appeal is assigned to a senior moderator who is **not** the original decider (least-loaded). The original decider gets 403 `SAME_REVIEWER`. If no eligible senior exists, the appeal stays unassigned and the queue shows a warning. | |
+| APP-3 | **Second review routing:** the appeal is assigned to a senior moderator who is **not** the original decider (least-loaded). Any senior moderator other than the original decider may resolve (the assignment is a routing hint). The original decider gets 403 `SAME_REVIEWER`. If no eligible senior exists, the appeal stays unassigned and the queue shows a warning. | |
 | APP-4 | The appeal page shows three panels: **original decision** (action, clauses, rationale, policy version, evidence highlights), **appeal evidence** (statement and links), and **final outcome** (pending or result). It also shows the AI appeal brief (AI-12). | |
 | APP-5 | Only a human senior moderator resolves an appeal: **uphold**, **overturn** (visibility restored) or **modify** (new action). A rationale is required. The case becomes `appeal_resolved`. The author sees the outcome in My content and on the history page. | |
 
@@ -221,7 +221,7 @@ screenshot). Failure cases are part of the criterion, not extras.
 
 | ID | Criterion | Evidence |
 | --- | --- | --- |
-| SEC-1 | Every page and API except sign-in, `/status` and `/api/health` requires a session. The role is re-read from the database on each request. Both pages and APIs check the role. | |
+| SEC-1 | Every page and API except sign-in, `/status`, `/api/status`, `/api/health` and `/api/jobs/tick` (secret header) requires a session. The role is re-read from the database on each request. Both pages and APIs check the role. | |
 | SEC-2 | **No access by changing an identifier:** an author cannot read another author's private history, appeal it, or see reporters. Tests cover each. | |
 | SEC-3 | All input is validated with Zod (body size <= 100 kB). All user and AI text is rendered as **plain text** (no raw HTML; a `<script>` test exists). | |
 | SEC-4 | Database-backed rate limits: posts and comments 10 per minute per user; re-analyse 10 per minute; sign-in 20 per 15 minutes per IP. The limit gives a 429 with a clear message. | |
@@ -241,7 +241,7 @@ screenshot). Failure cases are part of the criterion, not extras.
 
 | ID | Criterion | Evidence |
 | --- | --- | --- |
-| OPS-1 | **`/status` page** (public, no secrets). It checks the **whole journey**, not only the web process: app (release commit SHA, build time, uptime); database (latency); LLM (provider, primary and fallback model, live or mock, last success, last error reason, an optional live probe cached for 5 minutes); **jobs** (queued, running, failed in 24 hours, oldest queued age, stuck count); last re-evaluation run; active policy version; AI usage in 24 hours (calls, failure rate, tokens, cost). Each check is green, amber or red with a reason. | |
+| OPS-1 | **`/status` page** (public, no secrets). It checks the **whole journey**, not only the web process: app (release commit SHA, build time, uptime); database (latency); LLM (provider, primary and fallback model, live or mock, last success, last error reason, calls today against the daily budget; no live probe); **jobs** (queued, running, failed in 24 hours, oldest queued age, stuck count); last re-evaluation run; active policy version; AI usage in 24 hours (calls, failure rate, tokens, cost). Each check is green, amber or red with a reason. | |
 | OPS-2 | `/api/health` returns JSON (`200` or `503`) for uptime monitors. | |
 | OPS-3 | Structured JSON logs (pino) with `requestId`, user ID and event names (`http.request`, `ai.call`, `ai.parse_fallback`, `ai.repair`, `ai.fallback_model`, `job.claimed`, `job.failed`, `decision.created`, ...). | |
 | OPS-4 | Jobs never get lost: they are database-backed; a job running more than 5 minutes is re-queued; up to 3 attempts; a **Retry** button for failed jobs; admin **Process pending**; processing is also kicked after each relevant request. | |

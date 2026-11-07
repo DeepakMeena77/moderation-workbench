@@ -27,9 +27,8 @@ evidence for each criterion, and the README evidence table is built from its out
 | 13 | Manual exploratory | What automation misses: real feel, screen reader, real phone | Checklist sec. 9 | - | S8, S9 | - |
 | 14 | Post-deploy smoke | The live URL works end to end with real Gemini | Checklist sec. 10 | - | After each deploy | - |
 
-**`npm run verify`** = `check:ascii`, `check:ui`, `lint`, `typecheck`, `test`. The agent runs it after every
-step. You run it before every commit. The pre-commit hook (`.githooks/pre-commit`) runs the two fast checks
-(ASCII and UI rules) on every commit.
+**`npm run verify`** = `check:repo`, `check:ascii`, `check:ui`, `lint`, `typecheck`, `test`. The agent runs it after every
+step. You run it before every commit. The pre-commit hook (`.githooks/pre-commit`) runs the repo guard, the staged secret scan, the ASCII check and the UI rules on every commit; `.githooks/pre-push` adds the history secret scan and `npm run verify`.
 
 ---
 
@@ -84,7 +83,7 @@ URLs with a password, and `SESSION_SECRET=` with a value. It must find nothing.
 | Level | Scope | Database | AI |
 | --- | --- | --- | --- |
 | Unit | Pure functions | none | none (or the mock) |
-| Integration | Services and route handlers | Postgres (Docker locally, a service container in CI) | mock |
+| Integration | Services and route handlers | Postgres: a dedicated Neon `test` branch locally (Docker is not installed), a service container in CI | mock |
 | Component | React components in jsdom | none | none |
 | End to end | Browser journey | seeded test database | mock |
 
@@ -271,11 +270,11 @@ the audit checks our design system and not library internals.
 The journey runs at 1280 px and at 390 px:
 
 1. Author signs in (demo card) -> posts `You are a worthless idiot` -> sees "Analysing..." and then the post.
-2. Moderator -> Queue shows the case with a HAR-1 tag -> opens it -> the quote is highlighted -> **Modify** to
+2. `senior@` (deciding as first-line moderator) -> Queue shows the case with a HAR-1 tag -> opens it -> the quote is highlighted -> **Modify** to
    `limit` with a rationale -> snackbar.
 3. Author -> My content shows "Limited" -> **Appeal** with a 20+ character statement.
-4. Moderator (the original decider) opens the appeal -> sees the blocked message.
-5. Senior -> Appeals -> **Overturn** with a rationale -> the author's post is visible again.
+4. `senior@` (the original decider) opens the appeal -> sees the blocked message and disabled controls (`SAME_REVIEWER`).
+5. `senior2@` -> Appeals -> **Overturn** with a rationale -> the author's post is visible again.
 6. Admin -> Policy -> Publish v2 -> the progress reaches done -> Audit shows the "intact" banner.
 
 ---
@@ -364,15 +363,17 @@ The mock run in CI checks that the pipeline and the report work. The live run is
 **`.github/workflows/ci.yml`:**
 
 ```text
-job verify:   services postgres:16
-              npm ci -> prisma migrate deploy -> npm run verify -> npm run eval -- --mock
-job browser:  needs verify; npx playwright install --with-deps -> build -> seed (mock AI)
-              -> npm run test:e2e -> npm run test:ui -> upload the Playwright report and screenshots
+job verify  (from S0): services postgres:16
+                       npm ci -> prisma migrate deploy -> npm run verify
+job browser (from S0): needs verify; npx playwright install --with-deps -> build -> seed (mock AI)
+                       -> npm run test:ui (S0: /status only; each UI slice adds its pages)
+                       -> upload the Playwright report and screenshots
+added in S8:           npm run eval -- --mock (verify job), npm run test:e2e (browser job)
 ```
 
 **Hooks:**
 
-- `.githooks/pre-commit` runs `check:ascii` and `check:ui` (fast).
-- Enable it once with `git config core.hooksPath .githooks` (S0).
+- `.githooks/pre-commit` runs the repo guard, staged secrets, ASCII and UI rules. `.githooks/pre-push` runs the repo guard, the history secret scan, ASCII and `npm run verify`.
+- Hooks are already enabled in this clone (`core.hooksPath = .githooks`). A fresh clone runs `git config core.hooksPath .githooks` once.
 
 The README shows the CI badge.

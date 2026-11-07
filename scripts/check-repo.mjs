@@ -31,7 +31,8 @@ const ALLOWED = [
   /^prompts\/[a-z-]+\.v\d+\.md$/,
   /^evals\/(cases\.json|run\.ts|lib\/[\w.-]+\.ts|results\/[\w.-]+\.md)$/,
   /^tests\/.+\.(ts|tsx|json)$/,
-  /^(package\.json|package-lock\.json|tsconfig\.json|next\.config\.(ts|mjs|js)|eslint\.config\.(mjs|js)|vitest\.config\.(ts|mts)|vitest\.workspace\.ts|playwright\.config\.ts|vercel\.json|postcss\.config\.(mjs|js))$/,
+  /^tests\/.+-snapshots\/[\w.-]+\.png$/,
+  /^(package\.json|package-lock\.json|tsconfig\.json|next\.config\.(ts|mjs|js)|eslint\.config\.(mjs|js)|vitest\.config\.(ts|mts)|vitest\.workspace\.ts|playwright\.config\.ts|prisma\.config\.ts|vercel\.json|postcss\.config\.(mjs|js))$/,
 ];
 
 // Always wrong, even if a pattern above would match.

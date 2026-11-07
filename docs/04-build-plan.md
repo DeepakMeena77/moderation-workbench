@@ -18,8 +18,7 @@ Each slice ends **deployed and demonstrable**. Work through them in order. Use t
 | S8 | Eval set, e2e, screenshots, states and mobile polish | 2 h | 12:30-14:30 |
 | S9 | Docs, release notes, slides, live verification, submit | 3 h | 14:30-17:30 (+ buffer to 20:00) |
 
-**If you fall behind,** cut in this order: hash chain (AUD-3) -> metrics charts (keep the numbers) -> Playwright
-screenshots (keep the one journey test) -> the policy JSON upload (keep paste). **Never cut:** the status page,
+**If you fall behind,** cut in this order: visual regression baselines -> metrics charts (keep the numbers) -> the policy JSON upload (keep paste) -> text-spacing and zoom UI checks. **Never cut:** the status page,
 AI robustness, human-control tests, or the S9 docs.
 
 ---
@@ -76,7 +75,7 @@ Then:
   test for `/status`: axe, no overflow at 320 and 1280, and the style audit. Every later page joins the same
   matrix.
 
-**Acceptance:** OPS-2, OPS-5 (a first deploy), DOC-4 (CI green), UX-4 (theme in place).
+**Acceptance:** OPS-2, OPS-5 (a first deploy), DOC-4 (CI green), SEC-5 (log redaction and the Origin check in `http.ts`).
 
 **Done when:**
 
@@ -107,7 +106,7 @@ Then:
   destinations, the "More" sheet, theme toggle
 - shared components: Button styles, Tag, QueryState, EmptyState, ErrorState, Skeletons, SnackbarProvider
 
-**Acceptance:** SEC-1, UX-2 (navigation part), UX-3 (shell), UX-5.
+**Acceptance:** SEC-1, SEC-4 (sign-in limit), UX-2 (navigation part), UX-3 (shell), UX-4, UX-5.
 
 **Tests:**
 
@@ -139,7 +138,7 @@ Then:
 - the Feed page: composer, post cards, comments, report sheet, visibility treatments
 - database rate limits for posting
 
-**Acceptance:** CNT-1, CNT-2, CNT-3, CNT-5, DET-1..5, POL-1, OPS-4 (claim, lease, retry), SEC-4 (posting),
+**Acceptance:** CNT-1, CNT-2, CNT-3, CNT-5, SEC-3 (feed renders plain text), DET-1..5, POL-1, OPS-4 (claim, lease, retry), SEC-4 (posting),
 AUD-1 (for these events).
 
 **Tests:**
@@ -218,7 +217,7 @@ AUD-1 (for these events).
 - re-analyse and reopen
 - the `Decision` insert-only trigger
 
-**Acceptance:** HUM-1..7, Q-1, Q-3, Q-4, AI-5 (shown in UI), AI-10 (shown in UI), UX-1 for these pages.
+**Acceptance:** HUM-1..7, Q-1, Q-3, Q-4, SEC-3, SEC-4 (re-analyse limit), AI-5 (shown in UI), AI-10 (shown in UI), UX-1 for these pages.
 
 **Tests:**
 
@@ -330,6 +329,8 @@ AUD-1 (for these events).
 
 ## S9 - Documentation, release, submit
 
+**Acceptance:** DOC-1..4, OPS-5.
+
 1. `README.md` (<= ~300 lines):
    - live link, demo logins, `/status` link
    - the 5-minute demo script
@@ -357,8 +358,8 @@ AUD-1 (for these events).
 Live: <url> | Status: <url>/status | Repo: <github url>
 Demo sign-in: one click on the sign-in page (author, author2, moderator, senior, senior2, admin).
 Password for manual sign-in: <DEMO_PASSWORD> (test accounts only).
-5-minute path: Author posts "You are a worthless idiot" -> Moderator: Queue -> case -> Approve/Modify ->
-Author: My content -> Appeal -> Senior: Appeals -> resolve (the original decider is blocked) ->
+5-minute path: Author posts "You are a worthless idiot" -> senior@: Queue -> case -> Approve/Modify ->
+Author: My content -> Appeal -> senior@ is blocked (own decision) -> senior2@: Appeals -> resolve ->
 Admin: Policy -> Publish v2 -> watch re-evaluation -> Audit (chain verified) -> /status.
 Docs: README (acceptance -> evidence table), AI_NOTES.md, PROMPTS_USED.md, AGENT_USAGE.md, ABOUTME.md.
 Known limits: see README sec. Limitations. AI runs on the Gemini free tier with a fallback model; if the quota

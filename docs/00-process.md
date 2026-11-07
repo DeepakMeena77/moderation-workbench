@@ -3,7 +3,7 @@
 How this project goes from requirements to a submitted, reviewable build, and which documents exist (and which
 deliberately do not).
 
-**Effort budget:** about 13 focused hours over two days.
+**Effort budget:** about 18 focused hours across S0-S9 (schedule in `04-build-plan.md`), with a cut list if time runs short.
 
 ---
 
@@ -124,7 +124,7 @@ after every slice.
    - no silent `catch`
 5. **Verify.** Run `npm run verify`, click through the slice in the browser at 360 px and at desktop width, then
    deploy and repeat on the live URL.
-6. **Log.** Write one line in the `AGENT_USAGE.md` log: prompt, what came back, what you changed, any mistake
+6. **Log.** The agent ends each step with a draft log line; the human edits it and writes it into the `AGENT_USAGE.md` log: prompt, what came back, what you changed, any mistake
    caught. Prompt changes go in `PROMPTS_USED.md`.
 7. **Commit yourself.** Follow sec. 1.2b. The agent never commits.
 
@@ -144,7 +144,7 @@ after every slice.
       (for example `it('[APP-3] ...')`).
 - [ ] Loading, empty, error, validation and success states exist for every new view and form.
 - [ ] It works at 360 px with no horizontal scroll, works at 1280 px, and is usable by keyboard.
-- [ ] `npm run verify` (ASCII check, UI-rules check, lint, typecheck, test) is green, and CI is green.
+- [ ] `npm run verify` (repo guard, ASCII check, UI-rules check, lint, typecheck, test) is green, and CI is green.
 - [ ] For UI slices: `npm run test:ui` is green (axe, overflow, navigation variant, style audit).
 - [ ] `npm run check:trace -- --slice <Sx>` shows every criterion of the slice as covered.
 - [ ] It is deployed, and checked on the live URL.

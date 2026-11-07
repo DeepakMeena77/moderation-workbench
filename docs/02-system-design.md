@@ -9,8 +9,8 @@ one lives.
 
 | Layer | Choice | Why |
 | --- | --- | --- |
-| App | **Next.js (App Router, latest stable) + TypeScript (strict)**, Node runtime | One codebase and one deploy; API route handlers and UI share types; no CORS |
-| UI | **MUI (Material UI, latest stable) themed with Material 3 tokens** (`03-ui-ux.md`), `@mui/icons-material` (Rounded set), Roboto via `next/font` | Accessible components; easy to express M3 shapes, colours and states; agents know it well |
+| App | **Next.js 15 (App Router) + React 19 + TypeScript 5 (strict)**, Node runtime | One codebase and one deploy; API route handlers and UI share types; no CORS |
+| UI | **MUI 7 (Material UI) themed with Material 3 tokens** (`03-ui-ux.md`), `@mui/icons-material` (Rounded set), Roboto via `next/font` | Accessible components; easy to express M3 shapes, colours and states; agents know it well |
 | Client data | TanStack Query | Loading, error and retry states and cache invalidation in one place |
 | Validation | Zod (inputs, config, policy files, AI output) | One schema language end to end |
 | Database | **PostgreSQL (Neon)** via **Prisma** | Transactions, partial unique indexes, triggers (insert-only tables), `FOR UPDATE SKIP LOCKED` job claiming |
@@ -26,8 +26,8 @@ one lives.
 - next, react, react-dom
 - @mui/material, @mui/icons-material, @mui/material-nextjs, @emotion/react, @emotion/styled, @emotion/cache
 - @tanstack/react-query
-- zod
-- @prisma/client
+- zod (v3)
+- @prisma/client (Prisma 6: no `prisma.config.ts` or driver adapter needed)
 - @google/genai
 - pino
 - jose
@@ -35,11 +35,14 @@ one lives.
 
 **Allowed dev dependencies:**
 
-- typescript, prisma, tsx
+- typescript, prisma (6.x), tsx, @types/node, @types/react, @types/react-dom
 - vitest, @vitest/coverage-v8
 - @testing-library/react, @testing-library/user-event, @testing-library/jest-dom, jsdom
 - @playwright/test, @axe-core/playwright (accessibility audits in `tests/ui`)
-- eslint (with the Next.js config), prettier
+- eslint, eslint-config-next, @eslint/eslintrc (flat-config compat), prettier
+- @vitejs/plugin-react, vite-tsconfig-paths (Vitest with JSX and path aliases)
+
+**Pinned majors:** Next 15, React 19, MUI 7, Prisma 6, Zod 3, TanStack Query 5, Vitest 3, Playwright 1.x. Next 15 keeps `middleware.ts` and has a stable `after()`.
 
 Repository checks (`scripts/check-ascii.mjs`, `check-ui-rules.mjs`, `check-trace.mjs`) use plain Node and need
 no dependency.
@@ -129,7 +132,7 @@ enum AppealOutcome   { uphold overturn modify }
 enum PolicyStatus    { active retired }
 enum JobType         { analyze appeal_brief }
 enum JobStatus       { queued running succeeded failed }
-enum AiStatus        { ok timeout rate_limited invalid_output provider_error unavailable }
+enum AiStatus        { ok timeout rate_limited invalid_output invalid_input provider_error budget_exhausted unavailable }
 enum ActorType       { human system ai }
 
 model User      { id String @id @default(cuid()); email String @unique; name String; role Role; passwordHash String; createdAt DateTime @default(now()) }
@@ -153,7 +156,7 @@ model Analysis  { id String @id @default(cuid()); caseId String; seq Int; policy
                   ruleFindings Json; aiFindings Json?; recommendation Json; aiStatus AiStatus; aiRunId String?
                   createdAt DateTime @default(now()); @@unique([caseId, seq]) }                 // insert-only  [POL-3]
 
-model AiRun     { id String @id @default(cuid()); purpose String; provider String; model String
+model AiRun     { id String @id @default(cuid()); purpose String; provider String; model String; modelsTried String[]
                   promptVersion String; promptHash String; policyVersion Int?
                   inputTokens Int; outputTokens Int; thinkingTokens Int; costUsd Decimal @db.Decimal(10,6)
                   latencyMs Int; attempts Int; repairUsed Boolean; fallbackUsed Boolean; parseStrategy String?
@@ -182,7 +185,10 @@ model ReevaluationRun { id String @id @default(cuid()); fromVersion Int; toVersi
 model AuditEvent { id BigInt @id @default(autoincrement()); at DateTime @default(now()); actorId String?; actorType ActorType
                   action String; entityType String; entityId String; before Json?; after Json?; policyVersion Int?
                   requestId String?; prevHash String; hash String }                                 // insert-only, chained  [AUD-1..3]
+model RateLimit { key String; windowStart DateTime; count Int @default(0); @@id([key, windowStart]) }    [SEC-4]
 ```
+
+**One `AiRun` per pipeline run** (one classify, or one appeal brief): tokens and cost are summed over every attempt, repair and fallback; `model` is the model that produced the accepted output (or the last one tried), and `modelsTried` lists all of them. A run that makes no call (`invalid_input`, `budget_exhausted`) is still recorded with 0 tokens.
 
 **SQL migrations added by hand:**
 
@@ -279,7 +285,7 @@ budget as low as the model allows) and `mock.ts`.
 | Severity | Meaning |
 | --- | --- |
 | high | Credible threat; risk of self-harm; hate against a protected group; exposure of a private person's details |
-| medium | Direct insult or harassment without a threat; deliberate spam or scam |
+| medium | Direct insult or harassment without a threat; sharing contact details |
 | low | Mild incivility; borderline promotion |
 
 | Confidence | Meaning |
@@ -288,6 +294,8 @@ budget as low as the model allows) and `mock.ts`.
 | 0.7-0.89 | Likely; minor ambiguity |
 | 0.4-0.69 | Depends on context (sarcasm, quoting, news, reclaimed terms) |
 | < 0.4 | Speculative; must be `interpretation` |
+
+Severity starts from the cited clause's `defaultSeverity`; the model moves it up or down only with a stated reason. The fallback model is used only for transport failures (timeouts, 429, 5xx, 404) after retries; invalid output is handled by the single repair call on the same model.
 
 **Output contract** (Zod; unknown keys stripped; **there is no field that can approve, remove or decide**):
 
@@ -305,13 +313,14 @@ budget as low as the model allows) and `mock.ts`.
 
 | Bound | Default | Behaviour |
 | --- | --- | --- |
-| Input budget | `AI_MAX_INPUT_TOKENS=6000` (estimated as chars / 4) | Trim author history, then the parent post, then reports. Set `trimmedContext=true`. Never trim the content or the policy. If still over budget, return `invalid_input` with no call. |
+| Input budget | `AI_MAX_INPUT_TOKENS=6000` (estimated as chars / 4) | Trim author history, then the parent post, then reports. Set `trimmedContext=true`. Never trim the content or the policy. If still over budget, record an `AiRun` with status `invalid_input` and 0 tokens, and make no call. |
 | Output cap | `AI_MAX_OUTPUT_TOKENS=2048` | A `MAX_TOKENS` finish usually means truncated JSON, which goes into the parse ladder and then repair. |
-| Per-call timeout | `AI_TIMEOUT_MS=20000` | AbortController plus `Promise.race` (in case the SDK ignores the signal) |
+| Per-call timeout | `AI_TIMEOUT_MS=12000` | AbortController plus `Promise.race` (in case the SDK ignores the signal) |
 | Transient retries | `AI_MAX_ATTEMPTS=3` per model | 429, 5xx and timeouts only. Back-off 1 s, 2 s with jitter, or the server's `retryDelay` if <= 10 s. **No retry on 400, 401, 403 or 404.** |
+| Daily budget | `AI_MAX_CALLS_PER_DAY=200` | Counted from `AiRun` rows. Above it, no call is made: status `budget_exhausted`, rule findings only, routed to a human. Protects the free quota on a public demo. |
 | Fallback model | `GEMINI_FALLBACK_MODEL` | Used once the primary model has used its retries, or immediately on 404 (model retired) or a daily-quota 429 |
 | Repair | `AI_MAX_REPAIRS=1` | One extra call with the exact Zod error paths and the previous output. Then **stop**. |
-| Overall deadline | `AI_DEADLINE_MS=45000` per classify | No new attempt starts after the deadline |
+| Overall deadline | `AI_DEADLINE_MS=25000` per pipeline run | No new attempt starts after the deadline |
 | Pacing | `AI_MIN_INTERVAL_MS=4000` | Spaces calls to stay under the free-tier requests-per-minute limit |
 
 When every bound is exhausted, the result is `aiStatus = unavailable`: rule findings only, `needsHuman`, and a
@@ -361,29 +370,29 @@ priority   = Q-2 formula
 ## 6. Background jobs [OPS-4]
 
 - **Enqueue** inside the same transaction as the change that needs the work. `dedupeKey` makes enqueueing
-  idempotent (`analyze:{caseId}:{reason}:{policyVersion}`).
+  idempotent (`analyze:{caseId}:{reason}:{policyVersion}:{triggerId}`, where `triggerId` is the request ID for a manual re-analyse, the report ID for a report, or the run ID for re-evaluation. Retrying a failed job resets the same row to `queued` with `attempts=0`).
 - **Claim:**
 
   ```sql
-  UPDATE job SET status='running', attempts=attempts+1, locked_until=now()+interval '5 min'
+  UPDATE job SET status='running', attempts=attempts+1, locked_until=now() + make_interval(secs => :leaseMs / 1000.0)   -- JOB_LEASE_MS (default 120000)
   WHERE id = (SELECT id FROM job
               WHERE (status='queued' AND run_after<=now()) OR (status='running' AND locked_until<now())
               ORDER BY run_after FOR UPDATE SKIP LOCKED LIMIT 1)
   RETURNING *
   ```
 
-- **Run** with a budget: `JOB_BUDGET_MS=40000` and at most 10 jobs per tick, under the route's `maxDuration=60`.
+- **Run** with a budget: `JOB_BUDGET_MS=50000` and at most 10 jobs per tick, under the route's `maxDuration=60`. A job starts only if the remaining budget is at least `AI_DEADLINE_MS + 5000`, so the platform never kills a job mid-call. Pacing (`AI_MIN_INTERVAL_MS`) is per instance, best effort.
 - **Success** sets `succeeded`. An **infrastructure error** re-queues with `run_after` +30 s and then +2 min.
   After 3 attempts the job is `failed`, with `lastError` and an audit event.
 - **Ticks:**
   - `after()` from `next/server` on post, comment, report, re-analyse, appeal and publish
-  - a cheap check on `GET /api/status` and `GET /api/cases` (runs the runner in `after()` only when work is
+  - a cheap check on the polling endpoints (`GET /api/status`, `/api/cases`, `/api/posts`, `/api/me/content`, `/api/reevaluations/:id`) (runs the runner in `after()` only when work is
     waiting)
   - an admin **Process pending** button (`POST /api/jobs/run`)
-  - an optional external cron hitting `GET /api/jobs/tick` with `CRON_SECRET`. The Vercel Hobby plan's cron runs
+  - an optional external cron hitting `GET /api/jobs/tick` with the `x-cron-secret` header (never in the URL). The Vercel Hobby plan's cron runs
     only daily, so use cron-job.org for every 5 minutes.
 - **Re-evaluation** [POL-3]. Publishing (one transaction):
-  1. insert v(n+1) as active and v(n) as retired
+  1. set v(n) to `retired`, then insert v(n+1) as `active` (the server assigns n+1; a `version` in the pasted JSON is ignored)
   2. create a `ReevaluationRun` with `total` = count of unresolved cases
   3. enqueue one `analyze` job per case (`reason=policy_change`, `runId`)
 
@@ -538,7 +547,7 @@ and comments in the last minute, re-analyses), and for sign-in a small table key
 | Session | `SESSION_SECRET` (>= 32 characters) |
 | Demo | `DEMO_MODE`, `DEMO_PASSWORD` |
 | AI provider | `AI_PROVIDER` (`gemini` or `mock`), `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` |
-| AI bounds | `AI_TIMEOUT_MS`, `AI_DEADLINE_MS`, `AI_MAX_ATTEMPTS`, `AI_MAX_REPAIRS`, `AI_MIN_INTERVAL_MS`, `AI_MAX_INPUT_TOKENS`, `AI_MAX_OUTPUT_TOKENS` |
+| AI bounds | `AI_MAX_CALLS_PER_DAY`, `AI_TIMEOUT_MS`, `AI_DEADLINE_MS`, `AI_MAX_ATTEMPTS`, `AI_MAX_REPAIRS`, `AI_MIN_INTERVAL_MS`, `AI_MAX_INPUT_TOKENS`, `AI_MAX_OUTPUT_TOKENS` |
 | AI pricing | `AI_PRICE_INPUT_PER_MTOK`, `AI_PRICE_OUTPUT_PER_MTOK` |
 | Moderation | `AUTO_CLEAR_ENABLED`, `AUTO_CLEAR_MIN_CONFIDENCE`, `HUMAN_CONFIDENCE_THRESHOLD`, `APPEAL_WINDOW_DAYS` |
 | Jobs | `JOB_LEASE_MS`, `JOB_BUDGET_MS`, `CRON_SECRET` |
@@ -562,13 +571,13 @@ and comments in the last minute, re-analyses), and for sign-in a small table key
   | --- | --- | --- |
   | App | Release identifier and build time | - |
   | Database | `SELECT 1` latency | - |
-  | LLM | Provider, models, live or mock, last `ok` AI run, last error | **warn** if the last 3 runs failed |
+  | LLM | Provider, models, live or mock, key configured, last `ok` AI run, last error, calls today vs `AI_MAX_CALLS_PER_DAY` | **warn** if the last 3 runs failed or today is above 80% of the budget; **fail** if mock in production or no key |
   | Jobs | Counts by status, oldest queued age, stuck count | **warn** if the oldest queued job is over 2 minutes; **fail** if a job is stuck |
   | Re-evaluation | Last run | - |
   | Policy | Active version | - |
   | AI usage | Last 24 hours | - |
 
-  An optional live LLM probe (a tiny prompt) is cached for 5 minutes, so the page never burns quota on each view.
+  There is no live LLM probe: the LLM check reads recent `AiRun` rows and the config, so viewing the status page never spends quota and no service calls the AI directly.
 - **`metrics.ts`** [OPS-6]:
   - agreement = decisions where `finalAction = recommendedAction`, over decisions on analyses with
     `aiStatus = ok`
@@ -596,6 +605,10 @@ and comments in the last minute, re-analyses), and for sign-in a small table key
 
 ---
 
+**Health envelope exception:** `/api/health` returns a flat `{ ok, db, version }` (monitor-friendly); every other route uses the `{ data }` / `{ error }` envelope.
+
+**Service ownership for job writes:** the analysis job calls `services/analysis.ts`; the appeal-brief job calls `services/appealBriefs.ts`, which only writes `Appeal.brief` and `briefAiRunId`. Code under `ai`, `rules`, `moderation` and `jobs` may never import `services/visibility`, `services/decisions` or `services/appeals` (resolve).
+
 ## 12. Architecture decisions (ADRs)
 
 | # | Decision | Alternatives | Reason |
@@ -620,10 +633,10 @@ and comments in the last minute, re-analyses), and for sign-in a small table key
 1. **Neon:** create a project in the same region as the Vercel functions. Copy the pooled and direct URLs.
 2. **Vercel:** import the repo.
    - Build command: `prisma generate && prisma migrate deploy && next build`
-   - Set the environment variables
+   - Set the environment variables, scoped by environment: **Production** uses the main Neon branch, **Preview** uses a separate `preview` Neon branch, so a preview build migrates only its own branch
    - Set the function region to match Neon
    - Set `maxDuration=60` for API routes
 3. **Seed once** from your machine with the production `DATABASE_URL`: `npm run db:seed`. It is idempotent, and
    `--reset` asks for confirmation.
 4. **Verify on the live URL** (`05-test-plan.md` sec. 7) and record the result in the README and `RELEASE_NOTES.md`.
-5. **Optional:** cron-job.org -> `GET /api/jobs/tick?secret=...` every 5 minutes.
+5. **Optional:** cron-job.org -> `GET /api/jobs/tick` with header `x-cron-secret` every 5 minutes.
