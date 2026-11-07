@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { checkDatabase, getHealth, getStatusReport } from '@/server/services/status';
+import {
+  aiUsageState,
+  checkDatabase,
+  getHealth,
+  getStatusReport,
+  jobsState,
+  JOB_QUEUE_WARN_S,
+  llmState,
+} from '@/server/services/status';
 
 vi.mock('@/server/db', () => ({
   getDb: () => ({ $queryRaw: () => Promise.reject(new Error('database is down')) }),
@@ -35,15 +43,61 @@ describe('status service', () => {
     expect(res.headers.get('x-request-id')).toBeTruthy();
   });
 
-  it('[INFRA] the status report is fail overall when any check fails, ok when all pass', async () => {
+  it('[INFRA] with the database down, only app and database are reported and the page is fail', async () => {
     const down = await getStatusReport(async () => {
       throw new Error('down');
     });
     expect(down.overall).toBe('fail');
     expect(down.checks.map((c) => c.check)).toEqual(['app', 'database']);
+  });
 
+  it('[OPS-1] a check whose query throws is reported as failing instead of breaking the page', async () => {
+    // The mocked client has no aiRun, job or policy tables, so every query-backed check throws.
     const up = await getStatusReport(async () => 1);
-    expect(up.overall).toBe('ok');
+    expect(up.checks.map((c) => c.check)).toEqual(['app', 'database', 'llm', 'jobs', 'policy', 'aiUsage']);
     expect(up.checks.find((c) => c.check === 'app')?.detail).toMatchObject({ release: 'local' });
+    for (const name of ['llm', 'jobs', 'policy', 'aiUsage']) {
+      expect(up.checks.find((c) => c.check === name)).toMatchObject({
+        state: 'fail',
+        detail: { reason: 'check could not run' },
+      });
+    }
+    expect(up.overall).toBe('fail');
+  });
+});
+
+describe('status state rules', () => {
+  const base = {
+    provider: 'gemini' as const,
+    hasKey: true,
+    production: true,
+    lastThreeStatuses: ['ok'],
+    callsToday: 0,
+    maxCallsPerDay: 200,
+  };
+
+  it('[OPS-1] the AI model check fails for mock AI in production and for a missing key', () => {
+    expect(llmState({ ...base, provider: 'mock' }).state).toBe('fail');
+    expect(llmState({ ...base, provider: 'mock', production: false }).state).toBe('ok');
+    expect(llmState({ ...base, hasKey: false })).toEqual({ state: 'fail', reason: 'no Gemini API key' });
+  });
+
+  it('[OPS-1] the AI model check warns after 3 failed runs or above 80% of the daily budget', () => {
+    expect(llmState({ ...base, lastThreeStatuses: ['timeout', 'rate_limited', 'invalid_output'] }).state).toBe('warn');
+    expect(llmState({ ...base, lastThreeStatuses: ['timeout', 'ok', 'invalid_output'] }).state).toBe('ok');
+    expect(llmState({ ...base, callsToday: 160 }).state).toBe('warn');
+    expect(llmState({ ...base, callsToday: 159 }).state).toBe('ok');
+  });
+
+  it('[OPS-1] the jobs check fails on a stuck job and warns on an old queued job', () => {
+    expect(jobsState({ stuck: 1, oldestQueuedS: null }).state).toBe('fail');
+    expect(jobsState({ stuck: 0, oldestQueuedS: JOB_QUEUE_WARN_S + 1 }).state).toBe('warn');
+    expect(jobsState({ stuck: 0, oldestQueuedS: JOB_QUEUE_WARN_S })).toEqual({ state: 'ok', reason: null });
+  });
+
+  it('[OPS-1] AI usage warns only when most recent runs fail', () => {
+    expect(aiUsageState({ calls: 4, failures: 3 })).toBe('warn');
+    expect(aiUsageState({ calls: 3, failures: 3 })).toBe('ok');
+    expect(aiUsageState({ calls: 10, failures: 5 })).toBe('ok');
   });
 });
