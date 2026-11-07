@@ -1,0 +1,88 @@
+{
+  "version": 2,
+  "notes": "Adds SCAM-1 (financial scams), street addresses under PII-1, and a SPAM-1 link threshold of 2",
+  "clauses": [
+    {
+      "code": "HAR-1",
+      "title": "Harassment and insults",
+      "text": "Do not insult, demean or target a person. This covers name-calling, degrading remarks about someone's worth or intelligence, and telling someone to harm themselves.",
+      "defaultSeverity": "medium",
+      "defaultAction": "label",
+      "allowedActions": ["label", "limit", "remove"],
+      "signals": { "keywords": ["worthless", "idiot"], "patterns": ["\\bkill yourself\\b"] },
+      "alwaysEscalate": false
+    },
+    {
+      "code": "THR-1",
+      "title": "Threats of violence",
+      "text": "Do not threaten, encourage or celebrate violence against a person or group, including conditional or implied threats.",
+      "defaultSeverity": "high",
+      "defaultAction": "remove",
+      "allowedActions": ["limit", "remove"],
+      "signals": {
+        "patterns": [
+          "\\bi(?:'m| am)? ?(?:going to|gonna|will) (?:kill|hurt|shoot|stab|beat) you\\b",
+          "\\byou(?:'re| are) (?:dead|going to die)\\b"
+        ]
+      },
+      "alwaysEscalate": true
+    },
+    {
+      "code": "HATE-1",
+      "title": "Hate against protected groups",
+      "text": "Do not attack or dehumanise people because of a protected characteristic such as race, ethnicity, religion, nationality, disability, sex, gender identity or sexual orientation.",
+      "defaultSeverity": "high",
+      "defaultAction": "remove",
+      "allowedActions": ["label", "limit", "remove"],
+      "signals": { "keywords": ["subhuman"], "patterns": ["\\b(?:vermin|animals) like (?:them|you people)\\b"] },
+      "alwaysEscalate": false
+    },
+    {
+      "code": "SH-1",
+      "title": "Self-harm (support, not punishment)",
+      "text": "Content about suicide or self-harm is reviewed so the person can be offered support. Do not encourage or give instructions for self-harm.",
+      "defaultSeverity": "high",
+      "defaultAction": "limit",
+      "allowedActions": ["label", "limit"],
+      "signals": {
+        "patterns": ["\\b(?:want|going) to (?:kill|hurt) myself\\b", "\\bend my life\\b", "\\bsuicidal\\b"]
+      },
+      "alwaysEscalate": true
+    },
+    {
+      "code": "PII-1",
+      "title": "Private information",
+      "text": "Do not share someone's private contact details, such as an email address, phone number or street address, without their consent.",
+      "defaultSeverity": "medium",
+      "defaultAction": "limit",
+      "allowedActions": ["limit", "remove"],
+      "signals": {
+        "contactDetails": true,
+        "addressPattern": "\\b\\d{1,5}\\s+(?:[a-z0-9.'-]+\\s+){1,4}(?:street|st|road|rd|avenue|ave|lane|ln|drive|dr|boulevard|blvd|court|ct|way)\\b"
+      },
+      "alwaysEscalate": false
+    },
+    {
+      "code": "SPAM-1",
+      "title": "Spam and link flooding (2+ links)",
+      "text": "Do not flood the community with links, repeated posts or unsolicited promotion. Two or more links in one item is treated as link flooding.",
+      "defaultSeverity": "low",
+      "defaultAction": "label",
+      "allowedActions": ["label", "limit", "remove"],
+      "signals": { "linkThreshold": 2 },
+      "alwaysEscalate": false
+    },
+    {
+      "code": "SCAM-1",
+      "title": "Financial scams",
+      "text": "Do not promote schemes that promise guaranteed or multiplied returns, or ask people to send money or cryptocurrency.",
+      "defaultSeverity": "high",
+      "defaultAction": "limit",
+      "allowedActions": ["limit", "remove"],
+      "signals": {
+        "patterns": ["\\bdouble your money\\b", "\\bsend (?:me )?(?:your )?crypto\\b", "\\bguaranteed returns?\\b"]
+      },
+      "alwaysEscalate": false
+    }
+  ]
+}

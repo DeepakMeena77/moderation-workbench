@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { AiStatus } from '@/server/ai/types';
 import type { VerificationReport, VerifiedFinding, VerifiedOutput } from '@/server/ai/verify';
 import { combine, type AiOutcome, type CombineInput, type RuleFinding } from '@/server/moderation/combine';
 import { computePriority } from '@/server/moderation/priority';
+import { policyFileSchema, type ActivePolicy } from '@/server/policy/schema';
+import { runRules } from '@/server/rules';
 import { POLICY } from './helpers/ai';
 
 const SETTINGS = { autoClearEnabled: true, autoClearMinConfidence: 0.85, humanConfidenceThreshold: 0.7 };
@@ -53,7 +56,14 @@ function aiDown(status: AiStatus = 'timeout', reason = 'AI did not answer in tim
 }
 
 function rule(clauseCode: string, severity: RuleFinding['severity'] = 'low'): RuleFinding {
-  return { ruleId: 'keyword', clauseCode, quotes: [{ text: 'x', start: 0, end: 1 }], confidence: 1, severity };
+  return {
+    ruleId: 'keyword',
+    clauseCode,
+    evidenceType: 'confirmed',
+    quotes: [{ text: 'x', start: 0, end: 1 }],
+    confidence: 1,
+    severity,
+  };
 }
 
 function run(overrides: Partial<CombineInput> = {}) {
@@ -205,5 +215,55 @@ describe('priority (Q-2)', () => {
   it('[Q-2] combine applies the formula to its own result', () => {
     const rec = run({ reportCount: 2, ai: aiOk({ findings: [aiFinding()], proposedAction: 'label' }) });
     expect(rec.priority).toBe(50 + 20 + 5);
+  });
+});
+
+// From S2: the rule-only path with the real v1 policy and the real rules, now with the AI unavailable.
+const v1File = policyFileSchema.parse(JSON.parse(readFileSync('policies/policy.v1.json', 'utf8')));
+const v1: ActivePolicy = { version: 1, clauses: v1File.clauses };
+const rulesFor = (text: string) => runRules(text, v1, { createdAt: new Date(), recentByAuthor: [] });
+const RULE_ONLY = aiDown('unavailable', 'AI unavailable - retry later');
+
+describe('combine (rule-only, real v1 policy and rules)', () => {
+  it('[DET-5] with the AI unavailable, rule findings still drive the recommendation and a human must decide', () => {
+    const result = combine({
+      policy: v1,
+      ruleFindings: rulesFor('You worthless idiot'),
+      reportCount: 0,
+      ai: RULE_ONLY,
+      settings: SETTINGS,
+    });
+    expect(result).toMatchObject({
+      action: 'label',
+      severity: 'medium',
+      confidence: null,
+      needsHuman: true,
+      autoClear: false,
+      clauseCodes: ['HAR-1'],
+    });
+    expect(result.reasons[0]).toBe('AI result missing: AI unavailable - retry later. Rule findings only.');
+    expect(result.reasons).toContain('The recommended action is "label"; any action needs a human decision.');
+  });
+
+  it('[DET-5] clean text with the AI unavailable is never auto-cleared', () => {
+    const result = combine({ policy: v1, ruleFindings: [], reportCount: 0, ai: RULE_ONLY, settings: SETTINGS });
+    expect(result).toMatchObject({ action: 'none', severity: null, needsHuman: true, autoClear: false });
+  });
+
+  it('[DET-5] the strongest default action of the hit clauses wins and reports are listed', () => {
+    const result = combine({
+      policy: v1,
+      ruleFindings: rulesFor("You idiot, I'm going to hurt you"),
+      reportCount: 2,
+      ai: RULE_ONLY,
+      settings: SETTINGS,
+    });
+    expect(result.action).toBe('remove');
+    expect(result.severity).toBe('high');
+    expect(result.alwaysEscalate).toBe(true);
+    expect(result.priority).toBe(100);
+    expect(result.reasons).toEqual(
+      expect.arrayContaining(['Clause THR-1 always goes to a human.', 'Reported by 2 users.']),
+    );
   });
 });

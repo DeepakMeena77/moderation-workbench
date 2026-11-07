@@ -140,8 +140,13 @@ export const theme = createTheme({
     MuiFab: { styleOverrides: { root: { borderRadius: 16, boxShadow: 'none' } } },
     MuiChip: { styleOverrides: { root: { borderRadius: 8, height: 32 } } },
     MuiAppBar: { defaultProps: { elevation: 0, color: 'inherit' } },
-    MuiDrawer: { styleOverrides: { paper: { border: 0 } } },
-    MuiDialog: { styleOverrides: { paper: { borderRadius: 28 } } },
+    // Dialog and Drawer pass their own elevation (24 and 16) to the paper, which wins over MuiPaper's default,
+    // so both are set to 0 here: sheets and dialogs are separated by tone and the scrim, never by a shadow.
+    MuiDrawer: { defaultProps: { elevation: 0 }, styleOverrides: { paper: { border: 0 } } },
+    MuiDialog: {
+      defaultProps: { slotProps: { paper: { elevation: 0 } } },
+      styleOverrides: { paper: { borderRadius: 28, boxShadow: 'none' } },
+    },
     MuiTextField: { defaultProps: { variant: 'filled' } },
     // MUI sets input and label line heights to 1.4375em (23 px); M3 bodyLarge is 16/24.
     MuiInputBase: { styleOverrides: { root: { lineHeight: '1.5rem' } } },

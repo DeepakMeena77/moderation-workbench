@@ -7,23 +7,17 @@ import {
   type ModAction,
   type PolicyClauseView,
   type PolicyView,
-  type QuoteSpan,
   type Severity,
 } from '../ai/types';
 import type { VerificationReport, VerifiedOutput } from '../ai/verify';
+import type { RuleFinding } from '../rules';
 import { computePriority } from './priority';
 
 // Combine (docs/02-system-design.md sec. 5.6; AI-6, AI-7, AI-8, DET-5, Q-2). The server, not the model, decides
 // whether a human is needed. The result is a recommendation only: nothing here changes visibility or a case.
 
-/** A deterministic rule hit (docs/02-system-design.md sec. 5.1). S2's rules produce this shape. */
-export interface RuleFinding {
-  ruleId: string;
-  clauseCode: string;
-  quotes: QuoteSpan[];
-  confidence: 1;
-  severity: Severity;
-}
+/** Deterministic rule hits (docs/02-system-design.md sec. 5.1) come from src/server/rules. */
+export type { RuleFinding };
 
 /** The part of a classify result that combine reads. */
 export interface AiOutcome {
@@ -54,6 +48,8 @@ export interface Recommendation {
   priority: number;
   /** Clauses cited by the rules or the verified AI findings, sorted. */
   clauseCodes: string[];
+  /** A cited clause always goes to a human. Stored so a later report can keep priority at 100 (Q-2). */
+  alwaysEscalate: boolean;
 }
 
 function strongestAllowed(clauses: readonly PolicyClauseView[]): ModAction {
@@ -156,5 +152,6 @@ export function combine(input: CombineInput): Recommendation {
       alwaysEscalate: alwaysEscalate.length > 0,
     }),
     clauseCodes: codes,
+    alwaysEscalate: alwaysEscalate.length > 0,
   };
 }

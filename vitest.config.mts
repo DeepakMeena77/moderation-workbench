@@ -46,6 +46,8 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['tests/components/**/*.test.tsx'],
           setupFiles: ['tests/components/setup.ts'],
+          // jsdom user-event flows can exceed the 5 s default when the machine runs other suites in parallel.
+          testTimeout: 15_000,
         },
       },
     ],
