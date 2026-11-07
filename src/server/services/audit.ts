@@ -15,13 +15,17 @@ export type AuditAction =
   | 'analysis.requested'
   | 'decision.created'
   | 'visibility.changed'
+  | 'appeal.created'
+  | 'appeal.assigned'
+  | 'appeal.brief_created'
+  | 'appeal.resolved'
   | 'job.failed';
 
 export interface AuditEventInput {
   actorId: string | null;
   actorType: ActorType;
   action: AuditAction;
-  entityType: 'content' | 'report' | 'case' | 'analysis' | 'decision' | 'job';
+  entityType: 'content' | 'report' | 'case' | 'analysis' | 'decision' | 'appeal' | 'job';
   entityId: string;
   /** Short summaries only: never the content text (SEC-5). */
   before?: Prisma.InputJsonObject;

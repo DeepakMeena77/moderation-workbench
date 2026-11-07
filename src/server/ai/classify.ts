@@ -1,12 +1,12 @@
 import { getLogger } from '../logger';
 import type { AiConfig } from './aiConfig';
-import { sanitizeErrorMessage, type AiRunRecord, type AiRunSink, type CallCounter } from './aiRun';
+import type { AiRunRecord, AiRunSink, CallCounter } from './aiRun';
 import { fitContext } from './budget';
-import { estimateCostUsd } from './cost';
 import { GeminiProvider } from './gemini';
 import { MockProvider } from './mock';
 import { classifyOutputSchema, classifyResponseJsonSchema } from './output';
 import {
+  buildRunRecord,
   PipelineStop,
   RunState,
   realClock,
@@ -183,28 +183,18 @@ export async function classify(input: ClassifyInput, deps: ClassifyDeps): Promis
     }
   }
 
-  const record: AiRunRecord = {
+  const record = buildRunRecord({
     purpose: 'classify',
     provider: deps.provider.name,
-    model: state.lastModel ?? config.primaryModel,
-    modelsTried: state.modelsTried,
-    promptVersion: prompt.version,
-    promptHash: prompt.sha256,
+    primaryModel: config.primaryModel,
+    prompt,
     policyVersion: input.policy.version,
-    inputTokens: state.usage.input,
-    outputTokens: state.usage.output,
-    thinkingTokens: state.usage.thinking,
-    costUsd: estimateCostUsd(state.usage, config.prices),
-    latencyMs: clock.now() - state.startedAt,
-    attempts: state.attempts,
-    repairUsed: state.repairUsed,
-    fallbackUsed: state.fallbackUsed,
-    parseStrategy: state.parseStrategy,
+    state,
+    prices: config.prices,
+    now: clock.now(),
     trimmedContext: trimmed.length > 0,
-    status,
-    errorCode,
-    errorMessage: errorMessage === null ? null : sanitizeErrorMessage(errorMessage),
-  };
+    outcome: { status, errorCode, errorMessage },
+  });
   const aiRunId = await deps.sink.write(record);
 
   logger.info(

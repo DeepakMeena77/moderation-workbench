@@ -45,6 +45,24 @@ describe('HUM-1 import boundaries', () => {
     }, 60_000);
   }
 
+  it('[HUM-1] lint blocks src/server/jobs from importing appeals, but allows the brief writer', async () => {
+    const lint = async (source: string) => {
+      const [result] = await eslint.lintText(source, {
+        filePath: join(process.cwd(), 'src', 'server', 'jobs', 'boundaryProbe.ts'),
+      });
+      return result?.messages.filter((m) => m.ruleId === 'no-restricted-imports') ?? [];
+    };
+    const blocked = await lint(
+      "import { resolveAppeal } from '../services/appeals';\nexport const used = typeof resolveAppeal;\n",
+    );
+    expect(blocked[0]?.message).toMatch(/HUM-1/);
+    // services/appealBriefs.ts writes only Appeal.brief and briefAiRunId (02 sec. 11), so the job may use it.
+    const allowed = await lint(
+      "import { recordAppealBrief } from '../services/appealBriefs';\nexport const used = typeof recordAppealBrief;\n",
+    );
+    expect(allowed).toEqual([]);
+  }, 60_000);
+
   it('[HUM-1] lint allows the same import from a service', async () => {
     const [result] = await eslint.lintText(
       "import { setVisibility } from './visibility';\nexport const used = typeof setVisibility;\n",

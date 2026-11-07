@@ -1,11 +1,13 @@
 import type { JobType } from '@prisma/client';
 import { getAiConfig, type AiConfig } from '../ai/aiConfig';
 import type { AiRunSink, CallCounter } from '../ai/aiRun';
+import { generateAppealBrief } from '../ai/appealBrief';
 import { classify, createAiProvider } from '../ai/classify';
 import type { AiProvider } from '../ai/provider';
 import { getDb } from '../db';
 import { getLogger } from '../logger';
 import { createDbAiRunSink, createDbCallCounter } from '../services/aiRuns';
+import { appealBriefPayloadSchema, prepareAppealBrief, recordAppealBrief } from '../services/appealBriefs';
 import { analyzePayloadSchema, prepareAnalysis, recordAnalysis, type AnalysisResult } from '../services/analysis';
 import type { ClaimedJob } from './queue';
 
@@ -15,7 +17,7 @@ import type { ClaimedJob } from './queue';
 
 export type JobHandler = (job: ClaimedJob) => Promise<void>;
 
-/** Collaborators of the analyse job. Production uses the defaults; tests inject the mock provider and bounds. */
+/** Collaborators of the AI jobs. Production uses the defaults; tests inject the mock provider and bounds. */
 export interface AnalyzeJobDeps {
   provider?: AiProvider;
   aiConfig?: AiConfig;
@@ -55,11 +57,44 @@ export async function runAnalyzeJob(payload: unknown, deps: AnalyzeJobDeps = {})
   return recordAnalysis(parsed, prepared, ai, aiConfig.moderation, requestId);
 }
 
+export type AppealBriefJobResult = { status: 'written' | 'skipped'; aiRunId: string | null; aiStatus: string | null };
+
+/**
+ * The appeal brief job (02 sec. 5.7, AI-12): the same bounded pipeline as classify, one AiRun, then the brief is
+ * stored through services/appealBriefs.ts, which writes only Appeal.brief and briefAiRunId. Like the analyse
+ * job, an AI failure is a successful job: the stored brief says the summary is unavailable and the senior
+ * moderator reviews the appeal without it. Nothing here can resolve the appeal or change visibility (HUM-1).
+ */
+export async function runAppealBriefJob(payload: unknown, deps: AnalyzeJobDeps = {}): Promise<AppealBriefJobResult> {
+  const { appealId } = appealBriefPayloadSchema.parse(payload);
+  const requestId = deps.requestId ?? null;
+  const aiConfig = deps.aiConfig ?? getAiConfig();
+
+  const prepared = await prepareAppealBrief(appealId);
+  if ('skipped' in prepared) {
+    getLogger().info({ event: 'appeal.brief_skipped', appealId, requestId, reason: prepared.skipped });
+    return { status: 'skipped', aiRunId: null, aiStatus: null };
+  }
+
+  const db = getDb();
+  const ai = await generateAppealBrief(prepared.input, {
+    provider: deps.provider ?? (defaultProvider ??= createAiProvider(aiConfig)),
+    config: aiConfig,
+    sink: deps.sink ?? createDbAiRunSink(db),
+    callCounter: deps.callCounter ?? createDbCallCounter(db),
+    logger: getLogger().child({ appealId }),
+    requestId,
+  });
+
+  const { written } = await recordAppealBrief(appealId, ai, requestId);
+  return { status: written ? 'written' : 'skipped', aiRunId: ai.aiRunId, aiStatus: ai.status };
+}
+
 export const HANDLERS: Record<JobType, JobHandler> = {
   analyze: async (job) => {
     await runAnalyzeJob(job.payload, { requestId: `job:${job.id}` });
   },
-  appeal_brief: async () => {
-    throw new Error('appeal_brief jobs have no handler before S5.');
+  appeal_brief: async (job) => {
+    await runAppealBriefJob(job.payload, { requestId: `job:${job.id}` });
   },
 };

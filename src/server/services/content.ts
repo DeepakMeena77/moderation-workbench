@@ -1,10 +1,12 @@
-import type { ContentType, Prisma, Visibility } from '@prisma/client';
+import type { AppealOutcome, AppealStatus, CaseStatus, ContentType, Prisma, Visibility } from '@prisma/client';
 import { z } from 'zod';
 import type { Actor } from '../auth/session';
 import { getDb } from '../db';
 import { AppError } from '../errors';
 import { analyzeDedupeKey, enqueue } from '../jobs/queue';
 import { contentFingerprint, getLogger } from '../logger';
+import { clausesSchema, type ModAction } from '../policy/schema';
+import { appealability, plainAppealText, plainDecisionText, type Appealability } from './appeals';
 import { append, type Tx } from './audit';
 import { getActivePolicy } from './policy';
 import { formatWait, type RateLimitRule } from './rateLimit';
@@ -155,8 +157,8 @@ export interface FeedItem {
   /** For the author: the checks have not finished yet ("Analysing..." tag, 03 sec. 6.2). */
   analysing: boolean;
   /**
-   * Clauses behind a label, limit or removal, and the appeal deadline (CNT-5). They come from the human
-   * decision, which arrives in S4 and S5; until then visibility is always "visible" and these stay empty.
+   * Clauses behind a label, limit or removal, from the latest human decision, and (for the author only) the
+   * appeal deadline while an appeal is still possible (CNT-5, APP-1).
    */
   moderation: { clauseCodes: string[]; appealUntil: string | null };
 }
@@ -184,7 +186,16 @@ const itemSelect = {
   createdAt: true,
   visibility: true,
   author: { select: { id: true, name: true } },
-  case: { select: { status: true } },
+  case: {
+    select: {
+      status: true,
+      decisions: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { finalAction: true, clauseCodes: true, createdAt: true, appeal: { select: { id: true } } },
+      },
+    },
+  },
 } satisfies Prisma.ContentSelect;
 
 type ItemRow = Prisma.ContentGetPayload<{ select: typeof itemSelect }>;
@@ -218,8 +229,23 @@ export async function listFeed(actor: Actor, query: z.infer<typeof feedQuerySche
     ).map((report) => report.contentId),
   );
 
+  const now = new Date();
   const toItem = (row: ItemRow): FeedItem => {
     const isOwn = row.author.id === actor.id;
+    const decision = row.case?.decisions[0];
+    const window =
+      isOwn && decision && row.case
+        ? appealability(
+            {
+              finalAction: decision.finalAction,
+              createdAt: decision.createdAt,
+              isLatest: true,
+              hasAppeal: decision.appeal !== null,
+            },
+            row.case.status,
+            now,
+          )
+        : null;
     return {
       id: row.id,
       type: row.type,
@@ -230,12 +256,160 @@ export async function listFeed(actor: Actor, query: z.infer<typeof feedQuerySche
       isOwn,
       viewerReported: reported.has(row.id),
       analysing: isOwn && row.case?.status === 'pending_analysis',
-      moderation: { clauseCodes: [], appealUntil: null },
+      moderation: {
+        clauseCodes: row.visibility !== 'visible' && decision ? decision.clauseCodes : [],
+        appealUntil: window?.canAppeal ? window.until : null,
+      },
     };
   };
 
   return {
     items: page.map((post) => ({ ...toItem(post), comments: post.comments.map(toItem) })),
+    nextCursor: rows.length > query.limit ? (page.at(-1)?.id ?? null) : null,
+  };
+}
+
+// --- My content (03 sec. 6.3, APP-1, APP-5) ---
+
+export const myContentQuerySchema = feedQuerySchema;
+
+export interface MyContentItem {
+  id: string;
+  type: ContentType;
+  body: string;
+  createdAt: string;
+  visibility: Visibility;
+  caseStatus: CaseStatus | null;
+  decision: {
+    id: string;
+    finalAction: ModAction;
+    clauses: Array<{ code: string; title: string | null }>;
+    decidedAt: string;
+    /** Plain words: "A moderator limited this under HAR-1 (Harassment)." */
+    summary: string;
+  } | null;
+  appeal: {
+    id: string;
+    status: AppealStatus;
+    outcome: AppealOutcome | null;
+    finalAction: ModAction | null;
+    createdAt: string;
+    resolvedAt: string | null;
+    summary: string;
+  } | null;
+  /** Whether the latest decision can be appealed now, and until when (APP-1). null before any decision. */
+  appealability: Appealability | null;
+}
+
+export interface MyContentPage {
+  items: MyContentItem[];
+  nextCursor: string | null;
+}
+
+/** Code -> title for every policy version, for clause names in plain-language text. Versions are few. */
+export async function clauseTitlesByVersion(): Promise<Map<number, Map<string, string>>> {
+  const policies = await getDb().policy.findMany({ select: { version: true, clauses: true } });
+  return new Map(
+    policies.map((p) => [p.version, new Map(clausesSchema.parse(p.clauses).map((c) => [c.code, c.title]))]),
+  );
+}
+
+/** The author's own items, newest first, with the latest decision and its appeal (SEC-2: own items only). */
+export async function listMyContent(
+  actor: Actor,
+  query: z.infer<typeof myContentQuerySchema>,
+  now: Date = new Date(),
+): Promise<MyContentPage> {
+  const [rows, titles] = await Promise.all([
+    getDb().content.findMany({
+      where: { authorId: actor.id },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: query.limit + 1,
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        type: true,
+        body: true,
+        createdAt: true,
+        visibility: true,
+        case: {
+          select: {
+            status: true,
+            decisions: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                id: true,
+                finalAction: true,
+                clauseCodes: true,
+                policyVersion: true,
+                createdAt: true,
+                appeal: {
+                  select: {
+                    id: true,
+                    status: true,
+                    outcome: true,
+                    finalAction: true,
+                    createdAt: true,
+                    resolvedAt: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+    clauseTitlesByVersion(),
+  ]);
+  const page = rows.slice(0, query.limit);
+  return {
+    items: page.map((row): MyContentItem => {
+      const decision = row.case?.decisions[0] ?? null;
+      const names = (decision && titles.get(decision.policyVersion)) || new Map<string, string>();
+      const appeal = decision?.appeal ?? null;
+      return {
+        id: row.id,
+        type: row.type,
+        body: row.body,
+        createdAt: row.createdAt.toISOString(),
+        visibility: row.visibility,
+        caseStatus: row.case?.status ?? null,
+        decision: decision
+          ? {
+              id: decision.id,
+              finalAction: decision.finalAction,
+              clauses: decision.clauseCodes.map((code) => ({ code, title: names.get(code) ?? null })),
+              decidedAt: decision.createdAt.toISOString(),
+              summary: plainDecisionText(decision, names),
+            }
+          : null,
+        appeal: appeal
+          ? {
+              id: appeal.id,
+              status: appeal.status,
+              outcome: appeal.outcome,
+              finalAction: appeal.finalAction,
+              createdAt: appeal.createdAt.toISOString(),
+              resolvedAt: appeal.resolvedAt?.toISOString() ?? null,
+              summary: plainAppealText(appeal),
+            }
+          : null,
+        appealability:
+          decision && row.case
+            ? appealability(
+                {
+                  finalAction: decision.finalAction,
+                  createdAt: decision.createdAt,
+                  isLatest: true,
+                  hasAppeal: appeal !== null,
+                },
+                row.case.status,
+                now,
+              )
+            : null,
+      };
+    }),
     nextCursor: rows.length > query.limit ? (page.at(-1)?.id ?? null) : null,
   };
 }

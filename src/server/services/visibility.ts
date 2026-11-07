@@ -5,7 +5,7 @@ import type { ModAction } from '../policy/schema';
 import { append, type Tx } from './audit';
 
 // The only writer of Content.visibility (HUM-1, docs/02-system-design.md sec. 8). Callers: decisions.decide()
-// and, from S5, appeals.resolve(). Code under src/server/{ai,rules,moderation,jobs} may not import this file
+// and appeals.resolve(). Code under src/server/{ai,rules,moderation,jobs} may not import this file
 // (ESLint no-restricted-imports plus tests/unit/boundaries.test.ts). The database trigger
 // "Content_visibility_human_only" refuses any visibility change in a transaction that did not pass through
 // here, so the rule holds even if this check were bypassed.
@@ -30,6 +30,8 @@ export interface SetVisibilityInput {
   /** The case and decision (or appeal) behind the change, for the audit event. */
   caseId: string;
   decisionId: string;
+  /** Set when an appeal resolution (APP-5) changes the visibility. */
+  appealId?: string;
   policyVersion: number;
   requestId: string;
 }
@@ -67,7 +69,12 @@ export async function setVisibility(tx: Tx, input: SetVisibilityInput): Promise<
     entityType: 'content',
     entityId: input.contentId,
     before: { visibility: content.visibility },
-    after: { visibility: input.visibility, caseId: input.caseId, decisionId: input.decisionId },
+    after: {
+      visibility: input.visibility,
+      caseId: input.caseId,
+      decisionId: input.decisionId,
+      ...(input.appealId ? { appealId: input.appealId } : {}),
+    },
     policyVersion: input.policyVersion,
     requestId: input.requestId,
   });
