@@ -125,7 +125,7 @@ for (const width of [1280, 390]) {
       await openPage(page, `/audit?q=${encodeURIComponent(run.deniedRequestId)}`, width);
       const events = page.getByRole('region', { name: 'Events' });
       // The table (>= 840 px) and the list (below) are both in the page; only one is shown.
-      await expect(events.getByText('access.denied', { exact: true }).filter({ visible: true }).first()).toBeVisible();
+      await expect(events.getByText('Access denied', { exact: true }).filter({ visible: true }).first()).toBeVisible();
       await expect(
         events
           .getByText(/Dana Okafor/)
