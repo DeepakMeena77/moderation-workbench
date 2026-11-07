@@ -196,7 +196,8 @@ describe('rate limit', () => {
     expect(res.status).toBe(429);
     const { error } = await readJson<ErrorBody>(res);
     expect(error.code).toBe('RATE_LIMITED');
-    expect(error.message).toMatch(/^You're posting quickly\. Try again in \d+ seconds?\.$/);
+    // The window is 60 s, so the wait reads "N seconds" or, exactly at a window boundary, "1 minute".
+    expect(error.message).toMatch(/^You're posting quickly\. Try again in \d+ (seconds?|minutes?)\.$/);
     expect(Number(res.headers.get('retry-after'))).toBeGreaterThan(0);
     expect((await counts()).content).toBe(10);
   });
