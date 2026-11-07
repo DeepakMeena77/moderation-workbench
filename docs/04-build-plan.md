@@ -34,17 +34,18 @@ AI robustness, human-control tests, or the S9 docs.
 - CI workflow; `.env.example`; README stub
 - Deploy to Vercel
 
-**Note.** `create-next-app` refuses a folder that already contains files such as `CLAUDE.md`. Scaffold into
-`./_scaffold` and move its contents up, or scaffold elsewhere and copy:
+**Note.** `create-next-app` refuses a folder that already contains files, and an npm
+package name cannot start with `_`. Create the git-ignored `./_scaffold` folder, scaffold into
+`./_scaffold/next-app` and move its contents up:
 
 ```bash
-npx create-next-app@latest _scaffold --ts --eslint --app --src-dir --import-alias "@/*" --no-tailwind --use-npm
+npx create-next-app@15.5.29 _scaffold/next-app --ts --eslint --app --src-dir --import-alias "@/*" --no-tailwind --use-npm --skip-install --disable-git --yes
 ```
 
 Then:
 
 1. The repository already exists: git is initialised and the hooks are active. **Do not** move the scaffold's
-   `.git`, `.gitignore`, `README.md` or any `AGENTS.md`/`CLAUDE.md` it generates. Report any `.gitignore`
+   `.git`, `.gitignore`, `README.md` or any extra Markdown files it generates. Report any `.gitignore`
    entries ours lacks, and the human adds them.
 2. Move the remaining scaffold files to the root. Delete `_scaffold` (it is git-ignored, so leftovers cannot be
    committed).
@@ -61,11 +62,12 @@ Then:
 - `check:ui` = `node scripts/check-ui-rules.mjs`
 - `check:trace` = `node scripts/check-trace.mjs`
 - `check:repo` = `node scripts/check-repo.mjs`, `check:secrets` = `node scripts/check-secrets.mjs --history`
-- `test` (vitest projects: unit, integration, components), `test:e2e` (Playwright `e2e` project), `test:ui`
-  (Playwright `ui` project)
+- `test` (vitest projects: unit and integration; components joins in S1), `test:e2e` (Playwright `e2e`
+  project), `test:ui` (Playwright `ui` project)
 - `verify` = check:repo + check:ascii + check:ui + lint + typecheck + test
-- `db:migrate`, `db:seed`
-- `eval`
+- `db:migrate`
+- Each script is added in the slice that creates its file: `db:seed` in S1 (`prisma/seed.ts`), `eval` in S8
+  (`evals/run.ts`)
 
 **Also in S0:**
 
@@ -81,16 +83,10 @@ Then:
 
 - `npm run verify` is green, and the pre-commit hook blocks a planted non-ASCII character (try it once)
 - `npm run test:ui` is green for `/status`
-- the live `/api/health` returns `{ ok: true, db: "connected" }`
+- the live `/api/health` returns `{ ok: true, db: "connected", version: "<commit SHA>" }`
 - `/status` shows App and Database in green with the commit SHA
 - the CI badge is green
 
-**Agent prompt:**
-
-> Read `CLAUDE.md`, `docs/02-system-design.md` sec. 1-2, sec. 10 and sec. 13, and `docs/03-ui-ux.md` sec. 2 and sec. 9. Implement
-> slice S0 from `docs/04-build-plan.md`. First give me a file-by-file plan and the exact commands, and wait for
-> my OK. Use only the dependencies allowed in 02 sec. 1. Put the M3 tokens in `src/ui/theme/tokens.ts` exactly as
-> listed in 03 sec. 2.1. No business features yet.
 
 ---
 
@@ -117,11 +113,6 @@ Then:
 **Done when:** on the live URL, one-click sign-in works for every role; the navigation changes correctly at 360,
 700, 1000 and 1300 px; keyboard navigation reaches every item.
 
-**Agent prompt:**
-
-> Read `CLAUDE.md`, 01 sec. 2, 02 sec. 10 (sessions and the handler wrapper), and 03 sec. 3-sec. 5. Implement S1. Build the navigation as
-> `src/ui/components/AppShell` with three variants chosen by `useMediaQuery` against the M3 breakpoints, and the
-> destinations taken from one config table keyed by role. Plan first and wait for my OK.
 
 ---
 
@@ -196,11 +187,6 @@ AUD-1 (for these events).
 
 **Start `PROMPTS_USED.md` iterations here:** save the first prompt, every change, and why.
 
-**Agent prompt:**
-
-> Read `CLAUDE.md` and 02 sec. 5 in full (bounds table, ladder, verify, combine) and 01 AI-1..AI-12. Implement S3
-> with all bounds read from config. The AI module must not import services or visibility code. Write the tests
-> listed in 04 S3 first (red), then implement until they pass. Plan first and wait for my OK.
 
 ---
 

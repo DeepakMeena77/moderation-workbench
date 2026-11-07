@@ -9,7 +9,7 @@ deliberately do not).
 
 ## 1. Document map
 
-Every document has one job. A reviewer, a coding agent or a new teammate should be able to find any fact in
+Every document has one job. A reviewer or a new teammate should be able to find any fact in
 **one** place.
 
 ### 1.1 Repository root (submission documents; keep the exact file names)
@@ -22,18 +22,17 @@ Every document has one job. A reviewer, a coding agent or a new teammate should 
 | `AI_NOTES.md` | The AI design in one page: model choice, output contract, every safeguard with file and test, failure modes, cost, eval results, release boundary | S9, from the system design and eval output | Created in S9 |
 | `ABOUTME.md` | Who built it and why | Fill in personal details before submitting | Template created |
 | `.env.example` | Variable names with safe placeholders | S0, extended per slice | Created in S0 |
-| `CLAUDE.md` | Operating rules for the coding agent. It is also evidence of responsible agent use | Now | Created |
 
 ### 1.2 `docs/` (build documents; read in this order)
 
 | File | Purpose | Main reader |
 | --- | --- | --- |
-| `00-process.md` | This file: the method, the document map, the agent workflow and the definition of done | You |
-| `01-requirements.md` | Users, scope, **numbered acceptance criteria** (with failure cases), assumptions | You, the agent, the reviewer |
-| `02-system-design.md` | Architecture, data model, state machines, AI pipeline, jobs, API, security, decisions (ADRs) | Agent, reviewer |
-| `03-ui-ux.md` | Material 3 design system (tokens, components), navigation and responsive layout, screens, states, microcopy, accessibility | Agent |
-| `04-build-plan.md` | Vertical slices S0-S9 in order, each with scope, acceptance criteria, tests, done checks and the prompt to give the agent | You and the agent |
-| `05-test-plan.md` | Test types and how each is run, static checks (ASCII, UI rules), **acceptance criterion -> test traceability**, UI/UX quality tests, eval set, e2e journey, manual and post-deploy checks | You and the agent |
+| `00-process.md` | This file: the method, the document map, the per-slice workflow and the definition of done | You |
+| `01-requirements.md` | Users, scope, **numbered acceptance criteria** (with failure cases), assumptions | Developer, reviewer |
+| `02-system-design.md` | Architecture, data model, state machines, AI pipeline, jobs, API, security, decisions (ADRs) | Developer, reviewer |
+| `03-ui-ux.md` | Material 3 design system (tokens, components), navigation and responsive layout, screens, states, microcopy, accessibility | Developer |
+| `04-build-plan.md` | Vertical slices S0-S9 in order, each with scope, acceptance criteria, tests and done checks | Developer |
+| `05-test-plan.md` | Test types and how each is run, static checks (ASCII, UI rules), **acceptance criterion -> test traceability**, UI/UX quality tests, eval set, e2e journey, manual and post-deploy checks | Developer |
 | `trace.md` | *Generated* by `npm run check:trace`: criterion -> tests -> status. Copied into the README in S9. | Reviewer |
 | `RELEASE_NOTES.md` | *Written in S9:* what was released, checks performed, limits, recovery, owner | Reviewer |
 | `screenshots/` | *Written in S8:* Playwright screenshots at 360 px and 1280 px | Reviewer |
@@ -49,7 +48,6 @@ Every document has one job. A reviewer, a coding agent or a new teammate should 
 | `scripts/check-secrets.mjs` | No API keys, database passwords, tokens or private keys in staged content, tracked files or history |
 | `.githooks/pre-commit` | Repo guard, secrets, ASCII and UI rules on the staged files |
 | `.githooks/pre-push` | Repo guard, secrets across the full history, ASCII, then `npm run verify` |
-| `.claude/settings.json` | Coding-agent permissions: no git write commands, no deploys, no reading `.env`, no editing the guards, hooks or `ABOUTME.md` |
 
 ### 1.2b Git workflow
 
@@ -60,8 +58,7 @@ Every document has one job. A reviewer, a coding agent or a new teammate should 
   - Vercel deploys `main` to production and branches to previews
 - **Commits:** small, Conventional Commits style (`feat(appeals): route to a different senior moderator`,
   `test(ai): bounded repair loop`, `docs: ...`). One concern per commit.
-- **Who commits:** only the human. The coding agent may run read-only git (`status`, `diff`, `log`, `show`).
-  Every write command is denied in `.claude/settings.json`.
+- **Who commits:** the developer, after reviewing the staged diff.
 - **Before every commit:**
   1. `git status` shows only files the slice plan named
   2. review `git diff --staged`
@@ -106,29 +103,28 @@ after every slice.
 
 ---
 
-## 3. AI-assisted coding workflow (repeat for each slice)
+## 3. Per-slice workflow (repeat for each slice)
 
-1. **Brief.** Start a fresh agent session. Give it `CLAUDE.md`, the slice section of `04-build-plan.md`, and the
-   referenced sections of `01`, `02` and `03`. Use the prompt in the slice section.
-2. **Plan first.** Ask for a file-by-file plan **before** any code. Reject plans that:
-   - add dependencies not listed in `02 sec. 1`
-   - change the data model without updating `02`
-   - skip tests
-3. **Implement in small diffs.** One concern per step: schema, then service, then route, then UI, then tests.
-4. **Review every diff yourself.** Check:
-   - the invariants in `CLAUDE.md`
+1. **Plan.** Write a file-by-file plan for the slice from `04-build-plan.md` and the referenced sections of `01`,
+   `02` and `03`. Reject a plan that:
+   - adds dependencies not listed in `02 sec. 1`
+   - changes the data model without updating `02`
+   - skips tests
+2. **Implement in small diffs.** One concern per step: schema, then service, then route, then UI, then tests.
+3. **Review every diff.** Check:
+   - the invariants in `02-system-design.md`
    - error handling
    - names
    - no secrets
    - no dead code
    - no silent `catch`
-5. **Verify.** Run `npm run verify`, click through the slice in the browser at 360 px and at desktop width, then
+4. **Verify.** Run `npm run verify`, click through the slice in the browser at 360 px and at desktop width, then
    deploy and repeat on the live URL.
-6. **Log.** The agent ends each step with a draft log line; the human edits it and writes it into the `AGENT_USAGE.md` log: prompt, what came back, what you changed, any mistake
-   caught. Prompt changes go in `PROMPTS_USED.md`.
-7. **Commit yourself.** Follow sec. 1.2b. The agent never commits.
+5. **Record.** Add a line to the `AGENT_USAGE.md` log (tooling used, what was kept or changed, mistakes caught).
+   Runtime prompt changes go in `PROMPTS_USED.md`.
+6. **Commit.** Follow sec. 1.2b.
 
-**Stop the agent and redirect when it:**
+**Stop and rethink when a step:**
 
 - builds UI before the service exists
 - works around a failing test instead of fixing it

@@ -1,0 +1,72 @@
+import { z } from 'zod';
+
+// Environment contract: docs/02-system-design.md sec. 10. Each slice adds the variables it starts to use.
+
+const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'] as const;
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\/\S+$/),
+  LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+  VERCEL_GIT_COMMIT_SHA: z.string().min(1).optional(),
+  BUILD_TIME: z.string().min(1).optional(),
+});
+
+// Error messages describe what is expected, never the value that was supplied: a misconfigured
+// DATABASE_URL or key must not end up in logs or on screen.
+const EXPECTED: Record<string, string> = {
+  NODE_ENV: 'development, test or production',
+  DATABASE_URL: 'a postgres:// or postgresql:// URL',
+  LOG_LEVEL: LOG_LEVELS.join(', '),
+  VERCEL_GIT_COMMIT_SHA: 'a non-empty commit SHA',
+  BUILD_TIME: 'a non-empty timestamp',
+};
+
+export type LogLevel = (typeof LOG_LEVELS)[number];
+
+export interface AppConfig {
+  nodeEnv: 'development' | 'test' | 'production';
+  databaseUrl: string;
+  logLevel: LogLevel;
+  release: {
+    commitSha: string | null;
+    buildTime: string | null;
+  };
+}
+
+export class ConfigError extends Error {
+  constructor(readonly variables: string[]) {
+    super(
+      `Invalid environment configuration: ${variables
+        .map((name) => `${name} must be ${EXPECTED[name] ?? 'valid'}`)
+        .join('; ')}. See .env.example.`,
+    );
+    this.name = 'ConfigError';
+  }
+}
+
+export function parseConfig(env: Record<string, string | undefined>): AppConfig {
+  const result = envSchema.safeParse(env);
+  if (!result.success) {
+    const variables = [...new Set(result.error.issues.map((issue) => String(issue.path[0] ?? 'unknown')))];
+    throw new ConfigError(variables);
+  }
+  const value = result.data;
+  return {
+    nodeEnv: value.NODE_ENV,
+    databaseUrl: value.DATABASE_URL,
+    logLevel: value.LOG_LEVEL,
+    release: {
+      commitSha: value.VERCEL_GIT_COMMIT_SHA ?? null,
+      buildTime: value.BUILD_TIME ?? null,
+    },
+  };
+}
+
+let cached: AppConfig | undefined;
+
+export function getConfig(): AppConfig {
+  // BUILD_TIME is read by its literal name so Next.js can inline it at build time (next.config.ts).
+  cached ??= parseConfig({ ...process.env, BUILD_TIME: process.env.BUILD_TIME });
+  return cached;
+}

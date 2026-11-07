@@ -1,0 +1,11 @@
+// Data model: docs/02-system-design.md sec. 3. Models arrive slice by slice (S1 onwards).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}

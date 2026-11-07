@@ -25,8 +25,10 @@ npm-debug.log*
 # Deployment
 .vercel/
 
-# Local agent settings and private notes (never committed)
-.claude/settings.local.json
+# Local tool settings and private notes (never committed)
+.claude/
+CLAUDE.md
+AGENTS.md
 .repo-guard.local
 _scaffold/
 *.local.md
@@ -38,3 +40,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Certificates and keys
+*.pem
