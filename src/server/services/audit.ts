@@ -28,6 +28,7 @@ export const AUDIT_ACTIONS = [
   'appeal.brief_created',
   'appeal.resolved',
   'job.failed',
+  'job.retried',
   'policy.published',
   'reevaluation.started',
   'reevaluation.retried',
@@ -46,6 +47,7 @@ export const AUDIT_ENTITY_TYPES = [
   'policy',
   'reevaluation',
   'route',
+  'page',
 ] as const;
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];
 
@@ -219,20 +221,39 @@ export async function recordAccessDenied(
   requestId: string,
   log: Logger,
 ): Promise<void> {
+  await writeDenied(actor, 'route', denied.route, { method: denied.method, code: denied.code }, requestId, log);
+}
+
+/**
+ * A signed-in user opened a page their role may not use (the Forbidden page). `page` is the route pattern, such
+ * as "/queue/[caseId]", so the event never carries an identifier the user typed. Best effort, as above.
+ */
+export async function recordPageDenied(actor: Actor, page: string, requestId: string, log: Logger): Promise<void> {
+  await writeDenied(actor, 'page', page, { code: 'FORBIDDEN' }, requestId, log);
+}
+
+async function writeDenied(
+  actor: Actor,
+  entityType: 'route' | 'page',
+  entityId: string,
+  detail: Record<string, string>,
+  requestId: string,
+  log: Logger,
+): Promise<void> {
   try {
     await getDb().$transaction((tx) =>
       append(tx, {
         actorId: actor.id,
         actorType: 'human',
         action: 'access.denied',
-        entityType: 'route',
-        entityId: denied.route,
-        after: { method: denied.method, code: denied.code, role: actor.role },
+        entityType,
+        entityId,
+        after: { ...detail, role: actor.role },
         requestId,
       }),
     );
   } catch (error) {
-    log.error({ event: 'audit.write_failed', action: 'access.denied', route: denied.route, err: error });
+    log.error({ event: 'audit.write_failed', action: 'access.denied', [entityType]: entityId, err: error });
   }
 }
 

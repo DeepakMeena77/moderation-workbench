@@ -76,7 +76,7 @@ export const POLICY: PolicyView = {
 };
 
 export const PRIMARY = 'gemini-3.5-flash-lite';
-export const FALLBACK = 'gemini-3.5-flash';
+export const FALLBACK = 'gemini-3.6-flash';
 
 export const silentLogger = createLogger({ level: 'silent' });
 

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   aiUsageState,
   checkDatabase,
+  describeAiError,
   getHealth,
   getStatusReport,
   jobsState,
@@ -99,5 +100,11 @@ describe('status state rules', () => {
     expect(aiUsageState({ calls: 4, failures: 3 })).toBe('warn');
     expect(aiUsageState({ calls: 3, failures: 3 })).toBe('ok');
     expect(aiUsageState({ calls: 10, failures: 5 })).toBe('ok');
+  });
+
+  it('[OPS-1] the last AI error reads as words with its reason, never a bare code', () => {
+    expect(describeAiError('invalid_output', 'invalid_after_repair')).toBe('Invalid output (invalid after repair)');
+    expect(describeAiError('rate_limited', null)).toBe('Rate limited');
+    expect(describeAiError('provider_error', 'http_403')).toBe('Provider error (http 403)');
   });
 });

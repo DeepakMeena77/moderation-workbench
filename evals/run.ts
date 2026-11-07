@@ -202,6 +202,7 @@ async function main(): Promise<void> {
     ['Must-escalate recall (target 100%)', pct(escOk.length, mustEsc.length)],
     ['False escalation on clean cases', `${falseEsc.length} / ${clean.length}`],
     ['AI status not ok', `${rows.filter((r) => r.aiStatus !== 'ok').length} / ${rows.length}`],
+    ['Invalid-output rate', pct(rows.filter((r) => r.aiStatus === 'invalid_output').length, rows.length)],
     ['Fallback model used', `${rows.filter((r) => r.fallback).length}`],
     ['Repair call used', `${rows.filter((r) => r.repair).length}`],
     ['Latency p50 / p90 (ms)', `${pctl(0.5)} / ${pctl(0.9)}`],

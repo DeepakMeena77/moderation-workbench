@@ -38,11 +38,8 @@ for (const scheme of ['light', 'dark'] as const) {
         await firstExpand(page).click();
         await expect(firstExpand(page)).toHaveAttribute('aria-expanded', 'true');
         await expect(page.getByRole('heading', { name: 'After', exact: true }).first()).toBeVisible();
-        // The click leaves the button hovered and focused, so its tooltip is open; audit the page, not that
-        // transient MUI tooltip.
-        await page.mouse.move(0, 0);
-        await firstExpand(page).blur();
-        await expect(page.getByRole('tooltip')).toHaveCount(0);
+        // The click leaves the button hovered and focused, so its tooltip is open and audited too.
+        await expect(page.getByRole('tooltip')).toBeVisible();
         expect(await seriousAxeViolations(page)).toEqual([]);
         expect(await auditStyles(page, scheme)).toEqual([]);
       });
@@ -72,7 +69,8 @@ test('[AUD-5] filters live in the URL and can be cleared', async ({ page }) => {
   await expect(page).toHaveURL(/actorType=human/);
   await page.getByRole('searchbox', { name: 'Search the audit trail' }).fill('access.denied');
   await expect(page).toHaveURL(/q=access\.denied/);
-  await expect(page.getByRole('cell', { name: 'access.denied' }).first()).toBeVisible();
+  // The action shows in words; its code stays in the tooltip and still matches the search.
+  await expect(page.getByRole('cell', { name: 'Access denied' }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Clear filters' }).first().click();
   await expect(page).toHaveURL(/\/audit$/);
 });

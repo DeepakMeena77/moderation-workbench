@@ -14,6 +14,7 @@ import { Card } from '../../components/Card';
 import { QueryState } from '../../components/QueryState';
 import { Tag, type TagTone } from '../../components/Tag';
 import { shortDateTime } from '../feed/format';
+import { JobsAdminPanel } from './JobsAdminPanel';
 
 // Public status page (docs/03-ui-ux.md sec. 6.12): the overall state and one card per check. Timestamps show as
 // readable local times, with the ISO value in the tooltip.
@@ -171,6 +172,7 @@ export function StatusView({ signedIn }: { signedIn: boolean }) {
         <QueryState query={query} loadingLabel="Loading system status">
           {(report) => <Report report={report} />}
         </QueryState>
+        <JobsAdminPanel signedIn={signedIn} />
       </Box>
     </Box>
   );

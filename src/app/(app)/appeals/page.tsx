@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'Appeals - Moderation Workbench' };
 
 // The appeals list (03 sec. 6.7). Senior moderators review; moderators and admins read.
 export default async function AppealsPage() {
-  const { actor, allowed } = await getPageAccess(PAGE_ROLES.appeals);
+  const { actor, allowed } = await getPageAccess(PAGE_ROLES.appeals, '/appeals');
   if (!allowed) return <Forbidden role={actor.role} />;
   return <AppealsView selectedId={null} />;
 }

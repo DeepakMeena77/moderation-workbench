@@ -1,12 +1,16 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { GET as failedRoute } from '@/app/api/jobs/failed/route';
+import { POST as retryRoute } from '@/app/api/jobs/[id]/retry/route';
+import { POST as runRoute } from '@/app/api/jobs/run/route';
+import { GET as tickRoute } from '@/app/api/jobs/tick/route';
 import { getAiConfig } from '@/server/ai/aiConfig';
-import { getConfig } from '@/server/config';
+import { getConfig, resetConfigForTests } from '@/server/config';
 import { getDb } from '@/server/db';
 import { claimNextJob, enqueue, RETRY_DELAYS_MS } from '@/server/jobs/queue';
 import { runPendingJobs } from '@/server/jobs/runner';
 import { createPost } from '@/server/services/content';
 import { actorFor, installPolicy } from './helpers/moderation';
-import { createUser } from './helpers/users';
+import { apiRequest, createUser, readJson, sessionCookieFor } from './helpers/users';
 
 // The database job queue and runner (OPS-4) and the S2 rule-only analysis it produces (DET-5).
 
@@ -165,5 +169,110 @@ describe('job queue', () => {
     const summary = await runPendingJobs({ budgetMs: getAiConfig().bounds.deadlineMs });
     expect(summary.claimed).toBe(0);
     expect((await getDb().job.findFirstOrThrow()).status).toBe('queued');
+  });
+});
+
+// --- Operator controls (OPS-4, SEC-1): Process pending, Retry and the cron tick ---
+
+describe('job routes', () => {
+  const asAdmin = async () => sessionCookieFor((await createUser('admin')).id);
+  const markFailed = (id: string) =>
+    getDb().job.update({ where: { id }, data: { status: 'failed', attempts: 3, lastError: 'Error: database hiccup' } });
+
+  afterEach(() => {
+    delete process.env.CRON_SECRET;
+    resetConfigForTests();
+  });
+
+  it('[OPS-4] an admin retries a failed job: back to queued with attempts 0, audited; only failed jobs qualify', async () => {
+    const job = await queueJob('retry-route', { caseId: 'case-1', reason: 'initial' });
+    await markFailed(job.id);
+    const cookie = await asAdmin();
+
+    const failed = await readJson<{ data: { items: Array<{ id: string; caseId: string | null }>; total: number } }>(
+      await failedRoute(apiRequest('/api/jobs/failed', { cookie })),
+    );
+    expect(failed.data.total).toBe(1);
+    expect(failed.data.items[0]).toMatchObject({ id: job.id, caseId: 'case-1' });
+
+    const retry = () => retryRoute(apiRequest(`/api/jobs/${job.id}/retry`, { method: 'POST', cookie }));
+    const res = await retry();
+    expect(res.status).toBe(200);
+    expect(await getDb().job.findUniqueOrThrow({ where: { id: job.id } })).toMatchObject({
+      status: 'queued',
+      attempts: 0,
+      lockedUntil: null,
+    });
+    // Due at once by the database clock, so the next tick claims it.
+    expect(await claimNextJob(getConfig().jobs.leaseMs)).toMatchObject({ id: job.id });
+    expect(await getDb().auditEvent.findFirstOrThrow({ where: { action: 'job.retried' } })).toMatchObject({
+      entityType: 'job',
+      entityId: job.id,
+      actorType: 'human',
+      before: { status: 'failed', attempts: 3 },
+    });
+
+    const again = await retry();
+    expect(again.status).toBe(409);
+    expect((await readJson<{ error: { code: string } }>(again)).error.code).toBe('INVALID_TRANSITION');
+    const missing = await retryRoute(apiRequest('/api/jobs/no-such-job/retry', { method: 'POST', cookie }));
+    expect(missing.status).toBe(404);
+  });
+
+  it('[OPS-4] retrying a failed re-evaluation job gives back the run failed count', async () => {
+    const admin = await createUser('admin');
+    const run = await getDb().reevaluationRun.create({
+      data: { fromVersion: 1, toVersion: 2, total: 1, failed: 1, startedById: admin.id, finishedAt: new Date() },
+    });
+    const job = await getDb().$transaction(async (tx) => {
+      await enqueue(tx, { type: 'analyze', payload: { caseId: 'c', reason: 'policy_change' }, dedupeKey: 'run-job' });
+      return tx.job.update({ where: { dedupeKey: 'run-job' }, data: { runId: run.id } });
+    });
+    await markFailed(job.id);
+    const cookie = await sessionCookieFor(admin.id);
+    expect((await retryRoute(apiRequest(`/api/jobs/${job.id}/retry`, { method: 'POST', cookie }))).status).toBe(200);
+    expect(await getDb().reevaluationRun.findUniqueOrThrow({ where: { id: run.id } })).toMatchObject({
+      failed: 0,
+      finishedAt: null,
+    });
+  });
+
+  it('[OPS-4] Process pending runs queued jobs for an admin; other roles get 403', async () => {
+    await postAs('A quiet post about gardening');
+    const moderator = await createUser('moderator');
+    const denied = await runRoute(
+      apiRequest('/api/jobs/run', { method: 'POST', cookie: await sessionCookieFor(moderator.id) }),
+    );
+    expect(denied.status).toBe(403);
+    expect(
+      (
+        await retryRoute(
+          apiRequest('/api/jobs/x/retry', { method: 'POST', cookie: await sessionCookieFor(moderator.id) }),
+        )
+      ).status,
+    ).toBe(403);
+
+    const res = await runRoute(apiRequest('/api/jobs/run', { method: 'POST', cookie: await asAdmin() }));
+    expect(res.status).toBe(200);
+    expect((await readJson<{ data: unknown }>(res)).data).toMatchObject({ claimed: 1, succeeded: 1 });
+    expect(await getDb().job.count({ where: { status: 'queued' } })).toBe(0);
+  });
+
+  it('[SEC-1] the cron tick needs the x-cron-secret header; without a configured secret it does not exist', async () => {
+    await postAs('Another quiet post about gardening');
+    const tick = (secret?: string) =>
+      tickRoute(apiRequest('/api/jobs/tick', secret === undefined ? {} : { headers: { 'x-cron-secret': secret } }));
+
+    expect((await tick('anything-at-all-here')).status).toBe(404);
+
+    process.env.CRON_SECRET = 'test-cron-secret-not-real-0001';
+    resetConfigForTests();
+    expect((await tick()).status).toBe(401);
+    expect((await tick('test-cron-secret-not-real-0002')).status).toBe(401);
+    expect(await getDb().job.count({ where: { status: 'queued' } })).toBe(1);
+
+    const ok = await tick('test-cron-secret-not-real-0001');
+    expect(ok.status).toBe(200);
+    expect((await readJson<{ data: unknown }>(ok)).data).toMatchObject({ claimed: 1, succeeded: 1 });
   });
 });

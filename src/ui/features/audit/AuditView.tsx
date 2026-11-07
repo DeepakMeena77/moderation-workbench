@@ -22,8 +22,12 @@ import { CardSkeleton } from '../../components/Skeletons';
 import { m3 } from '../../theme/theme';
 import { shortDateTime } from '../feed/format';
 import {
+  ACTION_LABEL,
+  actionLabel,
   AUDIT_ACTIONS,
   AUDIT_ENTITIES,
+  ENTITY_LABEL,
+  entityLabel,
   useAuditEvents,
   useAuditVerify,
   type ActorType,
@@ -52,6 +56,15 @@ function actorLabel(row: AuditRow): string {
 }
 
 const plural = (n: number, word: string) => `${n.toLocaleString('en-US')} ${word}${n === 1 ? '' : 's'}`;
+
+/** The action in words, with the stored code in the tooltip for anyone matching it against logs. */
+function ActionText({ action }: { action: string }) {
+  return (
+    <Box component="span" title={action}>
+      {actionLabel(action)}
+    </Box>
+  );
+}
 
 function Time({ iso }: { iso: string }) {
   return (
@@ -162,8 +175,8 @@ const COLUMNS: Array<DataColumn<AuditRow>> = [
   { key: 'id', header: 'Event', width: '12%', render: (row) => `#${row.id}` },
   { key: 'at', header: 'Time', width: '16%', render: (row) => <Time iso={row.at} /> },
   { key: 'actor', header: 'Actor', width: '20%', render: (row) => actorLabel(row) },
-  { key: 'action', header: 'Action', width: '22%', render: (row) => row.action },
-  { key: 'entity', header: 'Entity', render: (row) => `${row.entityType} ${row.entityId}` },
+  { key: 'action', header: 'Action', width: '22%', render: (row) => <ActionText action={row.action} /> },
+  { key: 'entity', header: 'Entity', render: (row) => `${entityLabel(row.entityType)} ${row.entityId}` },
 ];
 
 function EventListItem({ row }: { row: AuditRow }) {
@@ -188,10 +201,10 @@ function EventListItem({ row }: { row: AuditRow }) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="body2" component="p" sx={{ fontWeight: 500, overflowWrap: 'anywhere' }}>
-            {row.action}
+            <ActionText action={row.action} />
           </Typography>
           <Typography variant="caption" color="text.secondary" component="p" sx={{ overflowWrap: 'anywhere' }}>
-            #{row.id}, {actorLabel(row)}, {row.entityType} {row.entityId}, <Time iso={row.at} />
+            #{row.id}, {actorLabel(row)}, {entityLabel(row.entityType)} {row.entityId}, <Time iso={row.at} />
           </Typography>
         </Box>
         <IconButton
@@ -245,7 +258,7 @@ function Filters({ filters, onChange }: { filters: AuditFilters; onChange: (next
           <MenuItem value="">Any action</MenuItem>
           {AUDIT_ACTIONS.map((action) => (
             <MenuItem key={action} value={action}>
-              {action}
+              {ACTION_LABEL[action]}
             </MenuItem>
           ))}
         </TextField>
@@ -259,7 +272,7 @@ function Filters({ filters, onChange }: { filters: AuditFilters; onChange: (next
           <MenuItem value="">Any entity</MenuItem>
           {AUDIT_ENTITIES.map((entity) => (
             <MenuItem key={entity} value={entity}>
-              {entity}
+              {ENTITY_LABEL[entity]}
             </MenuItem>
           ))}
         </TextField>

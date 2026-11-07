@@ -2,13 +2,19 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// SEC-1: every API route requires a session except sign-in, status and health (and /api/jobs/tick with its
-// secret header, from S2). The type system already makes `auth` a required option of handle(); this test
+// SEC-1: every API route requires a session except sign-in, status and health, and /api/jobs/tick, which
+// checks its x-cron-secret header instead (tests/integration/jobs.test.ts). The type system already makes `auth` a required option of handle(); this test
 // pins the list of public routes so a new public route is a visible, reviewed change.
 
 const API_DIR = join(process.cwd(), 'src', 'app', 'api');
 
-const PUBLIC_ROUTES = ['GET /api/health', 'GET /api/status', 'POST /api/auth/demo', 'POST /api/auth/sign-in'];
+const PUBLIC_ROUTES = [
+  'GET /api/health',
+  'GET /api/status',
+  'GET /api/jobs/tick',
+  'POST /api/auth/demo',
+  'POST /api/auth/sign-in',
+];
 
 function routeFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -47,7 +53,7 @@ describe('API route authentication', () => {
     }
   });
 
-  it('[SEC-1] only sign-in, demo sign-in, status and health are public', () => {
+  it('[SEC-1] only sign-in, demo sign-in, status, health and the secret-checked cron tick are public', () => {
     const publicRoutes = declarations()
       .filter((declaration) => declaration.auth === "'public'")
       .map((declaration) => declaration.route)

@@ -14,9 +14,10 @@ import { getDb } from '../db';
 import { AppError } from '../errors';
 import { analyzeDedupeKey, enqueue } from '../jobs/queue';
 import { getLogger } from '../logger';
+import type { PolicyChange } from '../policy/diff';
 import { clausesSchema, MOD_ACTIONS, SEVERITIES, type ModAction, type Severity } from '../policy/schema';
 import { append, type Tx } from './audit';
-import { getActivePolicy } from './policy';
+import { getActivePolicy, policyChangeNotice } from './policy';
 import { enforceRateLimit, type RateLimitRule } from './rateLimit';
 
 // The moderation queue and the case page (Q-1, Q-3, Q-4; docs/02-system-design.md sec. 7). Reads the stored
@@ -351,6 +352,8 @@ export interface DecisionView {
   reasonCategory: string | null;
   rationale: string | null;
   createdAt: string;
+  /** POL-4: set when a newer policy version is active than the one this decision was made under. */
+  policyChange: PolicyChange | null;
 }
 
 export interface CaseDetail {
@@ -489,17 +492,18 @@ export async function getCase(actor: Actor, caseId: string): Promise<CaseDetail>
   if (!row) throw new AppError('NOT_FOUND', 'This case does not exist.');
 
   const current = row.currentAnalysisId ? await db.analysis.findUnique({ where: { id: row.currentAnalysisId } }) : null;
-  const [reasons, pendingJobs, policy, aiRun] = await Promise.all([
+  const latest = row.decisions[0];
+  const [reasons, pendingJobs, policy, aiRun, policyChange] = await Promise.all([
     db.report.groupBy({ by: ['reason'], where: { contentId: row.content.id }, _count: { _all: true } }),
     db.job.count({
       where: { type: 'analyze', status: { in: ['queued', 'running'] }, payload: { path: ['caseId'], equals: row.id } },
     }),
     policyClauses(db, current?.policyVersion ?? null),
     loadAiRun(current?.aiRunId ?? null),
+    latest ? policyChangeNotice(latest.policyVersion, db) : Promise.resolve(null),
   ]);
 
   const decider = DECIDER_ROLES.has(actor.role);
-  const latest = row.decisions[0];
   return {
     id: row.id,
     status: row.status,
@@ -557,6 +561,7 @@ export async function getCase(actor: Actor, caseId: string): Promise<CaseDetail>
           reasonCategory: latest.reasonCategory,
           rationale: latest.rationale,
           createdAt: latest.createdAt.toISOString(),
+          policyChange,
         }
       : null,
     analysisPending: pendingJobs > 0,

@@ -7,7 +7,10 @@ import { GET as listRoute, POST as publishRoute } from '@/app/api/policies/route
 import { POST as validateRoute } from '@/app/api/policies/validate/route';
 import { getDb } from '@/server/db';
 import { runPendingJobs } from '@/server/jobs/runner';
+import { getCase } from '@/server/services/cases';
 import { createPost } from '@/server/services/content';
+import { decide } from '@/server/services/decisions';
+import { getContentHistory } from '@/server/services/history';
 import {
   comparePolicies,
   getActivePolicy,
@@ -193,5 +196,34 @@ describe('policy change since a decision', () => {
       message: 'Policy changed since this decision (v1 -> v2)',
     });
     expect(await policyChangeNotice(2)).toBeNull();
+  });
+
+  it('[POL-4] the case page and both history views show the notice on a decision made under an older version', async () => {
+    await installPolicy(1);
+    const author = await createUser('author');
+    const moderator = await createUser('moderator');
+    const created = await createPost(actorFor(author), { body: 'You are a worthless idiot' }, 'req-policy-0004');
+    await runPendingJobs();
+    const kase = await getDb().case.findUniqueOrThrow({ where: { id: created.caseId } });
+    await decide(
+      actorFor(moderator),
+      kase.id,
+      { kind: 'approve', analysisId: kase.currentAnalysisId ?? '' },
+      'req-policy-0005',
+    );
+
+    const decisionEvent = async (viewer: Parameters<typeof getContentHistory>[0]) =>
+      (await getContentHistory(viewer, created.id)).events.find((e) => e.kind === 'decision');
+    expect((await getCase(actorFor(moderator), kase.id)).decision?.policyChange).toBeNull();
+    expect((await decisionEvent(actorFor(author)))?.policyChange).toBeUndefined();
+
+    const admin = await createUser('admin');
+    await publishPolicy(actorFor(admin), { json: V2_TEXT }, 'req-policy-0006');
+
+    const notice = { fromVersion: 1, toVersion: 2, message: 'Policy changed since this decision (v1 -> v2)' };
+    const detail = await getCase(actorFor(moderator), kase.id);
+    expect(detail.decision).toMatchObject({ policyVersion: 1, policyChange: notice });
+    expect(await decisionEvent(actorFor(author))).toMatchObject({ policyVersion: 1, policyChange: notice });
+    expect(await decisionEvent(actorFor(moderator))).toMatchObject({ policyVersion: 1, policyChange: notice });
   });
 });

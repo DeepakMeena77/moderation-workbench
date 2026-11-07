@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'Appeal review - Moderation Workbench
 
 // The appeal review (03 sec. 6.8). From 840 px it opens beside the appeals list (list-detail, 03 sec. 5.1).
 export default async function AppealReviewPage({ params }: { params: Promise<{ id: string }> }) {
-  const { actor, allowed } = await getPageAccess(PAGE_ROLES.appeals);
+  const { actor, allowed } = await getPageAccess(PAGE_ROLES.appeals, '/appeals/[id]');
   if (!allowed) return <Forbidden role={actor.role} />;
   const { id } = await params;
   return <AppealsView selectedId={id} />;

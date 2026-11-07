@@ -342,8 +342,11 @@ Each screen uses QueryState plus the states in sec. 7.
 12. **Status** `/status` (public, minimal top bar: app name + Sign in)
     - An overall banner: "All systems operational", "Degraded: AI on fallback model" or "Outage: database".
     - A grid of check cards (sec. 5.1). Each has a state icon, a title, key-value details and "checked 12 s ago".
-    - Release SHA linked to the GitHub commit. Auto-refresh every 30 s plus a **Refresh** button.
-    - Admin only: **Process pending jobs**.
+    - The release SHA (first 7 characters) on the App card. Auto-refresh every 30 s plus a **Refresh** button.
+    - Admin only: **Process pending jobs** (a snackbar with the runner summary) and the most recent failed jobs,
+      each with its last error and a **Retry** button. The role is read on the client, so the page never waits
+      for the database.
+    - Timestamps show as local times ("7 Nov, 19:13") with the ISO value in the tooltip.
 13. **Errors:** 404 "Not found", 403 "You don't have access to this", and a global error boundary with Retry and
     the request ID.
 

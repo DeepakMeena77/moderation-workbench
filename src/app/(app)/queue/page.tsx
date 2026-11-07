@@ -7,7 +7,7 @@ import { PAGE_ROLES } from '@/ui/shell/navigation';
 export const metadata: Metadata = { title: 'Queue - Moderation Workbench' };
 
 export default async function QueuePage() {
-  const { actor, allowed } = await getPageAccess(PAGE_ROLES.queue);
+  const { actor, allowed } = await getPageAccess(PAGE_ROLES.queue, '/queue');
   if (!allowed) return <Forbidden role={actor.role} />;
   return <QueueView selectedId={null} />;
 }

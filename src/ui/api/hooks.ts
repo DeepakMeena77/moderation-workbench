@@ -328,6 +328,15 @@ export interface DecisionSummary {
   reasonCategory: string | null;
   rationale: string | null;
   createdAt: string;
+  /** POL-4: set when a newer policy version is active than this decision's. */
+  policyChange: PolicyChange | null;
+}
+
+/** "Policy changed since this decision (v1 -> v2)" (POL-4); the server builds the message. */
+export interface PolicyChange {
+  fromVersion: number;
+  toVersion: number;
+  message: string;
 }
 
 export interface CaseDetail {
@@ -563,6 +572,7 @@ export interface HistoryEvent {
   action: ModAction | null;
   policyVersion: number | null;
   facts?: Array<{ label: string; value: string }>;
+  policyChange?: PolicyChange;
 }
 
 export interface ContentHistory {

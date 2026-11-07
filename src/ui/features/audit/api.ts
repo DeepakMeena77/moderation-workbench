@@ -3,8 +3,8 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 
-// Audit page data (AUD-3, AUD-5). Response shapes mirror src/server/services/audit.ts (the UI may not import
-// server code, docs/02 sec. 2).
+// Audit page data (AUD-3, AUD-5). Response shapes and the two lists mirror src/server/services/audit.ts (the UI
+// may not import server code, docs/02 sec. 2); tests/unit/auditLists.test.ts keeps the lists in step.
 
 export type ActorType = 'human' | 'system' | 'ai';
 
@@ -17,7 +17,12 @@ export const AUDIT_ACTIONS = [
   'analysis.requested',
   'decision.created',
   'visibility.changed',
+  'appeal.created',
+  'appeal.assigned',
+  'appeal.brief_created',
+  'appeal.resolved',
   'job.failed',
+  'job.retried',
   'policy.published',
   'reevaluation.started',
   'reevaluation.retried',
@@ -30,11 +35,58 @@ export const AUDIT_ENTITIES = [
   'case',
   'analysis',
   'decision',
+  'appeal',
   'job',
   'policy',
   'reevaluation',
   'route',
+  'page',
 ] as const;
+
+/** What each action means, in words; the code itself stays in the tooltip and in search (03 sec. 7). */
+export const ACTION_LABEL: Record<(typeof AUDIT_ACTIONS)[number], string> = {
+  'content.created': 'Content created',
+  'report.created': 'Report filed',
+  'case.opened': 'Case opened',
+  'case.reopened': 'Case reopened',
+  'analysis.created': 'Analysis recorded',
+  'analysis.requested': 'Re-analysis requested',
+  'decision.created': 'Decision made',
+  'visibility.changed': 'Visibility changed',
+  'appeal.created': 'Appeal filed',
+  'appeal.assigned': 'Appeal assigned',
+  'appeal.brief_created': 'Appeal summary written',
+  'appeal.resolved': 'Appeal resolved',
+  'job.failed': 'Job failed',
+  'job.retried': 'Job retried',
+  'policy.published': 'Policy published',
+  'reevaluation.started': 'Re-evaluation started',
+  'reevaluation.retried': 'Re-evaluation retried',
+  'access.denied': 'Access denied',
+};
+
+export const ENTITY_LABEL: Record<(typeof AUDIT_ENTITIES)[number], string> = {
+  content: 'Content',
+  report: 'Report',
+  case: 'Case',
+  analysis: 'Analysis',
+  decision: 'Decision',
+  appeal: 'Appeal',
+  job: 'Job',
+  policy: 'Policy',
+  reevaluation: 'Re-evaluation',
+  route: 'API route',
+  page: 'Page',
+};
+
+/** An action in words; an action written before this list knew it falls back to its code. */
+export function actionLabel(action: string): string {
+  return (ACTION_LABEL as Record<string, string>)[action] ?? action;
+}
+
+export function entityLabel(entityType: string): string {
+  return (ENTITY_LABEL as Record<string, string>)[entityType] ?? entityType;
+}
 
 export interface AuditRow {
   id: string;

@@ -1,3 +1,4 @@
+import type { AiStatus } from '@prisma/client';
 import { getAiConfig } from '../ai/aiConfig';
 import { getConfig } from '../config';
 import { getDb } from '../db';
@@ -126,6 +127,23 @@ function worst(states: CheckState[]): CheckState {
 
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 
+const AI_STATUS_WORDS: Record<AiStatus, string> = {
+  ok: 'OK',
+  timeout: 'Timed out',
+  rate_limited: 'Rate limited',
+  invalid_output: 'Invalid output',
+  invalid_input: 'Input over budget',
+  provider_error: 'Provider error',
+  budget_exhausted: 'Daily budget reached',
+  unavailable: 'Unavailable',
+};
+
+/** "Invalid output (invalid after repair)": the status page shows words, never a bare code (03 sec. 7). */
+export function describeAiError(status: AiStatus, errorCode: string | null): string {
+  const words = AI_STATUS_WORDS[status];
+  return errorCode ? `${words} (${errorCode.replace(/_/g, ' ')})` : words;
+}
+
 export async function checkLlm(now: Date = new Date()): Promise<CheckResult> {
   const ai = getAiConfig();
   const db = getDb();
@@ -157,7 +175,7 @@ export async function checkLlm(now: Date = new Date()): Promise<CheckResult> {
       model: ai.primaryModel,
       fallbackModel: ai.fallbackModel,
       lastSuccess: iso(lastOk?.createdAt),
-      lastError: lastError ? `${lastError.status}${lastError.errorCode ? ` (${lastError.errorCode})` : ''}` : null,
+      lastError: lastError ? describeAiError(lastError.status, lastError.errorCode) : null,
       lastErrorAt: iso(lastError?.createdAt),
       callsToday: `${callsToday} / ${ai.bounds.maxCallsPerDay}`,
       reason,

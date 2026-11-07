@@ -13,7 +13,7 @@ const aiEnvSchema = z
     GEMINI_API_KEY: z.string().min(1).optional(),
     GEMINI_MODEL: z.string().min(1).default('gemini-3.5-flash-lite'),
     // An empty value turns the fallback model off.
-    GEMINI_FALLBACK_MODEL: z.string().default('gemini-3.5-flash'),
+    GEMINI_FALLBACK_MODEL: z.string().default('gemini-3.6-flash'),
     AI_MAX_CALLS_PER_DAY: int(0, 100_000, 200),
     AI_TIMEOUT_MS: int(100, 120_000, 12_000),
     AI_DEADLINE_MS: int(100, 300_000, 25_000),

@@ -112,13 +112,54 @@ describe('page guards', () => {
     const user = await createUser('author');
     await signInPage(user.id);
     const staff = ['moderator', 'senior_moderator', 'admin'] as const;
-    expect((await getPageAccess(staff)).allowed).toBe(false);
-    expect((await getPageAccess(['author'])).allowed).toBe(true);
+    expect((await getPageAccess(staff, '/queue')).allowed).toBe(false);
+    expect((await getPageAccess(['author'], '/me')).allowed).toBe(true);
 
     await getDb().user.update({ where: { id: user.id }, data: { role: 'admin' } });
-    const access = await getPageAccess(staff);
+    const access = await getPageAccess(staff, '/queue');
     expect(access.allowed).toBe(true);
     expect(access.actor.role).toBe('admin');
+  });
+
+  it('[AUD-4] a refused page is audited as access.denied with the page pattern; an allowed page is not', async () => {
+    const user = await createUser('author');
+    await signInPage(user.id);
+    expect((await getPageAccess(['author'], '/me')).allowed).toBe(true);
+    expect(await getDb().auditEvent.count()).toBe(0);
+
+    expect((await getPageAccess(['moderator', 'senior_moderator', 'admin'], '/queue/[caseId]')).allowed).toBe(false);
+    const events = await getDb().auditEvent.findMany();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      actorId: user.id,
+      actorType: 'human',
+      action: 'access.denied',
+      entityType: 'page',
+      entityId: '/queue/[caseId]',
+      after: { code: 'FORBIDDEN', role: 'author' },
+    });
+    expect(events[0]?.requestId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('[AUD-4] if the page audit write fails, the page still answers Forbidden and the failure is logged', async () => {
+    const logger = getLogger();
+    vi.spyOn(logger, 'child').mockReturnValue(logger as unknown as ReturnType<typeof logger.child>);
+    const error = vi.spyOn(logger, 'error');
+    const user = await createUser('author');
+    await signInPage(user.id);
+    // Swapped by hand: vi.spyOn on the Prisma client's $transaction does not restore cleanly.
+    const db = getDb();
+    const original = db.$transaction.bind(db);
+    db.$transaction = (() => Promise.reject(new Error('database went away'))) as unknown as typeof db.$transaction;
+    try {
+      expect((await getPageAccess(['admin'], '/metrics')).allowed).toBe(false);
+    } finally {
+      db.$transaction = original;
+    }
+    expect(error).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'audit.write_failed', action: 'access.denied', page: '/metrics' }),
+    );
+    expect(await getDb().auditEvent.count()).toBe(0);
   });
 
   it('[SEC-1] a page with a token for a deleted user redirects to sign-in', async () => {

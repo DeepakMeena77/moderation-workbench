@@ -155,6 +155,8 @@ export const theme = createTheme({
     MuiBackdrop: {
       styleOverrides: { root: { '&:not(.MuiBackdrop-invisible)': { backgroundColor: 'rgba(0, 0, 0, 0.32)' } } },
     },
+    // MUI's tooltip text is 11/14 px, off the M3 type scale; plain tooltips use bodySmall (12/16).
+    MuiTooltip: { styleOverrides: { tooltip: { ...bodySmall } } },
     MuiMenu: { defaultProps: { elevation: 0 } },
     MuiPopover: { defaultProps: { elevation: 0 } },
     MuiSkeleton: {

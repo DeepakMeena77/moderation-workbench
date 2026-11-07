@@ -7,7 +7,7 @@ describe('AI configuration', () => {
     expect(config).toMatchObject({
       provider: 'mock',
       primaryModel: 'gemini-3.5-flash-lite',
-      fallbackModel: 'gemini-3.5-flash',
+      fallbackModel: 'gemini-3.6-flash',
       bounds: {
         maxCallsPerDay: 200,
         timeoutMs: 12_000,

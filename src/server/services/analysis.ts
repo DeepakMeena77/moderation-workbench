@@ -2,6 +2,7 @@ import type { AiStatus, CaseStatus, Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getDb } from '../db';
 import type { ModerationSettings } from '../ai/aiConfig';
+import { HISTORY_MAX_ITEMS } from '../ai/budget';
 import type { ClassifyInput, ClassifyResult } from '../ai/classify';
 import { contentFingerprint, getLogger } from '../logger';
 import { combine, type Recommendation } from '../moderation/combine';
@@ -135,6 +136,13 @@ export async function prepareAnalysis(caseId: string): Promise<PreparedAnalysis 
   const ctx = await loadAnalysisContext(getDb(), caseId);
   if (!ctx) throw new Error(`Case ${caseId} does not exist.`);
   if (!ANALYSABLE.includes(ctx.caseStatus)) return { skipped: ctx.caseStatus };
+  // AI-11: the author's last final actions on their other items, newest first (at most HISTORY_MAX_ITEMS).
+  const history = await getDb().decision.findMany({
+    where: { case: { content: { authorId: ctx.content.authorId }, id: { not: ctx.caseId } } },
+    orderBy: { createdAt: 'desc' },
+    take: HISTORY_MAX_ITEMS,
+    select: { finalAction: true },
+  });
   const ruleFindings: RuleFinding[] = runRules(ctx.content.body, ctx.policy, {
     createdAt: ctx.content.createdAt,
     recentByAuthor: ctx.recentByAuthor,
@@ -148,8 +156,7 @@ export async function prepareAnalysis(caseId: string): Promise<PreparedAnalysis 
       parentText: ctx.parent?.body ?? null,
       reportReasons: ctx.reportReasons,
       ruleFindings,
-      // The author's last final actions come from decisions, which arrive in S4.
-      authorHistory: [],
+      authorHistory: history.map((d) => d.finalAction),
     },
   };
 }

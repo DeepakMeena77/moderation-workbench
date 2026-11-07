@@ -7,7 +7,7 @@ import { PAGE_ROLES } from '@/ui/shell/navigation';
 export const metadata: Metadata = { title: 'Audit - Moderation Workbench' };
 
 export default async function AuditPage() {
-  const { actor, allowed } = await getPageAccess(PAGE_ROLES.audit);
+  const { actor, allowed } = await getPageAccess(PAGE_ROLES.audit, '/audit');
   if (!allowed) return <Forbidden role={actor.role} />;
   return <AuditView />;
 }

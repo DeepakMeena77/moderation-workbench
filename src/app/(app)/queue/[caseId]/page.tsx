@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'Case review - Moderation Workbench' 
 
 // The case page (03 sec. 6.6). From 840 px it opens beside the queue list (list-detail, 03 sec. 5.1).
 export default async function CasePage({ params }: { params: Promise<{ caseId: string }> }) {
-  const { actor, allowed } = await getPageAccess(PAGE_ROLES.queue);
+  const { actor, allowed } = await getPageAccess(PAGE_ROLES.queue, '/queue/[caseId]');
   if (!allowed) return <Forbidden role={actor.role} />;
   const { caseId } = await params;
   return <QueueView selectedId={caseId} />;

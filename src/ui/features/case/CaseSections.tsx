@@ -1,11 +1,13 @@
 'use client';
 
 import ExpandMoreRounded from '@mui/icons-material/ExpandMoreRounded';
+import PolicyRounded from '@mui/icons-material/PolicyRounded';
 import Box from '@mui/material/Box';
 import Collapse from '@mui/material/Collapse';
 import Typography from '@mui/material/Typography';
 import { useId, useState, type ReactNode } from 'react';
 import type { AiRun, Analysis, CaseDetail, Clause, DecisionSummary, Finding } from '../../api/hooks';
+import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { ConfidenceMeter } from '../../components/ConfidenceMeter';
@@ -348,6 +350,11 @@ export function DecisionSummaryCard({ decision }: { decision: DecisionSummary })
             {decision.rationale}
           </Typography>
         </Nested>
+      ) : null}
+      {decision.policyChange ? (
+        <Banner tone="warning" icon={<PolicyRounded />}>
+          {decision.policyChange.message}. The decision stays under v{decision.policyChange.fromVersion}.
+        </Banner>
       ) : null}
     </Card>
   );

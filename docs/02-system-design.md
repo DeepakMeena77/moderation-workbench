@@ -339,7 +339,7 @@ The AI and moderation settings are parsed with Zod in `src/server/ai/aiConfig.ts
 
 | Bound | Default | Behaviour |
 | --- | --- | --- |
-| Input budget | `AI_MAX_INPUT_TOKENS=6000` (estimated as chars / 4) | Trim author history, then the parent post, then reports. Set `trimmedContext=true`. Never trim the content or the policy. If still over budget, record an `AiRun` with status `invalid_input` and 0 tokens, and make no call. |
+| Input budget | `AI_MAX_INPUT_TOKENS=6000` (estimated as chars / 4); content <= 2,000 characters, parent post <= 1,000, the author's last 5 final actions (`ai/budget.ts`) | Trim author history, then the parent post, then reports. Set `trimmedContext=true`. Never trim the content or the policy. If still over budget, record an `AiRun` with status `invalid_input` and 0 tokens, and make no call. |
 | Output cap | `AI_MAX_OUTPUT_TOKENS=2048` | A `MAX_TOKENS` finish usually means truncated JSON, which goes into the parse ladder and then repair. |
 | Per-call timeout | `AI_TIMEOUT_MS=12000` | AbortController plus `Promise.race` (in case the SDK ignores the signal) |
 | Transient retries | `AI_MAX_ATTEMPTS=3` per model | 429, 5xx and timeouts only. Back-off 1 s, 2 s with +-25% jitter, capped at 10 s, or the server's `retryDelay` if <= 10 s (a longer hint moves to the fallback model). **No retry on 400, 401, 403 or 404.** The SDK's own retry is turned off. |
@@ -377,11 +377,16 @@ that fails Zod is **not** sent down the ladder again; it goes to the repair call
 
 ### 5.6 Combine (`moderation/combine.ts`) [AI-6, AI-7, Q-2]
 
+`needsHuman` has **12 conditions**: the 11 of AI-6 (the AI is unavailable; the action is not `none`; the AI asked
+for review; confidence below `HUMAN_CONFIDENCE_THRESHOLD`; a `high` severity finding; an `alwaysEscalate` clause;
+rules and AI disagree; an invalid citation; an unverified quote; the case was reported; `insufficientContext`) plus
+the AI-8 injection signal from `ai/prompts.ts`. Each adds one or more plain-language reasons.
+
 ```
 action     = max(lowered AI action, defaultAction of each rule-hit clause)   // never above allowed
 severity   = max over findings
 confidence = AI overall confidence (after caps), or null when the AI is unavailable
-needsHuman = any(AI-6 reasons, or an AI-8 injection signal from ai/prompts.ts) -> reasons[] in plain language (AI reasons prefixed "AI:")
+needsHuman = any of 12 conditions -> reasons[] in plain language (AI reasons prefixed "AI:")
 autoClear  = AUTO_CLEAR_ENABLED && AI ok && 0 findings && 0 reports && confidence >= 0.85 && reasons empty
 priority   = Q-2 formula
 ```
@@ -429,7 +434,11 @@ priority   = Q-2 formula
     waiting)
   - an admin **Process pending** button (`POST /api/jobs/run`)
   - an optional external cron hitting `GET /api/jobs/tick` with the `x-cron-secret` header (never in the URL). The Vercel Hobby plan's cron runs
-    only daily, so use cron-job.org for every 5 minutes.
+    only daily, so use cron-job.org for every 5 minutes. The tick answers 404 while `CRON_SECRET` is unset or
+    shorter than 16 characters, and 401 for a missing or wrong header (compared in constant time).
+- **Retry** (admin, on `/status`): `POST /api/jobs/:id/retry` resets one `failed` job to `queued` with
+  `attempts=0`, due at the database's `now()`, and writes `job.retried`; a job of a re-evaluation run also gives
+  back one from the run's `failed` count. Any other status answers 409 `INVALID_TRANSITION`.
 - **Re-evaluation** [POL-3]. Publishing (one transaction):
   1. set v(n) to `retired`, then insert v(n+1) as `active` (the server assigns n+1; a `version` in the pasted JSON is ignored)
   2. create a `ReevaluationRun` with `total` = count of unresolved cases
@@ -484,7 +493,7 @@ Lists use `?cursor=&limit=`.
 | GET `/api/audit`, GET `/api/audit/verify` | staff | audit | [AUD-3, 5] |
 | GET `/api/metrics` | staff | metrics | [OPS-6] |
 | GET `/api/status` (public), GET `/api/health` (public) | - | status | [OPS-1, 2] |
-| POST `/api/jobs/run`, GET `/api/jobs/tick`, POST `/api/jobs/:id/retry` | admin, `CRON_SECRET`, admin | jobs | [OPS-4] |
+| POST `/api/jobs/run`, GET `/api/jobs/tick`, GET `/api/jobs/failed`, POST `/api/jobs/:id/retry` | admin, `x-cron-secret` header (public route), admin, admin | jobs | [OPS-4] Run and tick answer the runner summary `{claimed, succeeded, requeued, failed, exhausted}`. Tick: 404 when no secret is configured, 401 for a wrong header. Failed: the 20 most recent failed jobs and the total. Retry: 409 `INVALID_TRANSITION` unless the job failed |
 
 **Error codes:**
 
@@ -569,7 +578,9 @@ Lists use `?cursor=&limit=`.
   as `SAME_REVIEWER`), `http.ts` appends `access.denied` (`entityType: route`, `entityId` = the route name,
   `after: {method, code, role}`) in its own transaction, after the failed one has rolled back. It is best effort:
   a failure is logged as `audit.write_failed` and the 403 is unchanged. Requests without a known actor (no
-  session, cross-site) are only logged, so anonymous traffic cannot fill the trail.
+  session, cross-site) are only logged, so anonymous traffic cannot fill the trail. A signed-in user who opens a
+  page their role may not use (the Forbidden page) is recorded the same way by `guards.getPageAccess`, with
+  `entityType: page` and the route pattern (`/queue/[caseId]`) as `entityId`.
 - **List [AUD-5]:** `GET /api/audit?actorType=&action=&entity=&from=&to=&q=&cursor=&limit=`, newest first.
   `from` and `to` are ISO instants (`[from, to)`; the page turns the viewer's local dates into them). `q`
   matches the entity ID, the action, the request ID, the actor's name or email, or `#<event id>`.
@@ -584,7 +595,7 @@ Lists use `?cursor=&limit=`.
     `appeal.resolved`
   - `policy.published`
   - `reevaluation.started`, `reevaluation.retried`
-  - `job.failed`
+  - `job.failed`, `job.retried`
   - `access.denied`
 
 ---
@@ -645,13 +656,14 @@ Demo sign-in is not limited: it takes no credentials.
 | Database | `DATABASE_URL` (pooled), `DIRECT_URL` (migrations) |
 | Session | `SESSION_SECRET` (>= 32 characters) |
 | Demo | `DEMO_MODE`, `DEMO_PASSWORD` |
-| AI provider | `AI_PROVIDER` (`gemini` or `mock`), `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` |
+| AI provider | `AI_PROVIDER` (`gemini` or `mock`, default `mock`), `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.5-flash-lite`), `GEMINI_FALLBACK_MODEL` (default `gemini-3.6-flash`; empty turns the fallback off) |
 | AI bounds | `AI_MAX_CALLS_PER_DAY`, `AI_TIMEOUT_MS`, `AI_DEADLINE_MS`, `AI_MAX_ATTEMPTS`, `AI_MAX_REPAIRS`, `AI_MIN_INTERVAL_MS`, `AI_MAX_INPUT_TOKENS`, `AI_MAX_OUTPUT_TOKENS` |
 | AI pricing | `AI_PRICE_INPUT_PER_MTOK`, `AI_PRICE_OUTPUT_PER_MTOK` |
 | Moderation | `AUTO_CLEAR_ENABLED`, `AUTO_CLEAR_MIN_CONFIDENCE`, `HUMAN_CONFIDENCE_THRESHOLD`, `APPEAL_WINDOW_DAYS` |
-| Jobs | `JOB_LEASE_MS`, `JOB_BUDGET_MS`, `CRON_SECRET` |
+| Jobs | `JOB_LEASE_MS`, `JOB_BUDGET_MS`, `CRON_SECRET` (optional; >= 16 characters turns on `GET /api/jobs/tick`) |
 | Logging | `LOG_LEVEL` |
-| Tests | `TEST_DATABASE` (`true` only in `.env.test`; integration tests refuse to run without it) |
+| Tests | `TEST_DATABASE` (`true` only in `.env.test`; integration tests refuse to run without it), `BASE_URL` (Playwright target; unset starts a local server), `CI` (set by GitHub Actions) |
+| Set by the platform | `NODE_ENV` (Next.js), `VERCEL_GIT_COMMIT_SHA` (Vercel; the release on `/status`), `BUILD_TIME` (`next.config.ts`, at build) |
 
 **Startup checks:**
 

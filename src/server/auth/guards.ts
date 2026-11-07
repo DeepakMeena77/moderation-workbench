@@ -1,8 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import type { Role } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { getConfig } from '../config';
+import { getLogger } from '../logger';
+import { recordPageDenied } from '../services/audit';
 import { DEMO_ACCOUNTS } from './demo';
 import { getActorFromToken, type Actor } from './session';
 import { SESSION_COOKIE, verifySessionToken } from './token';
@@ -29,10 +32,21 @@ export interface PageAccess {
   allowed: boolean;
 }
 
-/** The signed-in actor and whether their role may open a page that allows `roles`. */
-export async function getPageAccess(roles: readonly Role[]): Promise<PageAccess> {
+/**
+ * The signed-in actor and whether their role may open a page that allows `roles`. A refusal is written to the
+ * audit trail as access.denied (AUD-4), best effort, like a 403 from an API route. `page` is the route pattern
+ * ("/queue/[caseId]"), never the concrete URL.
+ */
+export async function getPageAccess(roles: readonly Role[], page: string): Promise<PageAccess> {
   const actor = await requirePageActor();
-  return { actor, allowed: roles.includes(actor.role) };
+  const allowed = roles.includes(actor.role);
+  if (!allowed) {
+    const requestId = randomUUID();
+    const log = getLogger().child({ requestId });
+    log.warn({ event: 'access.denied', page, userId: actor.id, role: actor.role, required: roles });
+    await recordPageDenied(actor, page, requestId, log);
+  }
+  return { actor, allowed };
 }
 
 /**

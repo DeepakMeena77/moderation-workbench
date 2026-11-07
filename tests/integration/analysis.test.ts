@@ -6,7 +6,9 @@ import type { AiProvider } from '@/server/ai/provider';
 import { getDb } from '@/server/db';
 import { runAnalyzeJob } from '@/server/jobs/handlers';
 import { runPendingJobs } from '@/server/jobs/runner';
+import { prepareAnalysis } from '@/server/services/analysis';
 import { createPost } from '@/server/services/content';
+import { decide } from '@/server/services/decisions';
 import { actorFor, installPolicy } from './helpers/moderation';
 import { createUser } from './helpers/users';
 
@@ -230,5 +232,42 @@ describe('analysis with the mock AI', () => {
     expect(await db.analysis.count()).toBe(0);
     expect(await db.aiRun.count()).toBe(1);
     expect((await db.content.findUniqueOrThrow({ where: { id: created.id } })).visibility).toBe('visible');
+  });
+});
+
+describe('author history in the AI context (AI-11)', () => {
+  it("[AI-11] the context carries the author's last final actions, newest first, and nobody else's", async () => {
+    const author = await createUser('author');
+    const other = await createUser('author');
+    const moderator = actorFor(await createUser('moderator'));
+    const decided = async (who: typeof author, body: string, final: 'label' | 'limit') => {
+      const created = await createPost(actorFor(who), { body }, 'req-history-01');
+      await runPendingJobs();
+      const kase = await getDb().case.findUniqueOrThrow({ where: { id: created.caseId } });
+      const analysisId = kase.currentAnalysisId ?? '';
+      await decide(
+        moderator,
+        kase.id,
+        final === 'label'
+          ? { kind: 'approve', analysisId }
+          : {
+              kind: 'modify',
+              analysisId,
+              finalAction: 'limit',
+              clauseCodes: ['HAR-1'],
+              reasonCategory: 'severity_too_low',
+              rationale: 'Repeated insults at the same person.',
+            },
+        'req-history-02',
+      );
+    };
+    await decided(author, 'You are a worthless idiot', 'label');
+    await decided(author, 'You are a total idiot, again', 'limit');
+    await decided(other, 'You are an idiot too', 'limit');
+
+    const next = await createPost(actorFor(author), { body: 'A calm post about the weather' }, 'req-history-03');
+    const prepared = await prepareAnalysis(next.caseId);
+    if ('skipped' in prepared) throw new Error('the new case should be analysable');
+    expect(prepared.classifyInput.authorHistory).toEqual(['limit', 'label']);
   });
 });

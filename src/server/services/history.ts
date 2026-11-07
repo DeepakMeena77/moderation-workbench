@@ -3,6 +3,7 @@ import type { Actor } from '../auth/session';
 import { getDb } from '../db';
 import { AppError } from '../errors';
 import { getLogger } from '../logger';
+import { policyChangeSince, type PolicyChange } from '../policy/diff';
 import type { ModAction } from '../policy/schema';
 import { parseStoredBrief } from './appealBriefs';
 import { appealability, clauseList, formatDeadline, plainAppealText, plainDecisionText } from './appeals';
@@ -38,6 +39,8 @@ export interface HistoryEvent {
   policyVersion: number | null;
   /** Staff only: label and value pairs (AI status, model, tokens, cost...). Never present in the author view. */
   facts?: Array<{ label: string; value: string }>;
+  /** Decisions only (POL-4): "Policy changed since this decision (v1 -> v2)" when a newer version is active. */
+  policyChange?: PolicyChange;
 }
 
 export interface HistoryAuditEvent {
@@ -66,6 +69,8 @@ export interface ContentHistory {
   /** Staff only: every audit event of the item, its case, analyses, decisions and appeals. */
   auditEvents?: HistoryAuditEvent[];
 }
+
+const withPolicyChange = (change: PolicyChange | null) => (change ? { policyChange: change } : {});
 
 const KIND_ORDER: Record<HistoryEventKind, number> = {
   created: 0,
@@ -125,7 +130,7 @@ export async function getContentHistory(
     throw new AppError('FORBIDDEN', 'You can only see the history of your own content.');
   }
 
-  const [kase, titles] = await Promise.all([
+  const [kase, titles, activePolicy] = await Promise.all([
     db.case.findUnique({
       where: { contentId },
       select: {
@@ -188,7 +193,10 @@ export async function getContentHistory(
       },
     }),
     clauseTitlesByVersion(),
+    db.policy.findFirst({ where: { status: 'active' }, select: { version: true } }),
   ]);
+  // POL-4: a decision keeps its policy version; when a newer one is active, both views say so.
+  const changeSince = (version: number) => (activePolicy ? policyChangeSince(version, activePolicy.version) : null);
 
   const titlesFor = (version: number) => titles.get(version) ?? new Map<string, string>();
   const noun = content.type === 'post' ? 'post' : 'comment';
@@ -268,6 +276,7 @@ export async function getContentHistory(
         ],
         action: d.finalAction,
         policyVersion: d.policyVersion,
+        ...withPolicyChange(changeSince(d.policyVersion)),
       });
     } else {
       const window = appealability(
@@ -293,6 +302,7 @@ export async function getContentHistory(
         ],
         action: d.finalAction,
         policyVersion: d.policyVersion,
+        ...withPolicyChange(changeSince(d.policyVersion)),
       });
     }
   }

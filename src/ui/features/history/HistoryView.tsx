@@ -7,6 +7,7 @@ import FlagRounded from '@mui/icons-material/FlagRounded';
 import ForumRounded from '@mui/icons-material/ForumRounded';
 import GavelRounded from '@mui/icons-material/GavelRounded';
 import PersonSearchRounded from '@mui/icons-material/PersonSearchRounded';
+import PolicyRounded from '@mui/icons-material/PolicyRounded';
 import PsychologyRounded from '@mui/icons-material/PsychologyRounded';
 import RuleRounded from '@mui/icons-material/RuleRounded';
 import VerifiedRounded from '@mui/icons-material/VerifiedRounded';
@@ -18,6 +19,7 @@ import Typography from '@mui/material/Typography';
 import { useRouter } from 'next/navigation';
 import { useId, useState, type ReactElement } from 'react';
 import { useHistory, type ContentHistory, type HistoryEvent, type HistoryEventKind } from '../../api/hooks';
+import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { IconButton } from '../../components/IconButton';
@@ -57,6 +59,11 @@ function EventBody({ event }: { event: HistoryEvent }) {
           {line}
         </Typography>
       ))}
+      {event.policyChange ? (
+        <Banner tone="warning" icon={<PolicyRounded />}>
+          {event.policyChange.message}. The decision stays under v{event.policyChange.fromVersion}.
+        </Banner>
+      ) : null}
       {event.facts && event.facts.length > 0 ? (
         <Box
           component="dl"

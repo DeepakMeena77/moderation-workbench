@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'My content - Moderation Workbench' }
 
 // My content (03 sec. 6.3): the author's items, decisions and appeals.
 export default async function MyContentPage() {
-  const { actor, allowed } = await getPageAccess(PAGE_ROLES.me);
+  const { actor, allowed } = await getPageAccess(PAGE_ROLES.me, '/me');
   if (!allowed) return <Forbidden role={actor.role} />;
   return <MyContentView />;
 }

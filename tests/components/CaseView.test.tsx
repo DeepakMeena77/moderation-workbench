@@ -173,6 +173,7 @@ describe('case page', () => {
             reasonCategory: 'severity_too_low',
             rationale: 'Repeated insults at the same person.',
             createdAt: new Date().toISOString(),
+            policyChange: null,
           },
         })}
         onReload={() => undefined}
@@ -180,6 +181,37 @@ describe('case page', () => {
     );
     expect(screen.getByText(/Mo Reviewer chose to modify the recommendation/)).toBeInTheDocument();
     expect(screen.getByText(/reason: Severity too low/)).toBeInTheDocument();
+    expect(screen.queryByText(/Policy changed since this decision/)).toBeNull();
+  });
+
+  it('[POL-4] a decision made under an older policy says the policy changed since, and keeps its version', () => {
+    renderWithProviders(
+      <CaseBody
+        detail={makeDetail({
+          status: 'resolved',
+          permissions: { canDecide: false, canReanalyze: false, canReopen: false, readOnly: false },
+          decision: {
+            id: 'd1',
+            kind: 'approve',
+            decider: { id: 'm1', name: 'Mo Reviewer' },
+            analysisSeq: 1,
+            policyVersion: 1,
+            recommendedAction: 'label',
+            finalAction: 'label',
+            clauseCodes: ['HAR-1'],
+            reasonCategory: null,
+            rationale: null,
+            createdAt: new Date().toISOString(),
+            policyChange: { fromVersion: 1, toVersion: 2, message: 'Policy changed since this decision (v1 -> v2)' },
+          },
+        })}
+        onReload={() => undefined}
+      />,
+    );
+    expect(
+      screen.getByText('Policy changed since this decision (v1 -> v2). The decision stays under v1.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Policy v1, analysis v1/)).toBeInTheDocument();
   });
 
   it('[SEC-3] content and parent text with markup render as text', () => {

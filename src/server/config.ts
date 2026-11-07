@@ -5,6 +5,7 @@ import { z } from 'zod';
 const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'] as const;
 
 export const SESSION_SECRET_MIN_LENGTH = 32;
+export const CRON_SECRET_MIN_LENGTH = 16;
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -17,6 +18,9 @@ const envSchema = z.object({
   // Jobs (S2, docs/02-system-design.md sec. 6).
   JOB_LEASE_MS: z.coerce.number().int().min(1000).max(900_000).default(120_000),
   JOB_BUDGET_MS: z.coerce.number().int().min(1000).max(300_000).default(50_000),
+  // The external cron's shared secret for GET /api/jobs/tick. Optional: a missing or short value (such as the
+  // .env.example placeholder) only disables the tick; it never stops the app from starting.
+  CRON_SECRET: z.string().optional(),
   // Appeals (S5, APP-1): how long after a decision its author may appeal.
   APPEAL_WINDOW_DAYS: z.coerce.number().int().min(1).max(365).default(14),
 });
@@ -54,6 +58,8 @@ export interface AppConfig {
     leaseMs: number;
     /** Wall-clock budget of one runner tick, under the route's maxDuration. */
     budgetMs: number;
+    /** The x-cron-secret value GET /api/jobs/tick accepts; null disables the tick. */
+    cronSecret: string | null;
   };
   appeals: {
     /** APP-1: an appeal must arrive within this many days of the decision. */
@@ -89,7 +95,11 @@ export function parseConfig(env: Record<string, string | undefined>): AppConfig 
       commitSha: value.VERCEL_GIT_COMMIT_SHA ?? null,
       buildTime: value.BUILD_TIME ?? null,
     },
-    jobs: { leaseMs: value.JOB_LEASE_MS, budgetMs: value.JOB_BUDGET_MS },
+    jobs: {
+      leaseMs: value.JOB_LEASE_MS,
+      budgetMs: value.JOB_BUDGET_MS,
+      cronSecret: value.CRON_SECRET && value.CRON_SECRET.length >= CRON_SECRET_MIN_LENGTH ? value.CRON_SECRET : null,
+    },
     appeals: { windowDays: value.APPEAL_WINDOW_DAYS },
   };
 }
