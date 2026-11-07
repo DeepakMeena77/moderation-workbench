@@ -3,14 +3,16 @@
 import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded';
 import GavelRounded from '@mui/icons-material/GavelRounded';
 import PriorityHighRounded from '@mui/icons-material/PriorityHighRounded';
+import RuleRounded from '@mui/icons-material/RuleRounded';
 import Box from '@mui/material/Box';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
+import { ActionTag, SeverityTag } from '../../components/ModerationTags';
 import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { Tag } from '../../components/Tag';
@@ -25,10 +27,10 @@ import { ReevaluationProgress } from './ReevaluationProgress';
 // Compare (two selects + DiffView) and, for admins, the 4-step Publish flow and the re-evaluation progress card.
 // Everyone may read the policy; only staff see run progress, and only admins publish.
 
-function signalSummary(clause: PolicyClause): string[] {
+/** Short rule signals, shown as tags. Keywords can be long, so they are listed as text instead. */
+function signalTags(clause: PolicyClause): string[] {
   const s = clause.signals;
   const parts: string[] = [];
-  if (s.keywords?.length) parts.push(`Keywords: ${s.keywords.join(', ')}`);
   if (s.patterns?.length) parts.push(`${s.patterns.length} ${s.patterns.length === 1 ? 'pattern' : 'patterns'}`);
   if (s.linkThreshold !== undefined) parts.push(`${s.linkThreshold}+ links`);
   if (s.contactDetails) parts.push('Contact details');
@@ -36,8 +38,25 @@ function signalSummary(clause: PolicyClause): string[] {
   return parts;
 }
 
+/** One labelled row of the clause facts: the label on the left (stacked above on compact), the value on the right. */
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Box sx={{ display: 'contents' }}>
+      <Typography component="dt" variant="caption" color="text.secondary" sx={{ pt: { sm: 1 } }}>
+        {label}
+      </Typography>
+      <Box component="dd" sx={{ m: 0, mb: { xs: 2, sm: 0 }, display: 'flex', flexWrap: 'wrap', gap: 2, minWidth: 0 }}>
+        {children}
+      </Box>
+    </Box>
+  );
+}
+
+// A clause as a card of facts (03 sec. 4): each fact has its own labelled row and its semantic tag (icon + tonal
+// colour), so severity, the default action and the allowed actions read as different things at a glance.
 function ClauseItem({ clause }: { clause: PolicyClause }) {
-  const signals = signalSummary(clause);
+  const tags = signalTags(clause);
+  const keywords = clause.signals.keywords ?? [];
   return (
     <Box
       component="li"
@@ -49,30 +68,56 @@ function ClauseItem({ clause }: { clause: PolicyClause }) {
         backgroundColor: m3(t).cardNested,
         display: 'flex',
         flexDirection: 'column',
-        gap: 2,
+        gap: 3,
         minWidth: 0,
       })}
     >
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
         <Tag label={clause.code} tone="secondary" />
-        <Typography variant="h4" component="h3">
+        <Typography variant="h4" component="h3" sx={{ flex: '1 1 auto', minWidth: 0, overflowWrap: 'anywhere' }}>
           {clause.title}
         </Typography>
+        {clause.alwaysEscalate ? <Tag label="Always to a human" tone="warning" icon={<PriorityHighRounded />} /> : null}
       </Box>
       <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
         {clause.text}
       </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-        <Tag label={`Severity: ${clause.defaultSeverity}`} />
-        <Tag label={`Default: ${clause.defaultAction}`} />
-        <Tag label={`Allowed: ${clause.allowedActions.join(', ')}`} />
-        {clause.alwaysEscalate ? <Tag label="Always to a human" tone="warning" icon={<PriorityHighRounded />} /> : null}
+      <Box
+        component="dl"
+        aria-label={`${clause.code} rules`}
+        sx={{
+          m: 0,
+          display: 'grid',
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'minmax(0, max-content) minmax(0, 1fr)' },
+          columnGap: 6,
+          rowGap: { xs: 1, sm: 2 },
+          alignItems: 'start',
+        }}
+      >
+        <Fact label="Severity">
+          <SeverityTag severity={clause.defaultSeverity} />
+        </Fact>
+        <Fact label="Default action">
+          <ActionTag action={clause.defaultAction} />
+        </Fact>
+        <Fact label="Allowed actions">
+          {clause.allowedActions.map((action) => (
+            <ActionTag key={action} action={action} />
+          ))}
+        </Fact>
+        {tags.length > 0 || keywords.length > 0 ? (
+          <Fact label="Rule signals">
+            {tags.map((tag) => (
+              <Tag key={tag} label={tag} icon={<RuleRounded />} />
+            ))}
+            {keywords.length > 0 ? (
+              <Typography variant="body2" sx={{ flexBasis: '100%', overflowWrap: 'anywhere' }}>
+                Keywords: {keywords.join(', ')}
+              </Typography>
+            ) : null}
+          </Fact>
+        ) : null}
       </Box>
-      {signals.length > 0 ? (
-        <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-          Rule signals: {signals.join('; ')}
-        </Typography>
-      ) : null}
     </Box>
   );
 }

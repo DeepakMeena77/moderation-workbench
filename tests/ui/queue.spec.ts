@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { horizontalOverflow, seriousAxeViolations } from './support/a11y';
 import { openPage, signInAs } from './support/auth';
 import { auditStyles } from './support/styleAudit';
+import { uniqueWords } from './support/unique';
 
 // The Queue and Case pages (docs/03-ui-ux.md sec. 5.1, 6.5, 6.6; Q-1, Q-3, HUM-2..7, UX-1..4). Needs the seeded
 // database (demo users, policy v1). Each run reuses one awaiting case made by author2, or creates it.
@@ -159,7 +160,7 @@ test('[HUM-7] an admin opens the case read-only, with no decision controls', asy
 
 test('[HUM-3] a moderator rejects a recommendation: inline validation, then success, at 360 px', async ({ page }) => {
   // The marker makes the mock AI fail, so this case also shows the "AI unavailable" state next to the rule evidence.
-  const body = `UI journey ${Date.now()}: you are a worthless idiot [mock:invalid]`;
+  const body = `UI journey ${uniqueWords()}: you are a worthless idiot [mock:invalid]`;
   const caseId = await ensureCase(page, body, 'author');
   await openPage(page, `/queue/${caseId}`, 360);
   await expect(page.getByText(/AI review pending or unavailable/).first()).toBeVisible();

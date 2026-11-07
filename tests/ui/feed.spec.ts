@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { horizontalOverflow, seriousAxeViolations } from './support/a11y';
 import { openPage, signInAs } from './support/auth';
 import { auditStyles } from './support/styleAudit';
+import { uniqueWords } from './support/unique';
 
 // The Feed page (docs/03-ui-ux.md sec. 6.2; CNT-1..3, CNT-5, UX-1..4). Needs the seeded database (policy v1).
 
@@ -10,10 +11,14 @@ const ORIGIN = new URL(BASE_URL).origin;
 // One long unbroken word, so the overflow checks also cover long content (03 sec. 5).
 const FIXTURE_BODY = `UI suite post from Ben. Long word check: ${'a'.repeat(90)}`;
 
-/** Makes sure author2 has a post the author can see and report. Reuses an existing one to stay under SEC-4. */
+/**
+ * Makes sure author2 has a post the author can see and report on the feed's first page. Reuses one that is still
+ * there (to stay under SEC-4); once newer posts have pushed it off the first page, it posts a fresh one.
+ */
 async function ensurePostByAuthor2(page: Page): Promise<void> {
   await signInAs(page, 'author2');
-  const feed = await page.request.get('/api/posts?limit=50');
+  // The default page size, exactly what /feed shows first.
+  const feed = await page.request.get('/api/posts');
   expect(feed.status()).toBe(200);
   const { data } = (await feed.json()) as { data: { items: Array<{ isOwn: boolean; body: string }> } };
   if (!data.items.some((item) => item.isOwn && item.body === FIXTURE_BODY)) {
@@ -64,6 +69,8 @@ for (const scheme of ['light', 'dark'] as const) {
     test(`[CNT-1] composer validation is inline and accessible (${scheme})`, async ({ page }) => {
       await signInAs(page, 'author');
       await openPage(page, '/feed', 360);
+      // The feed list is fetched on the client, so once it shows the page is hydrated and the click is handled.
+      await expect(page.getByRole('article').first().or(page.getByText('No posts yet.'))).toBeVisible();
       await page.getByRole('button', { name: 'Post', exact: true }).click();
       await expect(page.getByText('Write at least 1 character.')).toBeVisible();
       await expect(page.getByLabel('Write a post')).toBeFocused();
@@ -86,10 +93,12 @@ test('[CNT-1] a new post appears at once and gets its rule-only analysis within 
 }) => {
   await signInAs(page, 'author');
   await openPage(page, '/feed', 1280);
-  const text = `UI check ${Date.now()}: you are a worthless idiot`;
+  const text = `UI check ${uniqueWords()}: you are a worthless idiot`;
   await page.getByLabel('Write a post').fill(text);
   await page.getByRole('button', { name: 'Post', exact: true }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Posted - being checked against policy v1.' })).toBeVisible();
+  await expect(
+    page.getByRole('status').filter({ hasText: /^Posted - being checked against policy v\d+\.$/ }),
+  ).toBeVisible();
   const card = page.getByRole('article').filter({ hasText: text });
   await expect(card).toBeVisible();
   await expect(page.getByLabel('Write a post')).toHaveValue('');

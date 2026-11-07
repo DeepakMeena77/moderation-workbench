@@ -1,6 +1,7 @@
 # CI staged by slice (docs/05-test-plan.md sec. 11). S0: verify + the UI suite for /status. S1: the demo
 # users are seeded before the UI suite, which adds the sign-in page and the app shell.
-# S8: the verify job also runs the AI evaluation with the mock provider, as a pipeline check.
+# S8: the verify job also runs the AI evaluation with the mock provider, as a pipeline check, and the browser job
+# runs the cross-role end-to-end journey after the UI suite, on the same build and freshly seeded database.
 name: CI
 
 on:
@@ -83,6 +84,7 @@ jobs:
       - run: npm run build
       - run: npm run db:seed
       - run: npm run test:ui
+      - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:

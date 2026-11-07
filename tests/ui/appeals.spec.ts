@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { horizontalOverflow, seriousAxeViolations } from './support/a11y';
 import { openPage, signInAs, type DemoAccountKey } from './support/auth';
 import { auditStyles } from './support/styleAudit';
+import { uniqueWords } from './support/unique';
 
 // My content, history, appeals and the appeal review (docs/03-ui-ux.md sec. 6.3, 6.4, 6.7, 6.8; APP-1..5, CNT-4,
 // UX-1..4). Needs the seeded database (demo users, policy v1) and the mock AI. One fixture appeal is reused across
@@ -192,7 +193,7 @@ test('[APP-4] the review shows the three panels and the AI summary that does not
 });
 
 test('[APP-1] [APP-5] the author appeals at 360 px and a different senior overturns it', async ({ page }) => {
-  const decided = await decidedPost(page, `UI appeal journey ${Date.now()}: you are a worthless idiot`);
+  const decided = await decidedPost(page, `UI appeal journey ${uniqueWords()}: you are a worthless idiot`);
 
   // The author appeals from My content: inline validation first, then success.
   await signInAs(page, 'author');

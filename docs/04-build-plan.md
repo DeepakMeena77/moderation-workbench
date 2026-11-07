@@ -289,8 +289,9 @@ AUD-1 (for these events).
 **Scope:**
 
 - `evals/cases.json` (05 sec. 5) and `evals/run.ts` (`npm run eval`, and `-- --mock` in CI)
-- Playwright `e2e`: the main journey (author posts -> moderator decides -> author appeals -> senior resolves),
-  at 1280 and 390 px
+- Playwright `e2e`: the main journey (author posts -> moderator decides -> author appeals -> the decider is refused
+  and audited -> another senior resolves -> admin checks audit and metrics), at 1280 and 390 px (05 sec. 7); in CI
+  after the UI suite
 - Playwright `ui`, the full suite from 05 sec. 6 on every page:
   - axe in light and dark mode
   - overflow at 320-1920
@@ -301,7 +302,7 @@ AUD-1 (for these events).
   - reduced motion
   - text spacing
   - long content
-  - screenshots to `docs/screenshots/`
+  - screenshots to `docs/screenshots/` (`scripts/screenshots.ts`, run by hand; 05 sec. 6.6)
 - the manual pass from 05 sec. 6.7 and sec. 9 (hierarchy, microcopy, NVDA, a real phone)
 
 **Acceptance:** EVAL-1, EVAL-2, UX-1..4.
