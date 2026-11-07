@@ -14,12 +14,11 @@ const MAX_BYTES = 1_000_000;
 
 // Every tracked path must match one of these. Anything else is a mistake until this list is changed on purpose.
 const ALLOWED = [
-  /^(README|AGENT_USAGE|AI_NOTES|PROMPTS_USED|ABOUTME|CLAUDE)\.md$/,
+  /^(README|AGENT_USAGE|AI_NOTES|PROMPTS_USED|ABOUTME)\.md$/,
   /^\.env\.example$/,
   /^\.(gitignore|gitattributes|prettierrc(\.json)?|prettierignore|editorconfig|nvmrc|node-version)$/,
   /^\.githooks\/(pre-commit|pre-push|commit-msg)$/,
   /^\.github\/workflows\/[\w.-]+\.ya?ml$/,
-  /^\.claude\/settings\.json$/,
   /^\.vscode\/extensions\.json$/,
   /^docs\/(0[0-5]-[a-z0-9-]+|trace|RELEASE_NOTES)\.md$/,
   /^docs\/screenshots\/[\w.-]+\.png$/,
@@ -42,7 +41,7 @@ const FORBIDDEN_PATHS = [
   { re: /(^|\/)(node_modules|\.next|coverage|playwright-report|test-results|_scaffold|scratch)\//, why: 'generated or scratch folder' },
   { re: /(PLAYBOOK|ANALYSIS|NOTES_PRIVATE|TODO_PRIVATE)/i, why: 'private planning document' },
   { re: /^\.repo-guard\.local$/, why: 'private guard terms file' },
-  { re: /^\.claude\/settings\.local\.json$/, why: 'local agent settings' },
+  { re: /^(\.claude\/|CLAUDE\.md$|AGENTS\.md$|\.cursor\/|\.github\/copilot)/, why: 'local tool configuration' },
 ];
 
 // Generic content that must never be committed.
@@ -50,6 +49,7 @@ const FORBIDDEN_CONTENT = [
   { re: /recruitment\.[a-z]+\.[a-z]+\/hiring/i, why: 'assessment portal link' },
   { re: /async-task\?token=/i, why: 'assessment token' },
   { re: /C:\\Users\\|\/Users\/[A-Za-z]|F:\\Aggroso/i, why: 'local machine path' },
+  { re: /(generated|written|created) (by|with) (claude|chatgpt|copilot|gemini|an? ai\b|ai assistant)|co-authored-by:.*(claude|anthropic)|as an ai language model/i, why: 'tool attribution marker', skip: /^(AGENT_USAGE\.md|\.githooks\/commit-msg)$/ },
 ];
 
 function git(args) {
@@ -100,6 +100,7 @@ for (const file of files) {
   if (/\.(png|ico)$/i.test(file) || file === 'scripts/check-repo.mjs') continue;
   const text = staged ? git(['show', `:${file}`]) : readFileSync(full, 'utf8');
   for (const rule of FORBIDDEN_CONTENT) {
+    if (rule.skip?.test(file)) continue;
     if (rule.re.test(text)) problems.push(`${file}: contains ${rule.why}`);
   }
   for (const { term, re } of terms) {

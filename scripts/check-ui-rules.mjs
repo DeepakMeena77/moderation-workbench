@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Static checks for the design-system rules in docs/03-ui-ux.md and CLAUDE.md:
+// Static checks for the design-system rules in docs/03-ui-ux.md:
 // no elevation, no hex colours outside tokens, no raw HTML injection, spacing through the theme,
 // no outlined buttons, no borders on our surfaces.
 // Usage: node scripts/check-ui-rules.mjs
