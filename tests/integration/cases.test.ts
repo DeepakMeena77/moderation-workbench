@@ -182,13 +182,22 @@ describe('re-analyse and reopen', () => {
     const author = await createUser('author');
     const created = await postAs(author, 'You are a worthless idiot');
     await runPendingJobs();
-    for (let i = 0; i < 10; i++) {
-      expect((await reanalyzeRoute(post(`/api/cases/${created.caseId}/reanalyze`))).status).toBe(200);
+    // Pin the clock inside one 60 s window, so the 11 requests cannot straddle a window boundary on a slow run.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-07T10:05:10.000Z'));
+    try {
+      for (let i = 0; i < 10; i++) {
+        expect((await reanalyzeRoute(post(`/api/cases/${created.caseId}/reanalyze`))).status).toBe(200);
+      }
+      const limited = await reanalyzeRoute(post(`/api/cases/${created.caseId}/reanalyze`));
+      expect(limited.status).toBe(429);
+      expect(limited.headers.get('retry-after')).toBe('50');
+      expect((await readJson<ErrorBody>(limited)).error.message).toBe(
+        "You're re-analysing quickly. Try again in 50 seconds.",
+      );
+    } finally {
+      vi.useRealTimers();
     }
-    const limited = await reanalyzeRoute(post(`/api/cases/${created.caseId}/reanalyze`));
-    expect(limited.status).toBe(429);
-    expect(limited.headers.get('retry-after')).toMatch(/^\d+$/);
-    expect((await readJson<ErrorBody>(limited)).error.message).toMatch(/^You're re-analysing quickly\. Try again in/);
   });
 
   it('[Q-4] a moderator reopens an auto-cleared case into awaiting_review, audited', async () => {
