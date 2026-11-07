@@ -463,6 +463,9 @@ priority   = Q-2 formula
   Then set the priority and write the audit event (actor type `system`, and `ai` for the AI part). **It never
   touches visibility.**
 
+- **Transaction limits** (`server/db.ts`): interactive transactions wait up to 10 s for a connection and run for up
+  to 15 s. Every transaction is short; the limits only absorb a cold or busy database.
+
 ---
 
 ## 7. API
