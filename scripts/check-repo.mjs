@@ -39,7 +39,8 @@ const FORBIDDEN_PATHS = [
   { re: /(^|\/)\.env($|\.(?!example$))/, why: 'environment file with real values' },
   { re: /\.(pdf|docx?|pptx?|xlsx?|jsonl|log|zip|sqlite|db)$/i, why: 'binary, export, log or database file' },
   { re: /(^|\/)(node_modules|\.next|coverage|playwright-report|test-results|_scaffold|scratch)\//, why: 'generated or scratch folder' },
-  { re: /(PLAYBOOK|ANALYSIS|NOTES_PRIVATE|TODO_PRIVATE)/i, why: 'private planning document' },
+  // Private notes are upper-case Markdown or text files (e.g. PROMPT_PLAYBOOK.md); code such as analysis.ts is fine.
+  { re: /(^|\/)[^/]*(PLAYBOOK|ANALYSIS|NOTES_PRIVATE|TODO_PRIVATE)[^/]*\.(md|txt)$|(^|\/)build-notes\.md$/, why: 'private planning document' },
   { re: /^\.repo-guard\.local$/, why: 'private guard terms file' },
   { re: /^(\.claude\/|CLAUDE\.md$|AGENTS\.md$|\.cursor\/|\.github\/copilot)/, why: 'local tool configuration' },
 ];
