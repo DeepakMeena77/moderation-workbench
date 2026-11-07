@@ -2,7 +2,7 @@ import type { Logger } from 'pino';
 import type { z } from 'zod';
 import type { AiBounds, AiPrices } from './aiConfig';
 import { sanitizeErrorMessage, type AiRunRecord } from './aiRun';
-import { estimateCostUsd } from './cost';
+import { estimateRunCostUsd } from './cost';
 import { formatIssues } from './output';
 import { parseModelJson, type ParseStrategy } from './parse';
 import {
@@ -76,6 +76,8 @@ export interface PipelineDeps {
 export class RunState {
   attempts = 0;
   usage: TokenUsage = ZERO_USAGE;
+  /** The same usage split by the model that reported it, so each model is costed at its own prices (AI-10). */
+  readonly usageByModel = new Map<string, TokenUsage>();
   modelsTried: string[] = [];
   lastModel: string | null = null;
   fallbackUsed = false;
@@ -113,7 +115,8 @@ export function buildRunRecord(input: {
   prompt: { version: string; sha256: string };
   policyVersion: number | null;
   state: RunState;
-  prices: AiPrices;
+  /** The prices each model is billed at (cost.ts#pricesForModel). */
+  pricesFor: (model: string) => AiPrices;
   now: number;
   trimmedContext: boolean;
   outcome: RunOutcome;
@@ -130,7 +133,7 @@ export function buildRunRecord(input: {
     inputTokens: state.usage.input,
     outputTokens: state.usage.output,
     thinkingTokens: state.usage.thinking,
-    costUsd: estimateCostUsd(state.usage, input.prices),
+    costUsd: estimateRunCostUsd(state.usageByModel, input.pricesFor),
     latencyMs: input.now - state.startedAt,
     attempts: state.attempts,
     repairUsed: state.repairUsed,
@@ -253,6 +256,7 @@ export async function callModelChain(
           maxOutputTokens: bounds.maxOutputTokens,
         });
         state.usage = addUsage(state.usage, response.usage);
+        state.usageByModel.set(model, addUsage(state.usageByModel.get(model) ?? ZERO_USAGE, response.usage));
         logger.info(
           {
             event: 'ai.call',

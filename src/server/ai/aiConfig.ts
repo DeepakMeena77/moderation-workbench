@@ -25,6 +25,9 @@ const aiEnvSchema = z
     AI_MAX_OUTPUT_TOKENS: int(256, 65_536, 2_048),
     AI_PRICE_INPUT_PER_MTOK: price,
     AI_PRICE_OUTPUT_PER_MTOK: price,
+    // The fallback model's own prices. Each one, when unset, is the primary model's price.
+    AI_PRICE_FALLBACK_INPUT_PER_MTOK: price,
+    AI_PRICE_FALLBACK_OUTPUT_PER_MTOK: price,
     AUTO_CLEAR_ENABLED: z.enum(['true', 'false']).default('true'),
     AUTO_CLEAR_MIN_CONFIDENCE: ratio(0.85),
     HUMAN_CONFIDENCE_THRESHOLD: ratio(0.7),
@@ -53,6 +56,8 @@ const EXPECTED: Record<string, string> = {
   AI_MAX_OUTPUT_TOKENS: 'an integer from 256 to 65536',
   AI_PRICE_INPUT_PER_MTOK: 'a number, USD per million input tokens (required when AI_PROVIDER=gemini)',
   AI_PRICE_OUTPUT_PER_MTOK: 'a number, USD per million output tokens (required when AI_PROVIDER=gemini)',
+  AI_PRICE_FALLBACK_INPUT_PER_MTOK: 'a number, USD per million input tokens for the fallback model',
+  AI_PRICE_FALLBACK_OUTPUT_PER_MTOK: 'a number, USD per million output tokens for the fallback model',
   AUTO_CLEAR_ENABLED: 'true or false',
   AUTO_CLEAR_MIN_CONFIDENCE: 'a number from 0 to 1',
   HUMAN_CONFIDENCE_THRESHOLD: 'a number from 0 to 1',
@@ -93,7 +98,10 @@ export interface AiConfig {
   primaryModel: string;
   fallbackModel: string | null;
   bounds: AiBounds;
+  /** The primary model's prices. */
   prices: AiPrices;
+  /** The fallback model's prices; each defaults to the primary price when its variable is unset. */
+  fallbackPrices: AiPrices;
   moderation: ModerationSettings;
 }
 
@@ -138,6 +146,10 @@ export function parseAiConfig(env: Record<string, string | undefined>): AiConfig
     prices: {
       inputPerMTok: v.AI_PRICE_INPUT_PER_MTOK ?? 0,
       outputPerMTok: v.AI_PRICE_OUTPUT_PER_MTOK ?? 0,
+    },
+    fallbackPrices: {
+      inputPerMTok: v.AI_PRICE_FALLBACK_INPUT_PER_MTOK ?? v.AI_PRICE_INPUT_PER_MTOK ?? 0,
+      outputPerMTok: v.AI_PRICE_FALLBACK_OUTPUT_PER_MTOK ?? v.AI_PRICE_OUTPUT_PER_MTOK ?? 0,
     },
     moderation: {
       autoClearEnabled: v.AUTO_CLEAR_ENABLED === 'true',

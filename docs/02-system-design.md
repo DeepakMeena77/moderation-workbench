@@ -193,7 +193,7 @@ model AuditEvent { id BigInt @id @default(autoincrement()); at DateTime @default
 model RateLimit { key String; windowStart DateTime; count Int @default(0); @@id([key, windowStart]) }    [SEC-4]
 ```
 
-**One `AiRun` per pipeline run** (one classify, or one appeal brief): tokens and cost are summed over every attempt, repair and fallback; `model` is the model that produced the accepted output (or the last one tried), and `modelsTried` lists all of them. A run that makes no call (`invalid_input`, `budget_exhausted`) is still recorded with 0 tokens.
+**One `AiRun` per pipeline run** (one classify, or one appeal brief): tokens and cost are summed over every attempt, repair and fallback, and each model's tokens are costed at that model's prices (`ai/cost.ts`: the fallback model at `AI_PRICE_FALLBACK_*`, which default to the primary prices); `model` is the model that produced the accepted output (or the last one tried), and `modelsTried` lists all of them. A run that makes no call (`invalid_input`, `budget_exhausted`) is still recorded with 0 tokens.
 
 **SQL migrations added by hand:**
 
@@ -344,7 +344,7 @@ The AI and moderation settings are parsed with Zod in `src/server/ai/aiConfig.ts
 | Per-call timeout | `AI_TIMEOUT_MS=12000` | AbortController plus `Promise.race` (in case the SDK ignores the signal) |
 | Transient retries | `AI_MAX_ATTEMPTS=3` per model | 429, 5xx and timeouts only. Back-off 1 s, 2 s with +-25% jitter, capped at 10 s, or the server's `retryDelay` if <= 10 s (a longer hint moves to the fallback model). **No retry on 400, 401, 403 or 404.** The SDK's own retry is turned off. |
 | Daily budget | `AI_MAX_CALLS_PER_DAY=200` | Counted from `AiRun` rows. Above it, no call is made: status `budget_exhausted`, rule findings only, routed to a human. Protects the free quota on a public demo. |
-| Fallback model | `GEMINI_FALLBACK_MODEL` | Used once the primary model has used its retries, or immediately on 404 (model retired) or a daily-quota 429 |
+| Fallback model | `GEMINI_FALLBACK_MODEL` | Used once the primary model has used its retries, or immediately on 404 (model retired) or a daily-quota 429. Its tokens are costed at `AI_PRICE_FALLBACK_INPUT_PER_MTOK` / `AI_PRICE_FALLBACK_OUTPUT_PER_MTOK` (each defaults to the primary price); the run state keeps usage per model for this |
 | Repair | `AI_MAX_REPAIRS=1` | One extra call with the exact Zod error paths and the previous output. Then **stop**. |
 | Overall deadline | `AI_DEADLINE_MS=25000` per pipeline run | No new attempt starts after the deadline |
 | Pacing | `AI_MIN_INTERVAL_MS=4000` | Spaces calls to stay under the free-tier requests-per-minute limit |
@@ -373,7 +373,10 @@ that fails Zod is **not** sent down the ladder again; it goes to the repair call
 2. For each quote, search the content after normalising case and whitespace. Store the offsets. If a quote is not
    found, move the finding to `interpretation` and cap its confidence at 0.5 (`unverifiedQuotes[]`).
 3. Drop findings with no verified quote **and** no interpretation.
-4. Lower `proposedAction` to the strongest action allowed by the remaining clauses (`actionLowered: from -> to`).
+4. Lower `proposedAction` to the strongest action the remaining clauses allow whose rank is at or below the
+   proposal (`actionLowered: from -> to`); never raise it. `none` is always allowed, so with clauses allowing only
+   `label` and `remove`, a proposed `limit` becomes `label`, and a `label` under a clause allowing only `limit` and
+   `remove` becomes `none`.
 
 ### 5.6 Combine (`moderation/combine.ts`) [AI-6, AI-7, Q-2]
 
@@ -395,15 +398,21 @@ priority   = Q-2 formula
 
 ### 5.7 Appeal brief (`ai/appealBrief.ts`) [AI-12]
 
-- **Input:** original findings and decision, the appeal statement and evidence (escaped).
+- **Input:** original findings and decision, the appeal statement and evidence (escaped; attribute values such as
+  clause codes also escape `"` with `escapeAttr`).
 - **Output:** `{summary, newPoints[], disputedFindings:[{clauseCode, authorClaim}]}`. There is no outcome field.
 - The same bounds, ladder and AiRun logging apply.
 - `policyChangedSinceDecision` comes from the database (the active policy version differs from the decision's);
   it is computed when the appeal is read and never asked of the model.
 - **Verify:** a disputed finding must name a clause cited by the original findings or the decision; others are
   dropped (`droppedClauses`). Only the clauses the decision cited go into the prompt.
+- **Outcome language:** verify scans `summary` and `newPoints` (not `authorClaim`, which restates the author by
+  design) for recommending language in the model's own voice (`OUTCOME_LANGUAGE`: "I recommend", "should be
+  overturned", "recommends reinstating"; reporting the author's request does not match). A match keeps the brief,
+  sets `flags.outcomeLanguage`, logs `ai.brief_outcome_language` (never the text), and the appeal review shows
+  "This summary may contain a recommendation. Decide from the evidence."
 - **Storage:** the `appeal_brief` job (`jobs/handlers.ts#runAppealBriefJob`) writes `Appeal.brief` =
-  `{aiStatus, unavailableReason, summary, newPoints, disputedFindings, droppedClauses}` and `briefAiRunId` once,
+  `{aiStatus, unavailableReason, summary, newPoints, disputedFindings, droppedClauses, flags}` and `briefAiRunId` once,
   through `services/appealBriefs.ts`, with the `appeal.brief_created` audit event (actor type `ai`). An AI failure
   is a successful job: the brief records the status and the page says the summary is unavailable.
 
@@ -663,7 +672,7 @@ Demo sign-in is not limited: it takes no credentials.
 | Demo | `DEMO_MODE`, `DEMO_PASSWORD` |
 | AI provider | `AI_PROVIDER` (`gemini` or `mock`, default `mock`), `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.5-flash-lite`), `GEMINI_FALLBACK_MODEL` (default `gemini-3.6-flash`; empty turns the fallback off) |
 | AI bounds | `AI_MAX_CALLS_PER_DAY`, `AI_TIMEOUT_MS`, `AI_DEADLINE_MS`, `AI_MAX_ATTEMPTS`, `AI_MAX_REPAIRS`, `AI_MIN_INTERVAL_MS`, `AI_MAX_INPUT_TOKENS`, `AI_MAX_OUTPUT_TOKENS` |
-| AI pricing | `AI_PRICE_INPUT_PER_MTOK`, `AI_PRICE_OUTPUT_PER_MTOK` |
+| AI pricing | `AI_PRICE_INPUT_PER_MTOK`, `AI_PRICE_OUTPUT_PER_MTOK` (primary model; required when `AI_PROVIDER=gemini`), `AI_PRICE_FALLBACK_INPUT_PER_MTOK`, `AI_PRICE_FALLBACK_OUTPUT_PER_MTOK` (fallback model; optional, each defaults to the primary price) |
 | Moderation | `AUTO_CLEAR_ENABLED`, `AUTO_CLEAR_MIN_CONFIDENCE`, `HUMAN_CONFIDENCE_THRESHOLD`, `APPEAL_WINDOW_DAYS` |
 | Jobs | `JOB_LEASE_MS`, `JOB_BUDGET_MS`, `CRON_SECRET` (optional; >= 16 characters turns on `GET /api/jobs/tick`) |
 | Logging | `LOG_LEVEL` |
@@ -717,6 +726,7 @@ Demo sign-in is not limited: it takes no credentials.
   | `[mock:fakequote]` | A quote that is not in the text |
   | `[mock:badclause]` | An unknown clause |
   | `[mock:disallowed]` | An action the clause does not allow |
+  | `[mock:emptyfinding]` | A finding with no quote and an empty interpretation, otherwise an auto-clear-looking output: verification drops it and combine still sends the case to a human |
 
   The mock reports token usage so the cost code is exercised.
 

@@ -440,6 +440,8 @@ export type AppealBriefView =
       newPoints: string[];
       disputedFindings: Array<{ clauseCode: string; authorClaim: string }>;
       droppedClauses: string[];
+      /** The summary or a new point reads like a recommendation (AI-12); the page warns the reviewer. */
+      outcomeLanguage: boolean;
       model: string | null;
       costUsd: number | null;
     };
@@ -580,6 +582,7 @@ export async function getAppeal(actor: Actor, appealId: string): Promise<AppealD
             newPoints: stored.newPoints,
             disputedFindings: stored.disputedFindings,
             droppedClauses: stored.droppedClauses,
+            outcomeLanguage: stored.flags.outcomeLanguage,
             model: row.briefAiRun?.model ?? null,
             costUsd: row.briefAiRun ? Number(row.briefAiRun.costUsd) : null,
           };

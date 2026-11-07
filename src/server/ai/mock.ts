@@ -21,6 +21,7 @@ export const MOCK_MARKERS = [
   'fakequote',
   'badclause',
   'disallowed',
+  'emptyfinding',
 ] as const;
 export type MockMarker = (typeof MOCK_MARKERS)[number];
 
@@ -149,16 +150,32 @@ export function mockClassify(content: string, clauses: Set<string>, markers: Set
     });
   }
   if (markers.has('disallowed')) action = 'remove';
+  if (markers.has('emptyfinding')) {
+    // A finding with nothing a human could check: no quote and no interpretation. Verification drops it, and the
+    // rest of the output looks safe to auto-clear, so only the combine safeguard (AI-6) keeps it for a human.
+    findings.push({
+      clauseCode: 'HAR-1',
+      evidenceType: 'interpretation',
+      quotes: [],
+      interpretation: '',
+      severity: 'low',
+      severityReason: 'No reason given.',
+      confidence: 0.95,
+      confidenceReason: 'No reason given.',
+    });
+  }
 
-  const severity = maxSeverity(findings.map((f) => f.severity)) ?? 'low';
+  // The output's own confidence and review request describe the findings it can show; the empty finding adds none.
+  const shown = findings.filter((f) => f.quotes.length > 0 || f.interpretation.trim() !== '');
+  const severity = maxSeverity(shown.map((f) => f.severity)) ?? 'low';
   return {
     findings,
     proposedAction: action,
     overallSeverity: severity,
-    overallConfidence: findings.length === 0 ? 0.9 : Math.min(...findings.map((f) => f.confidence)),
-    confidenceReason: findings.length === 0 ? 'No policy signal found.' : 'Based on the quoted wording.',
-    needsHumanReview: findings.length > 0,
-    humanReviewReasons: findings.length > 0 ? ['A policy clause may apply.'] : [],
+    overallConfidence: shown.length === 0 ? 0.9 : Math.min(...shown.map((f) => f.confidence)),
+    confidenceReason: shown.length === 0 ? 'No policy signal found.' : 'Based on the quoted wording.',
+    needsHumanReview: shown.length > 0,
+    humanReviewReasons: shown.length > 0 ? ['A policy clause may apply.'] : [],
     insufficientContext: false,
   };
 }
