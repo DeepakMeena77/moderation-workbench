@@ -7,14 +7,16 @@ import WarningRounded from '@mui/icons-material/WarningRounded';
 import Box from '@mui/material/Box';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useStatus, type CheckState, type StatusCheck, type StatusReport } from '../../api/hooks';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { QueryState } from '../../components/QueryState';
 import { Tag, type TagTone } from '../../components/Tag';
+import { shortDateTime } from '../feed/format';
 
-// Public status page (docs/03-ui-ux.md sec. 6.12). S0 shows the app and database checks; S7 adds the rest.
+// Public status page (docs/03-ui-ux.md sec. 6.12): the overall state and one card per check. Timestamps show as
+// readable local times, with the ISO value in the tooltip.
 
 const STATE_TAG: Record<CheckState, { label: string; tone: TagTone; icon: ReactElement<SvgIconProps> }> = {
   ok: { label: 'Operational', tone: 'success', icon: <CheckCircleRounded /> },
@@ -64,9 +66,23 @@ const DETAIL_LABEL: Record<string, string> = {
   avgLatencyMs: 'Avg latency (ms)',
 };
 
-function formatDetail(key: string, value: string | number | null): string {
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
+/** An ISO timestamp as a readable local time ("7 Nov, 19:13"); the exact ISO value stays in the tooltip. */
+function LocalTime({ iso }: { iso: string }) {
+  return (
+    <time dateTime={iso} title={iso}>
+      {shortDateTime(iso)}
+    </time>
+  );
+}
+
+function formatDetail(key: string, value: string | number | null): ReactNode {
   if (value === null) return '-';
   if (key === 'release' && typeof value === 'string' && /^[0-9a-f]{40}$/.test(value)) return value.slice(0, 7);
+  if (typeof value === 'string' && ISO_TIME.test(value) && !Number.isNaN(Date.parse(value))) {
+    return <LocalTime iso={value} />;
+  }
   return String(value);
 }
 
@@ -107,7 +123,7 @@ function Report({ report }: { report: StatusReport }) {
           <Typography variant="body1">{OVERALL_TEXT[report.overall]}</Typography>
         </Box>
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
-          Checked at {new Date(report.checkedAt).toLocaleTimeString()}. Refreshes every 30 seconds.
+          Checked <LocalTime iso={report.checkedAt} />. Refreshes every 30 seconds.
         </Typography>
       </Card>
       <Box

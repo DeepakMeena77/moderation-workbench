@@ -206,6 +206,8 @@ model RateLimit { key String; windowStart DateTime; count Int @default(0); @@id(
    `visible`, and the flag is transaction-local, so it never outlives the decision that set it.
 4. Indexes: `Case(status, priority DESC, createdAt)`, `Job(status, runAfter)`, `AuditEvent(entityType, entityId)`,
    `AuditEvent(at)`.
+5. S7: `audit_canonical_json(jsonb)` and `audit_event_hash(prevHash, "AuditEvent")`, which chained the existing
+   events once (sec. 9); the `forbid_mutation()` trigger is attached to `AuditEvent` after that backfill.
 
 ---
 
@@ -533,9 +535,26 @@ Lists use `?cursor=&limit=`.
 ## 9. Audit [AUD-1..5]
 
 - `audit.append(tx, event)` takes `pg_advisory_xact_lock(7331)` (which serialises the chain), reads the last
-  hash, and computes `hash = sha256(prevHash + canonicalJson(event))`.
+  hash, and computes `hash = sha256(prevHash + canonicalJson(event))`. The first event's `prevHash` is 64 zeros.
+  - The hashed event is `{action, actorId, actorType, after, at, before, entityId, entityType, policyVersion,
+    requestId}` (`at` as an ISO string, missing summaries as `null`). Canonical JSON sorts object keys by code
+    point at every level and has no whitespace. `id` is not hashed: the `prevHash` links fix the order.
+  - The lock relies on READ COMMITTED (every transaction here), so the read after the lock sees the previous
+    holder's commit.
 - It is always called inside the caller's transaction.
-- `verify()` walks the events in `id` order and returns `{intact, checked, firstBrokenId}`.
+- `verify()` walks the events in `id` order and returns `{intact, checked, firstBrokenId}`: an event is broken
+  when its own hash does not match its content or its `prevHash` does not match the previous event's hash (a
+  deleted or rewritten predecessor). `checked` counts up to and including the first broken event.
+- The S7 migration chained the events written before it with `audit_event_hash()`, the SQL twin of the app's
+  hash (`audit_canonical_json()`); an integration test checks that both give the same hash.
+- **Denied access [AUD-4]:** when a route answers 403 to a signed-in caller (the role check or a service rule such
+  as `SAME_REVIEWER`), `http.ts` appends `access.denied` (`entityType: route`, `entityId` = the route name,
+  `after: {method, code, role}`) in its own transaction, after the failed one has rolled back. It is best effort:
+  a failure is logged as `audit.write_failed` and the 403 is unchanged. Requests without a known actor (no
+  session, cross-site) are only logged, so anonymous traffic cannot fill the trail.
+- **List [AUD-5]:** `GET /api/audit?actorType=&action=&entity=&from=&to=&q=&cursor=&limit=`, newest first.
+  `from` and `to` are ISO instants (`[from, to)`; the page turns the viewer's local dates into them). `q`
+  matches the entity ID, the action, the request ID, the actor's name or email, or `#<event id>`.
 - **Event names:**
   - `content.created`
   - `report.created`
@@ -545,7 +564,7 @@ Lists use `?cursor=&limit=`.
   - `visibility.changed`
   - `appeal.created`, `appeal.assigned`, `appeal.resolved`
   - `policy.published`
-  - `reevaluation.started`, `reevaluation.finished`
+  - `reevaluation.started`, `reevaluation.retried`, `reevaluation.finished`
   - `job.failed`
   - `access.denied`
 
@@ -640,13 +659,13 @@ Demo sign-in is not limited: it takes no credentials.
   | AI usage | Last 24 hours | - |
 
   There is no live LLM probe: the LLM check reads recent `AiRun` rows and the config, so viewing the status page never spends quota and no service calls the AI directly.
-- **`metrics.ts`** [OPS-6]:
+- **`metrics.ts`** [OPS-6], over the last 7 UTC calendar days (today included):
   - agreement = decisions where `finalAction = recommendedAction`, over decisions on analyses with
     `aiStatus = ok`
-  - override reasons grouped by `reasonCategory`
-  - AI failures by status
-  - p50 and p90 latency
-  - tokens and cost by day
+  - overrides = decisions that rejected or modified the recommendation, grouped by `reasonCategory`
+  - AI failures by status, and the failure rate over all runs
+  - p50 and p90 latency over runs that reached a provider (`invalid_input` and `budget_exhausted` make no call)
+  - tokens and cost by day (every day listed, zeros included), plus the last 24 hours
 - **Mock provider:** deterministic keyword heuristics plus markers that force each path:
 
   | Marker | Forces |
