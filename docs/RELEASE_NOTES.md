@@ -1,5 +1,17 @@
 # Release notes
 
+## 1.0.2 (2026-11-08)
+
+- The visibility trigger also checks the actor: a change needs `app.actor_id` naming a user whose stored role is
+  moderator or senior moderator (migration `20261108130000_visibility_actor_role`, replaces one function only).
+- An integration test pauses the model call and shows no database transaction is open while it runs.
+- Verify lowers a proposed action to the strongest allowed action at or below it, never raising it.
+- Recommending language in the appeal brief's summary is flagged, logged and shown as a warning to the reviewer.
+- Fallback-model runs are costed at their own prices when `AI_PRICE_FALLBACK_*` is set.
+- Attribute values in the appeal brief prompt are escaped.
+- Metrics show how many auto-cleared cases were later reported or reopened.
+- The evaluation reports exact action agreement; E12 is stricter; three live runs are kept (19/21 each).
+
 ## 1.0.1 (2026-11-08)
 
 - A finding that verification had to drop, or a proposed action lowered to what the cited clauses allow, is now a

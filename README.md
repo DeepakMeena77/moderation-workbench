@@ -7,8 +7,8 @@ versioned policy, and **humans make every moderation decision**. Authors can app
 moderator. Every state change is written to a tamper-evident audit trail.
 
 > **The AI recommends; humans decide.** Only one function can change what users see, and it refuses any actor
-> that is not a human moderator. A database trigger adds defence in depth: it rejects a visibility change in any
-> transaction that did not pass through that function. The AI cannot label, limit or remove content, or resolve an
+> that is not a human moderator. A database trigger adds defence in depth: it rejects a visibility change unless the
+> transaction names an actor whose stored role is moderator or senior moderator. The AI cannot label, limit or remove content, or resolve an
 > appeal. The only thing that happens without a person is **auto-clear**: a case with no rule or AI findings, no
 > reports and AI confidence of at least 0.85 is closed as "auto-cleared" without changing what anyone sees. It can
 > be turned off with `AUTO_CLEAR_ENABLED=false`, and a moderator can reopen any auto-cleared case.
@@ -51,7 +51,7 @@ Demo accounts: `author@`, `author2@`, `moderator@`, `senior@`, `senior2@`, `admi
   check; refused API calls and refused pages are recorded as `access.denied`.
 - **Operations:** a public status page that checks the whole journey, an admin jobs panel (run pending jobs,
   retry failed ones), structured logs with request IDs, and a metrics page (AI vs human agreement, override
-  reasons, failures, latency, cost).
+  reasons, failures, latency, cost, and how many auto-cleared cases were later reported or reopened).
 
 ## Requirements and evidence
 
@@ -172,9 +172,9 @@ content (evidence stays stable), notifications, real-time push (pages poll while
 
 ## Known limitations
 
-- The appeal brief's output has no outcome field and its prompt forbids recommending one, but its free-text
-  summary is not machine-checked for recommending language; the page labels it "Does not recommend an outcome",
-  and a senior moderator decides.
+- The appeal brief's output has no outcome field, its prompt forbids recommending one, and its summary is scanned
+  for recommending language in the model's own voice (a match shows a warning on the appeal page). A reworded
+  recommendation could still slip past the pattern; a senior moderator decides either way.
 - The audit chain detects a changed or rewritten row and a row removed from the middle of the chain. Rows are
   insert-only by trigger, so removing any row needs the table owner to bypass the trigger; rows removed from the
   end, a `TRUNCATE` (the integration tests reset tables this way) or an empty chain still verify as intact. An
@@ -185,7 +185,7 @@ content (evidence stays stable), notifications, real-time push (pages poll while
 - Deterministic threat patterns cannot tell a quotation from a threat (evaluation case E09). Such cases still go
   to a human; no action is taken automatically.
 - The AI over-flags some friendly banter as possible harassment (label only, sent to a human).
-- One price pair is used for both models, so fallback runs are slightly under-costed.
+- The fallback model's prices default to the primary model's until `AI_PRICE_FALLBACK_*` is set.
 - The Gemini free tier has small quotas; a daily AI call budget and a fallback model reduce, but do not remove,
   "AI unavailable" periods. Rule findings still reach a human in that state.
 - The audit integrity check walks the whole chain on each audit page load; fine at demo scale, and a stored

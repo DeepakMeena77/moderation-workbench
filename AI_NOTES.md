@@ -49,7 +49,7 @@ Model probe on the project key before choosing (one tiny JSON request each):
 
 | Safeguard | Where | Test |
 | --- | --- | --- |
-| Only a human moderator can change visibility | `src/server/services/visibility.ts`, DB trigger in the S4 migration | `tests/integration/decisions.test.ts`, `tests/integration/analysis.test.ts` `[HUM-1]` |
+| Only a human moderator can change visibility; the database checks the actor's stored role | `src/server/services/visibility.ts`, DB trigger (S4, role check in `20261108130000_visibility_actor_role`) | `tests/integration/decisions.test.ts`, `tests/integration/analysis.test.ts` `[HUM-1]` |
 | AI code cannot import visibility or decisions | ESLint rule | `tests/unit/boundaries.test.ts` |
 | Output schema has no decide/approve/status field; unknown keys stripped | `src/server/ai/output.ts` | `tests/unit/output.test.ts` |
 | Server, not model, decides `needsHuman` | `src/server/moderation/combine.ts` | `tests/unit/combine.test.ts` `[AI-6]` |
@@ -64,9 +64,11 @@ Model probe on the project key before choosing (one tiny JSON request each):
 | Every pipeline run recorded with tokens and cost, success or failure | `src/server/ai/aiRun.ts`, `services/aiRuns.ts` | `tests/integration/analysis.test.ts` `[AI-10]` |
 | AiRun and Analysis rows cannot be updated or deleted | DB triggers in the S3 migration | `tests/integration/audit.test.ts` `[AUD-2]` |
 | Daily AI call budget protects the demo quota | `src/server/ai/pipeline.ts` | `tests/unit/classify.test.ts` |
-| AI call never holds a database transaction | `src/server/jobs/handlers.ts` (prepare, call the model, record) | By construction: the model is called between `prepareAnalysis` and `recordAnalysis`, which each run their own short transaction |
-| A finding dropped by verification, or an action lowered to what the clauses allow, always goes to a human (never auto-cleared) | `src/server/moderation/combine.ts` | `tests/unit/combine.test.ts` `[AI-6]` `[AI-4]` |
+| AI call never holds a database transaction | `src/server/jobs/handlers.ts` (prepare, call the model, record) | `tests/integration/analysis.test.ts` `[AI-9]`: the model call is paused and no session is idle in a transaction, with a control that detects one |
+| A finding dropped by verification, or an action lowered to what the clauses allow, always goes to a human (never auto-cleared) | `src/server/moderation/combine.ts` | `tests/unit/combine.test.ts` `[AI-6]` `[AI-4]`, end to end in `tests/integration/safeguards.test.ts` `[AI-6]` |
 | Appeal brief has no outcome field; an added one is stripped | `src/server/ai/appealBrief.ts` | `tests/unit/appealBrief.test.ts` `[AI-12]` |
+| Recommending language in the brief's summary is flagged and shown as a warning | `src/server/ai/appealBrief.ts`, `src/ui/features/appeals/AppealReview.tsx` | `tests/unit/appealBrief.test.ts`, `tests/components/AppealReview.test.tsx` `[AI-12]` |
+| Fallback runs are costed at the fallback model's own prices | `src/server/ai/cost.ts`, `aiConfig.ts` | `tests/unit/cost.test.ts` `[AI-10]` |
 | "Policy changed since decision" comes from the database, not the model | `src/server/services/appeals.ts` | `tests/integration/appeals.test.ts` `[AI-12]` |
 | Every AI write and human decision is in a hash-chained, insert-only audit trail | `src/server/services/audit.ts`, S7 migration | `tests/integration/audit.test.ts` `[AUD-3]` |
 
@@ -159,7 +161,8 @@ What the runs show:
 
 ## 9. Known limitations
 
-- One price pair is used for both models, so fallback runs are under-costed.
+- The fallback model's prices default to the primary model's until `AI_PRICE_FALLBACK_*` is set; the published
+  gemini-3.6-flash price is not filled in.
 - Pacing is per serverless instance, best effort.
 - English only; other languages are routed to a human.
 - Free-tier quotas are small; the daily budget and the fallback model reduce, but do not remove, the chance of
