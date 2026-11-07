@@ -262,6 +262,16 @@ content saved -> job(analyze) -> rules(text, policy, ctx) -> AI classify -> veri
 `(text, policy, ctx) -> RuleFinding[]`, each `{ruleId, clauseCode, quotes:[{text,start,end}], confidence:1,
 severity:defaultSeverity}`. These are pure functions, unit-tested one by one.
 
+- `keyword`: whole-word, case-insensitive match of `signals.keywords`; `pattern`: `signals.patterns`
+  compiled with flags `gi` (the policy schema validates them with the same flags).
+- `links`: http(s) and `www.` links; at or above `signals.linkThreshold` the clause is hit.
+- `contact`: emails and phone numbers with >= 9 digits for `signals.contactDetails`; `signals.addressPattern`
+  for street addresses.
+- `repeat` (DET-4, `SPAM-1`): word overlap = shared distinct words / the larger distinct-word set, >= 0.9,
+  against the same author's items from the previous 10 minutes. Texts under 3 words are skipped (short
+  replies such as "thanks a lot" repeat naturally).
+- At most 20 quotes per finding, so stored JSON stays bounded.
+
 ### 5.2 AI classify [AI-1..11]
 
 **Provider interface:**
@@ -386,6 +396,10 @@ priority   = Q-2 formula
   RETURNING *
   ```
 
+- **Clock:** every queue timestamp (`runAfter`, `lockedUntil`) is set with the database's `now()`, never the app
+  server's clock, so a server clock that runs ahead cannot leave fresh jobs "not yet due". A claim also requires
+  `attempts < maxAttempts`; a job whose lease expired on its last attempt is set to `failed` (with an audit
+  event) by the next tick.
 - **Run** with a budget: `JOB_BUDGET_MS=50000` and at most 10 jobs per tick, under the route's `maxDuration=60`. A job starts only if the remaining budget is at least `AI_DEADLINE_MS + 5000`, so the platform never kills a job mid-call. Pacing (`AI_MIN_INTERVAL_MS`) is per instance, best effort.
 - **Success** sets `succeeded`. An **infrastructure error** re-queues with `run_after` +30 s and then +2 min.
   After 3 attempts the job is `failed`, with `lastError` and an audit event.

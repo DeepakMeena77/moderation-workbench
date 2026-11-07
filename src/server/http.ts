@@ -24,12 +24,14 @@ export type AuthRequirement = 'public' | 'signed-in' | readonly Role[];
 
 type ActorFor<A extends AuthRequirement> = A extends 'public' ? null : Actor;
 
-export interface HandlerContext<TBody, TQuery, TActor> {
+export interface HandlerContext<TBody, TQuery, TActor, TParams = undefined> {
   req: Request;
   requestId: string;
   actor: TActor;
   body: TBody;
   query: TQuery;
+  /** Path parameters named in `route` (":id"), parsed with the `params` schema. */
+  params: TParams;
   log: Logger;
 }
 
@@ -37,12 +39,15 @@ export interface RouteOptions<
   TBody extends ZodTypeAny | undefined,
   TQuery extends ZodTypeAny | undefined,
   TAuth extends AuthRequirement,
+  TParams extends ZodTypeAny | undefined = undefined,
 > {
-  /** Stable route name for logs, e.g. "GET /api/health". */
+  /** Stable route name for logs, e.g. "GET /api/health". Path parameters are written ":name". */
   route: string;
   auth: TAuth;
   body?: TBody;
   query?: TQuery;
+  /** Schema for the ":name" segments of `route`, read from the request URL. */
+  params?: TParams;
 }
 
 type Infer<T> = T extends ZodTypeAny ? z.infer<T> : undefined;
@@ -51,9 +56,10 @@ export function handle<
   TAuth extends AuthRequirement,
   TBody extends ZodTypeAny | undefined = undefined,
   TQuery extends ZodTypeAny | undefined = undefined,
+  TParams extends ZodTypeAny | undefined = undefined,
 >(
-  options: RouteOptions<TBody, TQuery, TAuth>,
-  handler: (ctx: HandlerContext<Infer<TBody>, Infer<TQuery>, ActorFor<TAuth>>) => Promise<unknown>,
+  options: RouteOptions<TBody, TQuery, TAuth, TParams>,
+  handler: (ctx: HandlerContext<Infer<TBody>, Infer<TQuery>, ActorFor<TAuth>, Infer<TParams>>) => Promise<unknown>,
 ): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
     const started = performance.now();
@@ -73,7 +79,8 @@ export function handle<
       }
       const body = (options.body ? await readBody(req, options.body) : await rejectOversizedBody(req)) as Infer<TBody>;
       const query = (options.query ? parseQuery(req, options.query) : undefined) as Infer<TQuery>;
-      const result = await handler({ req, requestId, actor: actor as ActorFor<TAuth>, body, query, log });
+      const params = (options.params ? parseParams(req, options.route, options.params) : undefined) as Infer<TParams>;
+      const result = await handler({ req, requestId, actor: actor as ActorFor<TAuth>, body, query, params, log });
       response = result instanceof Response ? result : json({ data: result }, 200);
     } catch (error) {
       response = errorResponse(error, requestId, log, options.route);
@@ -161,6 +168,40 @@ function parseQuery(req: Request, schema: ZodTypeAny): unknown {
   const params = Object.fromEntries(new URL(req.url).searchParams.entries());
   const parsed = schema.safeParse(params);
   if (!parsed.success) throw validationError(parsed.error);
+  return parsed.data;
+}
+
+/**
+ * The ":name" segments of a route pattern, read from the request path. Taken from the URL rather than the
+ * Next.js context argument, so handlers stay plain (req) => Response functions that tests can call directly.
+ */
+export function matchPathParams(route: string, pathname: string): Record<string, string> | null {
+  const pattern = (route.split(' ')[1] ?? route).split('/');
+  const actual = pathname.replace(/\/+$/, '').split('/');
+  if (pattern.length !== actual.length) return null;
+  const params: Record<string, string> = {};
+  for (let i = 0; i < pattern.length; i++) {
+    const expected = pattern[i] ?? '';
+    const segment = actual[i] ?? '';
+    if (expected.startsWith(':')) {
+      try {
+        params[expected.slice(1)] = decodeURIComponent(segment);
+      } catch {
+        return null;
+      }
+    } else if (expected !== segment) {
+      return null;
+    }
+  }
+  return params;
+}
+
+function parseParams(req: Request, route: string, schema: ZodTypeAny): unknown {
+  const raw = matchPathParams(route, new URL(req.url).pathname);
+  if (!raw) throw new AppError('NOT_FOUND', 'Not found.');
+  const parsed = schema.safeParse(raw);
+  // A malformed identifier cannot name anything that exists.
+  if (!parsed.success) throw new AppError('NOT_FOUND', 'Not found.');
   return parsed.data;
 }
 

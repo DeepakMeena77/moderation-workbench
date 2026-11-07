@@ -1,12 +1,14 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { DEMO_ACCOUNTS } from '../src/server/auth/demo';
+import { policyContentHash, policyFileSchema } from '../src/server/policy/schema';
 
-// Seeds the six demo users (docs/04-build-plan.md S1). Idempotent: a re-run resets each account's name, role
-// and password, so it also repairs a demo role that was changed by hand. Later slices add policy v1 and
-// content. Variables already set in the environment win over .env, so
+// Seeds the six demo users (S1) and policy v1 as the active policy (S2). Idempotent: a re-run resets each
+// account's name, role and password, so it also repairs a demo role that was changed by hand; policy v1 is
+// installed only when no policy exists yet, so a re-run never touches published versions (they are
+// immutable) or an active v2. Variables already set in the environment win over .env, so
 // `DATABASE_URL=<production url> npm run db:seed` seeds production (docs/02-system-design.md sec. 13).
 
 const envSchema = z.object({
@@ -43,9 +45,32 @@ async function main(): Promise<void> {
       console.log(`  ${account.email} (${account.role})`);
     }
     console.log(`Seeded ${DEMO_ACCOUNTS.length} demo users.`);
+    await seedInitialPolicy(prisma);
   } finally {
     await prisma.$disconnect();
   }
+}
+
+async function seedInitialPolicy(prisma: PrismaClient): Promise<void> {
+  const existing = await prisma.policy.findFirst({
+    orderBy: { version: 'desc' },
+    select: { version: true, status: true },
+  });
+  if (existing) {
+    console.log(`Policy already installed (latest v${existing.version}, ${existing.status}); left unchanged.`);
+    return;
+  }
+  const file = policyFileSchema.parse(JSON.parse(readFileSync('policies/policy.v1.json', 'utf8')));
+  await prisma.policy.create({
+    data: {
+      version: 1,
+      status: 'active',
+      clauses: file.clauses,
+      notes: file.notes ?? null,
+      contentHash: policyContentHash(file.clauses),
+    },
+  });
+  console.log(`Installed policy v1 as active (${file.clauses.length} clauses).`);
 }
 
 main().catch((error: unknown) => {
