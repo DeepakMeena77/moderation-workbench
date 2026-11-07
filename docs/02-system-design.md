@@ -38,6 +38,9 @@ one lives.
 - typescript, prisma (6.x), tsx, @types/node, @types/react, @types/react-dom
 - vitest, @vitest/coverage-v8
 - @testing-library/react, @testing-library/user-event, @testing-library/jest-dom, jsdom
+- @testing-library/dom: a required peer dependency of @testing-library/react and @testing-library/user-event
+  (npm does not install it for them). Pinned explicitly so the version the component tests run against is
+  visible in `package.json` rather than chosen by npm.
 - @playwright/test, @axe-core/playwright (accessibility audits in `tests/ui`)
 - eslint, eslint-config-next, @eslint/eslintrc (flat-config compat), prettier
 - @vitejs/plugin-react, vite-tsconfig-paths (Vitest with JSX and path aliases)
@@ -72,7 +75,7 @@ flowchart LR
 
 | Layer | Path | May | May not |
 | --- | --- | --- | --- |
-| Pages and UI | `src/app/(...)`, `src/ui` | Call `/api` through hooks | Import anything from `src/server` |
+| Pages and UI | `src/app/(...)`, `src/ui` | Call `/api` through hooks. **Exception:** layouts and pages in `src/app` may import `@/server/auth/guards`, and nothing else from `src/server`, to check the session and role on the server before rendering [SEC-1] | Import anything else from `src/server` |
 | Route handlers | `src/app/api/**/route.ts` | Authenticate, validate with Zod, call **one** service, map errors | Contain business rules, or call Prisma directly |
 | Services | `src/server/services` | Business rules, transactions, audit, enqueue jobs | Call the LLM directly (only the job handlers do) |
 | Moderation core | `src/server/rules`, `src/server/ai`, `src/server/moderation` | Pure functions plus the AI provider | **Import `services/visibility.ts`, decisions or appeals** (ESLint `no-restricted-imports` plus a test) [HUM-1] |
@@ -92,19 +95,21 @@ src/
     api/...                            # see sec. 7
   server/
     config.ts  logger.ts  db.ts  errors.ts  http.ts (handler wrapper)
-    auth/      session.ts  guards.ts  demo.ts
+    middleware.ts (in src/, the edge page gate)
+    auth/      token.ts (edge-safe JWT and cookie)  session.ts  guards.ts  demo.ts
     policy/    schema.ts  diff.ts
     rules/     index.ts keyword.ts pattern.ts links.ts contact.ts repeat.ts
     ai/        provider.ts gemini.ts mock.ts prompts.ts parse.ts output.ts verify.ts budget.ts cost.ts
                classify.ts appealBrief.ts
     moderation/ combine.ts priority.ts
     services/  content.ts reports.ts cases.ts analysis.ts decisions.ts visibility.ts appeals.ts
-               policy.ts reevaluation.ts audit.ts metrics.ts status.ts rateLimit.ts
+               policy.ts reevaluation.ts audit.ts metrics.ts status.ts rateLimit.ts auth.ts
     jobs/      queue.ts runner.ts handlers.ts
   ui/
     theme/     tokens.ts theme.ts
     components/ (see 03-ui-ux.md sec. 4)
-    features/  feed/ me/ history/ queue/ case/ appeals/ policy/ audit/ metrics/ status/
+    shell/     AppShell, top app bar, navigation bar / rail / drawer, More sheet, navigation.ts (03 sec. 3)
+    features/  auth/ feed/ me/ history/ queue/ case/ appeals/ policy/ audit/ metrics/ status/
     api/       client.ts  hooks.ts
 prompts/   classify.v1.md  appeal-brief.v1.md
 policies/  policy.v1.json  policy.v2.json
@@ -419,7 +424,7 @@ Lists use `?cursor=&limit=`.
 
 | Method and path | Roles | Service | Notes |
 | --- | --- | --- | --- |
-| POST `/api/auth/sign-in`, POST `/api/auth/sign-out`, GET `/api/auth/me` | public, any, any | auth | `POST /api/auth/demo` (role) only when `DEMO_MODE=true` [UX-5] |
+| POST `/api/auth/sign-in`, POST `/api/auth/sign-out`, GET `/api/auth/me` | public, any, any | auth | Sign-in body `{email, password}`, limited per IP [SEC-4]. `POST /api/auth/demo` body `{account}` (`author`, `author2`, `moderator`, `senior`, `senior2`, `admin`), public, not limited, 404 unless `DEMO_MODE=true` [UX-5] |
 | GET `/api/posts`, POST `/api/posts`, POST `/api/posts/:id/comments` | any, author, author | content | Feed respects visibility [CNT-1, 2, 5] |
 | POST `/api/content/:id/reports` | any (not own) | reports | 409 `ALREADY_REPORTED` [CNT-3] |
 | GET `/api/content/:id/history` | the author, or staff | cases | Plain view for the author [CNT-4, SEC-2] |
@@ -521,8 +526,27 @@ Lists use `?cursor=&limit=`.
 
 **Sessions:**
 
-- a `jose` HS256 JWT in an httpOnly cookie (`SameSite=Lax`, `Secure` in production), valid 8 hours
-- `getActor()` re-reads the user and role from the database on each request
+- a `jose` HS256 JWT signed with `SESSION_SECRET`, in the cookie `mw_session`: `HttpOnly`, `SameSite=Lax`,
+  `Path=/`, `Max-Age=28800` (8 hours, absolute, never extended), and `Secure` when the request arrived over
+  https (`x-forwarded-proto`, set by Vercel). `Secure` is not tied to `NODE_ENV`, so a local production build
+  served over http (the UI test suite) keeps its cookie
+- the token holds only `sub` (user ID), `iss`, `aud`, `iat` and `exp`; **no role and no email**. Verification
+  accepts HS256 only
+- `getActor()` re-reads the user and role from the database on each request, so a role change or a deleted
+  user applies to the next request
+- where the checks run:
+  1. `src/middleware.ts` (edge, pages only, no database): signature and expiry; otherwise a redirect to
+     `/sign-in?next=<path>`. It skips `/api/*`, `/sign-in`, `/status`, `/_next` and files with an extension
+  2. `(app)/layout.tsx`: `requirePageActor()` re-reads the user before the shell renders
+  3. each page: `getPageAccess(roles)` with the roles from `src/ui/shell/navigation.ts`; the wrong role sees
+     the 403 view
+  4. APIs: the `auth` option of the `http.ts` wrapper
+- `next` after sign-in is accepted only as a same-site path (`safeNextPath`)
+- sign-out clears the cookie. A token cannot be revoked before it expires; the per-request user read limits
+  the effect
+- seeded accounts only. `DEMO_PASSWORD` is read by `prisma/seed.ts` alone (bcrypt cost 10); the app never
+  reads it. With `DEMO_MODE=false` the users still exist and password sign-in works, but `POST /api/auth/demo`
+  answers 404 and the demo cards and "Switch demo user" are hidden
 
 **`http.ts` handler wrapper**, applied to every route:
 
@@ -532,13 +556,18 @@ Lists use `?cursor=&limit=`.
   origin behind the proxy). Anything else, including a request with neither header, gets 403 `FORBIDDEN`.
   GET, HEAD and OPTIONS are not checked
 - enforces the 100 kB body limit
+- checks the session and role, from a required `auth` option (`'public'`, `'signed-in'` or a list of roles),
+  after the origin check and before the body is parsed: 401 `UNAUTHENTICATED` without a valid session,
+  403 `FORBIDDEN` (and an `access.denied` log line) for the wrong role. Only sign-in, demo sign-in, status
+  and health are `'public'` (pinned by `tests/unit/routes.test.ts`)
 - parses input with Zod
-- checks the role
-- maps `AppError` to the JSON envelope
+- maps `AppError` to the JSON envelope (a 429 also sets `Retry-After`)
 - logs `http.request` with method, route, status, duration, user ID and request ID
 
 **Rate limits** are database-backed fixed windows (they work on serverless): count the user's recent rows (posts
-and comments in the last minute, re-analyses), and for sign-in a small table keyed by IP.
+and comments in the last minute, re-analyses), and for sign-in the `RateLimit` table keyed by IP (the first
+`x-forwarded-for` entry), one atomic upsert per attempt. Every password attempt counts, successful or not.
+Demo sign-in is not limited: it takes no credentials.
 
 **Log redaction:** cookies, authorisation headers, passwords, keys. Content is logged as `{len, sha256}` only.
 

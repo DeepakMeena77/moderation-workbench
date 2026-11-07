@@ -1,4 +1,5 @@
-# CI staged by slice (docs/05-test-plan.md sec. 11). S0: verify + the UI suite for /status.
+# CI staged by slice (docs/05-test-plan.md sec. 11). S0: verify + the UI suite for /status. S1: the demo
+# users are seeded before the UI suite, which adds the sign-in page and the app shell.
 # S8 adds `npm run eval -- --mock` (verify job) and `npm run test:e2e` (browser job).
 name: CI
 
@@ -18,6 +19,10 @@ env:
   DATABASE_URL: postgresql://user:password@localhost:5432/workbench
   DIRECT_URL: postgresql://user:password@localhost:5432/workbench
   LOG_LEVEL: warn
+  # Throwaway values for CI only; real ones live in Vercel and the git-ignored .env files.
+  SESSION_SECRET: ci-only-session-secret-placeholder-000000
+  DEMO_MODE: 'true'
+  DEMO_PASSWORD: ci-only-demo-password
 
 jobs:
   verify:
@@ -75,7 +80,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npx prisma migrate deploy
       - run: npm run build
-      # Seeding (mock AI) joins here in S1, when prisma/seed.ts exists.
+      - run: npm run db:seed
       - run: npm run test:ui
       - uses: actions/upload-artifact@v4
         if: always()

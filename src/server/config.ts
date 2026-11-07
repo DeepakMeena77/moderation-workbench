@@ -4,9 +4,13 @@ import { z } from 'zod';
 
 const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'] as const;
 
+export const SESSION_SECRET_MIN_LENGTH = 32;
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\/\S+$/),
+  SESSION_SECRET: z.string().min(SESSION_SECRET_MIN_LENGTH),
+  DEMO_MODE: z.enum(['true', 'false']).default('false'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   VERCEL_GIT_COMMIT_SHA: z.string().min(1).optional(),
   BUILD_TIME: z.string().min(1).optional(),
@@ -17,6 +21,8 @@ const envSchema = z.object({
 const EXPECTED: Record<string, string> = {
   NODE_ENV: 'development, test or production',
   DATABASE_URL: 'a postgres:// or postgresql:// URL',
+  SESSION_SECRET: `at least ${SESSION_SECRET_MIN_LENGTH} characters`,
+  DEMO_MODE: 'true or false',
   LOG_LEVEL: LOG_LEVELS.join(', '),
   VERCEL_GIT_COMMIT_SHA: 'a non-empty commit SHA',
   BUILD_TIME: 'a non-empty timestamp',
@@ -27,6 +33,9 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
   databaseUrl: string;
+  sessionSecret: string;
+  /** One-click demo sign-in and the "Switch demo user" menu (UX-5). */
+  demoMode: boolean;
   logLevel: LogLevel;
   release: {
     commitSha: string | null;
@@ -55,6 +64,8 @@ export function parseConfig(env: Record<string, string | undefined>): AppConfig 
   return {
     nodeEnv: value.NODE_ENV,
     databaseUrl: value.DATABASE_URL,
+    sessionSecret: value.SESSION_SECRET,
+    demoMode: value.DEMO_MODE === 'true',
     logLevel: value.LOG_LEVEL,
     release: {
       commitSha: value.VERCEL_GIT_COMMIT_SHA ?? null,
@@ -69,4 +80,9 @@ export function getConfig(): AppConfig {
   // BUILD_TIME is read by its literal name so Next.js can inline it at build time (next.config.ts).
   cached ??= parseConfig({ ...process.env, BUILD_TIME: process.env.BUILD_TIME });
   return cached;
+}
+
+/** Integration tests change process.env (for example DEMO_MODE) and re-read the configuration. */
+export function resetConfigForTests(): void {
+  cached = undefined;
 }

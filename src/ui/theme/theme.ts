@@ -143,6 +143,13 @@ export const theme = createTheme({
     MuiDrawer: { styleOverrides: { paper: { border: 0 } } },
     MuiDialog: { styleOverrides: { paper: { borderRadius: 28 } } },
     MuiTextField: { defaultProps: { variant: 'filled' } },
+    // MUI sets input and label line heights to 1.4375em (23 px); M3 bodyLarge is 16/24.
+    MuiInputBase: { styleOverrides: { root: { lineHeight: '1.5rem' } } },
+    MuiInputLabel: { styleOverrides: { root: { lineHeight: '1.5rem' } } },
+    // 03 sec. 2.2: the scrim behind dialogs, sheets and the modal drawer is black at 32%.
+    MuiBackdrop: {
+      styleOverrides: { root: { '&:not(.MuiBackdrop-invisible)': { backgroundColor: 'rgba(0, 0, 0, 0.32)' } } },
+    },
     MuiMenu: { defaultProps: { elevation: 0 } },
     MuiPopover: { defaultProps: { elevation: 0 } },
     MuiSkeleton: {

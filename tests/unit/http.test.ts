@@ -7,11 +7,14 @@ import { getLogger } from '@/server/logger';
 const ORIGIN = 'http://localhost:3000';
 const URL_ = `${ORIGIN}/api/test`;
 
-const echo = handle({ route: 'POST /api/test', body: z.object({ name: z.string().min(1) }) }, async ({ body }) => ({
-  hello: body.name,
-}));
-const plainGet = handle({ route: 'GET /api/test' }, async () => ({ ok: true }));
-const plainPost = handle({ route: 'POST /api/plain' }, async () => ({ ok: true }));
+const echo = handle(
+  { route: 'POST /api/test', auth: 'public', body: z.object({ name: z.string().min(1) }) },
+  async ({ body }) => ({
+    hello: body.name,
+  }),
+);
+const plainGet = handle({ route: 'GET /api/test', auth: 'public' }, async () => ({ ok: true }));
+const plainPost = handle({ route: 'POST /api/plain', auth: 'public' }, async () => ({ ok: true }));
 
 function post(init: { headers?: Record<string, string>; body?: string } = {}): Request {
   return new Request(URL_, {
@@ -120,7 +123,7 @@ describe('http wrapper: body limits and validation', () => {
 
 describe('http wrapper: errors, request IDs and logging', () => {
   it('[INFRA] maps an AppError to its status and the error envelope', async () => {
-    const route = handle({ route: 'GET /api/conflict' }, async () => {
+    const route = handle({ route: 'GET /api/conflict', auth: 'public' }, async () => {
       throw new AppError('STALE_ANALYSIS', 'This case changed.', { currentAnalysisId: 'a2' });
     });
     const res = await route(new Request(`${ORIGIN}/api/conflict`));
@@ -137,7 +140,7 @@ describe('http wrapper: errors, request IDs and logging', () => {
   it('[INFRA] an unexpected error gives 500 INTERNAL without leaking its message, and is logged', async () => {
     const childSpy = routeLogsToSharedLogger();
     const logged = vi.spyOn(getLogger(), 'error');
-    const route = handle({ route: 'GET /api/boom' }, async () => {
+    const route = handle({ route: 'GET /api/boom', auth: 'public' }, async () => {
       throw new Error('connection to db-host-internal failed');
     });
     const res = await route(new Request(`${ORIGIN}/api/boom`));
@@ -167,5 +170,42 @@ describe('http wrapper: errors, request IDs and logging', () => {
     expect(entry).toMatchObject({ method: 'POST', route: 'POST /api/test', status: 200 });
     expect(typeof entry.durationMs).toBe('number');
     expect(JSON.stringify(info.mock.calls)).not.toContain('secret-body-text');
+  });
+});
+
+// The role (403) paths need a user row, so they live in tests/integration/authz.test.ts. Everything that
+// is decided before the database is consulted is checked here.
+describe('http wrapper: authentication', () => {
+  const signedInGet = handle({ route: 'GET /api/private', auth: 'signed-in' }, async () => ({ ok: true }));
+  const signedInPost = handle({ route: 'POST /api/private', auth: 'signed-in' }, async () => ({ ok: true }));
+
+  it('[SEC-1] answers 401 UNAUTHENTICATED when a signed-in route gets no session cookie', async () => {
+    const res = await signedInGet(new Request(`${ORIGIN}/api/private`));
+    expect(res.status).toBe(401);
+    expect((await json(res)).error).toMatchObject({ code: 'UNAUTHENTICATED' });
+  });
+
+  it('[SEC-1] answers 401 for a session cookie that is not a valid token', async () => {
+    const res = await signedInGet(
+      new Request(`${ORIGIN}/api/private`, { headers: { cookie: 'mw_session=not-a-jwt' } }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('[SEC-5] checks the origin before the session, so a cross-site mutation gets 403 not 401', async () => {
+    const res = await signedInPost(
+      new Request(`${ORIGIN}/api/private`, { method: 'POST', headers: { origin: 'https://evil.example' } }),
+    );
+    expect(res.status).toBe(403);
+    expect((await json(res)).error).toMatchObject({ code: 'FORBIDDEN' });
+  });
+
+  it('[SEC-4] a RATE_LIMITED error carries a Retry-After header in seconds', async () => {
+    const route = handle({ route: 'POST /api/limited', auth: 'public' }, async () => {
+      throw new AppError('RATE_LIMITED', 'Too many sign-in attempts. Try again in 15 minutes.', { retryAfterS: 840 });
+    });
+    const res = await route(new Request(`${ORIGIN}/api/limited`, { method: 'POST', headers: { origin: ORIGIN } }));
+    expect(res.status).toBe(429);
+    expect(res.headers.get('retry-after')).toBe('840');
   });
 });

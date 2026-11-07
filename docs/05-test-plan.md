@@ -114,19 +114,20 @@ URLs with a password, and `SESSION_SECRET=` with a value. It must find nothing.
 | AI-1, AI-8 | integration | `tests/integration/analysis.test.ts` |
 | AI-12 | unit + integration | `tests/unit/appealBrief.test.ts`, `tests/integration/appeals.test.ts` |
 | CNT-1..5, SEC-4 | integration + component | `tests/integration/content.test.ts`, `tests/components/Composer.test.tsx` |
+| SEC-4 (sign-in limit) | integration + component | `tests/integration/auth.test.ts`, `tests/components/SignInView.test.tsx` |
 | HUM-1 | integration (+ lint) | `tests/integration/hardRule.test.ts` |
 | HUM-2..7 | integration + component | `tests/integration/decisions.test.ts`, `tests/components/DecisionForm.test.tsx` |
 | Q-1, Q-3, Q-4 | integration + component | `tests/integration/cases.test.ts`, `tests/components/QueryState.test.tsx` |
 | APP-1..5 | integration | `tests/integration/appeals.test.ts` |
 | POL-1..5 | unit + integration | `tests/unit/policy.test.ts`, `tests/integration/policy.test.ts` |
 | AUD-1..5 | integration | `tests/integration/audit.test.ts` |
-| SEC-1, SEC-2 | integration | `tests/integration/authz.test.ts` |
+| SEC-1, SEC-2 | integration (+ unit) | `tests/integration/authz.test.ts`, `tests/integration/auth.test.ts`, `tests/unit/session.test.ts` (token, cookie, `next`), `tests/unit/middleware.test.ts` (page gate), `tests/unit/routes.test.ts` (public routes) |
 | SEC-5 | unit | `tests/unit/logger.test.ts` (redaction, content fingerprint), `tests/unit/http.test.ts` (Origin check, request log) |
 | SEC-3 | component + UI rules check | `tests/components/HighlightedText.test.tsx` |
 | OPS-1, OPS-2, OPS-4 | integration | `tests/integration/status.test.ts`, `tests/integration/jobs.test.ts` |
 | OPS-6 | integration | `tests/integration/metrics.test.ts` |
-| UX-1, UX-5 | e2e + component | `tests/e2e/journey.spec.ts`, `tests/components/AppShell.test.tsx` |
-| UX-2, UX-3, UX-4 | UI quality | `tests/ui/*.spec.ts`, `tests/unit/tokens.contrast.test.ts` |
+| UX-1, UX-5 | e2e + component (+ integration, UI quality) | `tests/e2e/journey.spec.ts`, `tests/components/AppShell.test.tsx`, `tests/components/SignInView.test.tsx`, `tests/components/QueryState.test.tsx`, `tests/integration/auth.test.ts` (demo route), `tests/ui/signin.spec.ts` |
+| UX-2, UX-3, UX-4 | UI quality (+ component) | `tests/ui/*.spec.ts` (`shell.spec.ts`: navigation variant per width, keyboard, themes), `tests/components/AppShell.test.tsx` (destinations per role), `tests/unit/tokens.contrast.test.ts` |
 | EVAL-1, EVAL-2 | eval | `evals/run.ts` |
 
 ---

@@ -9,3 +9,29 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
+enum Role {
+  author
+  moderator
+  senior_moderator
+  admin
+}
+
+// The role is read from this row on every request (SEC-1); it is never stored in the session token.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  role         Role
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// Fixed-window counters for database-backed rate limits (SEC-4), so limits hold across serverless instances.
+model RateLimit {
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+
+  @@id([key, windowStart])
+}

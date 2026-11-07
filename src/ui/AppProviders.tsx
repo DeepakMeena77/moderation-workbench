@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
+import { SnackbarProvider } from './components/SnackbarProvider';
 import { theme } from './theme/theme';
 
 export function AppProviders({ children }: { children: ReactNode }) {
@@ -17,7 +18,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <AppRouterCacheProvider>
       <ThemeProvider theme={theme} defaultMode="system">
         <CssBaseline enableColorScheme />
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          <SnackbarProvider>{children}</SnackbarProvider>
+        </QueryClientProvider>
       </ThemeProvider>
     </AppRouterCacheProvider>
   );

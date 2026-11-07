@@ -1,8 +1,8 @@
 import Box from '@mui/material/Box';
-import Skeleton from '@mui/material/Skeleton';
 import type { ReactNode } from 'react';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
+import { ListSkeleton } from './Skeletons';
 
 export interface QueryLike<T> {
   data: T | undefined;
@@ -21,15 +21,6 @@ export interface QueryStateProps<T> {
   skeleton?: ReactNode;
   /** Announced to screen readers while loading. */
   loadingLabel?: string;
-}
-
-function DefaultSkeleton() {
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Skeleton variant="rounded" height={96} />
-      <Skeleton variant="rounded" height={96} />
-    </Box>
-  );
 }
 
 // Every data view renders through this wrapper so loading, error and empty states are never forgotten
@@ -51,7 +42,7 @@ export function QueryState<T>({
         <Box component="span" sx={visuallyHidden}>
           {loadingLabel}
         </Box>
-        {skeleton ?? <DefaultSkeleton />}
+        {skeleton ?? <ListSkeleton />}
       </Box>
     );
   }

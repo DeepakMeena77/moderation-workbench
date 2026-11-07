@@ -1,28 +1,46 @@
 import { randomUUID } from 'node:crypto';
+import type { Role } from '@prisma/client';
 import type { Logger } from 'pino';
 import { z, type ZodTypeAny } from 'zod';
+import { getActor, type Actor } from './auth/session';
 import { AppError } from './errors';
 import { getLogger } from './logger';
 
 // The wrapper every route handler uses (docs/02-system-design.md sec. 10): request ID, CSRF check on
-// mutations, body size limit, Zod parsing, error mapping and the http.request log line. Auth and role
-// checks join in S1.
+// mutations, authentication and role check, body size limit, Zod parsing, error mapping and the
+// http.request log line.
 
 export const MAX_BODY_BYTES = 100 * 1024; // SEC-3
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
-export interface HandlerContext<TBody, TQuery> {
+/**
+ * Who may call a route (SEC-1). Required on every route, so a new route cannot forget it:
+ * - 'public': no session needed (only sign-in, demo sign-in, status and health)
+ * - 'signed-in': any role
+ * - a list of roles: only those roles
+ */
+export type AuthRequirement = 'public' | 'signed-in' | readonly Role[];
+
+type ActorFor<A extends AuthRequirement> = A extends 'public' ? null : Actor;
+
+export interface HandlerContext<TBody, TQuery, TActor> {
   req: Request;
   requestId: string;
+  actor: TActor;
   body: TBody;
   query: TQuery;
   log: Logger;
 }
 
-export interface RouteOptions<TBody extends ZodTypeAny | undefined, TQuery extends ZodTypeAny | undefined> {
+export interface RouteOptions<
+  TBody extends ZodTypeAny | undefined,
+  TQuery extends ZodTypeAny | undefined,
+  TAuth extends AuthRequirement,
+> {
   /** Stable route name for logs, e.g. "GET /api/health". */
   route: string;
+  auth: TAuth;
   body?: TBody;
   query?: TQuery;
 }
@@ -30,17 +48,19 @@ export interface RouteOptions<TBody extends ZodTypeAny | undefined, TQuery exten
 type Infer<T> = T extends ZodTypeAny ? z.infer<T> : undefined;
 
 export function handle<
+  TAuth extends AuthRequirement,
   TBody extends ZodTypeAny | undefined = undefined,
   TQuery extends ZodTypeAny | undefined = undefined,
 >(
-  options: RouteOptions<TBody, TQuery>,
-  handler: (ctx: HandlerContext<Infer<TBody>, Infer<TQuery>>) => Promise<unknown>,
+  options: RouteOptions<TBody, TQuery, TAuth>,
+  handler: (ctx: HandlerContext<Infer<TBody>, Infer<TQuery>, ActorFor<TAuth>>) => Promise<unknown>,
 ): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
     const started = performance.now();
     const incomingId = req.headers.get('x-request-id');
     const requestId = incomingId && REQUEST_ID_PATTERN.test(incomingId) ? incomingId : randomUUID();
     const log = getLogger().child({ requestId });
+    let actor: Actor | null = null;
     let response: Response;
 
     try {
@@ -48,9 +68,12 @@ export function handle<
       if (isMutation && !isSameOrigin(req)) {
         throw new AppError('FORBIDDEN', 'Cross-site requests are not allowed.');
       }
+      if (options.auth !== 'public') {
+        actor = await authorize(req, options.auth, options.route, log);
+      }
       const body = (options.body ? await readBody(req, options.body) : await rejectOversizedBody(req)) as Infer<TBody>;
       const query = (options.query ? parseQuery(req, options.query) : undefined) as Infer<TQuery>;
-      const result = await handler({ req, requestId, body, query, log });
+      const result = await handler({ req, requestId, actor: actor as ActorFor<TAuth>, body, query, log });
       response = result instanceof Response ? result : json({ data: result }, 200);
     } catch (error) {
       response = errorResponse(error, requestId, log, options.route);
@@ -63,10 +86,25 @@ export function handle<
       route: options.route,
       status: response.status,
       durationMs: Math.round(performance.now() - started),
-      userId: null,
+      userId: actor?.id ?? null,
     });
     return response;
   };
+}
+
+async function authorize(
+  req: Request,
+  required: 'signed-in' | readonly Role[],
+  route: string,
+  log: Logger,
+): Promise<Actor> {
+  const actor = await getActor(req);
+  if (!actor) throw new AppError('UNAUTHENTICATED', 'Sign in to continue.');
+  if (required !== 'signed-in' && !required.includes(actor.role)) {
+    log.warn({ event: 'access.denied', route, userId: actor.id, role: actor.role, required });
+    throw new AppError('FORBIDDEN', "You don't have access to this.");
+  }
+  return actor;
 }
 
 // SEC-5 (CSRF): a mutation must come from our own pages. Browsers send Sec-Fetch-Site and Origin and page
@@ -83,6 +121,19 @@ export function isSameOrigin(req: Request): boolean {
     allowed.add(`${proto}://${forwardedHost}`);
   }
   return allowed.has(origin);
+}
+
+/** The caller's IP for per-IP limits: the first x-forwarded-for entry (set by the Vercel edge). */
+export function clientIp(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  return forwarded || req.headers.get('x-real-ip')?.trim() || 'unknown';
+}
+
+/** A { data } response that also sets (or clears) a cookie, for the sign-in and sign-out routes. */
+export function jsonWithCookie(data: unknown, setCookie: string): Response {
+  const response = json({ data }, 200);
+  response.headers.append('set-cookie', setCookie);
+  return response;
 }
 
 async function rejectOversizedBody(req: Request): Promise<undefined> {
@@ -125,9 +176,15 @@ function tooLarge(): AppError {
   return new AppError('PAYLOAD_TOO_LARGE', `The request body is larger than ${MAX_BODY_BYTES / 1024} kB.`);
 }
 
+function retryAfterSeconds(details: unknown): number | null {
+  if (typeof details !== 'object' || details === null || !('retryAfterS' in details)) return null;
+  const value = (details as { retryAfterS: unknown }).retryAfterS;
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function errorResponse(error: unknown, requestId: string, log: Logger, route: string): Response {
   if (error instanceof AppError) {
-    return json(
+    const response = json(
       {
         error: {
           code: error.code,
@@ -138,6 +195,9 @@ function errorResponse(error: unknown, requestId: string, log: Logger, route: st
       },
       error.status,
     );
+    const retryAfter = error.code === 'RATE_LIMITED' ? retryAfterSeconds(error.details) : null;
+    if (retryAfter !== null) response.headers.set('retry-after', String(retryAfter));
+    return response;
   }
   // Unknown errors are logged with context but never echoed: their messages can contain internals.
   log.error({ event: 'http.error', route, err: error });
