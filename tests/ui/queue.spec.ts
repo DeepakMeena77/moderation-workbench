@@ -158,7 +158,8 @@ test('[HUM-7] an admin opens the case read-only, with no decision controls', asy
 });
 
 test('[HUM-3] a moderator rejects a recommendation: inline validation, then success, at 360 px', async ({ page }) => {
-  const body = `UI journey ${Date.now()}: you are a worthless idiot`;
+  // The marker makes the mock AI fail, so this case also shows the "AI unavailable" state next to the rule evidence.
+  const body = `UI journey ${Date.now()}: you are a worthless idiot [mock:invalid]`;
   const caseId = await ensureCase(page, body, 'author');
   await openPage(page, `/queue/${caseId}`, 360);
   await expect(page.getByText(/AI review pending or unavailable/).first()).toBeVisible();
