@@ -25,7 +25,7 @@ moderator. Every state change is written to a tamper-evident audit trail.
 | 3 | `author@example.com` | My content: the post shows the decision in plain words. Appeal it with a statement of 20+ characters. |
 | 4 | `senior@example.com` | Open the appeal: you made the original decision, so the review controls are off and the API refuses a resolve with `SAME_REVIEWER`. Refusals are written to the audit trail. |
 | 5 | `senior2@example.com` | Appeals: open it, read the AI's neutral summary (it never recommends an outcome), then uphold, overturn or modify. |
-| 6 | `admin@example.com` | Policy: upload [policies/policy.v2.json](policies/policy.v2.json), review the clause diff and impact, and publish; unresolved cases are re-analysed with progress. Audit: the chain shows "intact". Metrics: agreement, overrides, failures, latency and cost. |
+| 6 | `admin@example.com` | Policy: upload [policies/policy.v2.json](policies/policy.v2.json), review the clause diff and impact, and publish; unresolved cases are re-analysed with progress (the waiting crypto post, which v1 does not cover, is then cited under the new SCAM-1). Audit: the chain shows "intact". Metrics: agreement, overrides, failures, latency and cost. |
 | 7 | anyone | `/status`: app, database, AI model, jobs, policy and AI usage, checked live. |
 
 Demo accounts: `author@`, `author2@`, `moderator@`, `senior@`, `senior2@`, `admin@` (all `@example.com`).
@@ -71,6 +71,18 @@ ID in their name. `npm run check:trace -- --strict` maps each criterion to its t
 | Operations | OPS-1..6 | 5 of 6; OPS-5 (deployment) in [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) |
 | Evaluation | EVAL-1..2 | 2 of 2 |
 | Documents and CI | DOC-1..4 | By hand: these documents and [.github/workflows/ci.yml](.github/workflows/ci.yml) |
+
+## Screenshots
+
+Taken from the live deployment (light theme; dark theme follows the system setting or the toggle).
+
+| Case review | Appeal review |
+| --- | --- |
+| ![Case review: the post, findings, recommendation and decision](docs/screenshots/case-review-desktop.png) | ![Appeal review: original decision, appeal evidence, neutral AI summary and outcome](docs/screenshots/appeal-review.png) |
+| **Policy** | **System status** |
+| ![Policy clauses as a spec sheet, and the publish steps](docs/screenshots/policy.png) | ![Public status page with every check operational](docs/screenshots/status.png) |
+
+More in [docs/screenshots](docs/screenshots): sign-in, feed, my content, case review on a phone, audit and metrics.
 
 ## Architecture
 

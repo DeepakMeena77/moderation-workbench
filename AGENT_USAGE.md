@@ -96,4 +96,4 @@ How AI coding tools were used to build this project, what they got wrong, and ho
 | S6 | Policy versions, compare, publish, re-evaluation runs | verify, test:ui, trace S6 |
 | S7 | Hash-chained audit, access.denied, audit and metrics pages | verify (463), trace S7 8/8; one ui failure traced to leftover dev data, re-checked on a fresh database |
 | S8 | Evaluation set and runner; cross-role e2e journey; screenshot script | live eval 20/21; e2e 12/12 at 1280 and 390 px; trace S8 6/6 |
-| S9 | Job admin routes, policy-change notices, page access audit, docs aligned with code | verify (528), test:ui 202, e2e 12/12, `check:trace --strict` 65 covered, 5 manual, 0 missing |
+| S9 | Job admin routes, policy-change notices, page access audit, docs aligned with code | verify (533), test:ui 202, e2e 12/12, `check:trace --strict` 65 covered, 5 manual, 0 missing |

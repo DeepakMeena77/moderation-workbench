@@ -32,15 +32,17 @@ one-time hash backfill of existing audit events.
 
 ### Post-deploy checks
 
-<!-- Filled in from the production checks after the final deploy. -->
+Run on 2026-11-08 against release `d970152`.
 
 | Check | How | Result |
 | --- | --- | --- |
-| Status page all green | `/status` | |
-| Audit chain intact | Audit page banner (`/api/audit/verify`) | |
-| Live journey | Post, review, decide, appeal, second review | |
-| Live AI run recorded with tokens and cost | Case page, AI run panel | |
-| CI green on the release commit | GitHub Actions | |
+| Release live | `/api/health` | `version` is `d970152...`, database connected |
+| Status page all green | `/status` | All six checks operational: app, database, AI model (`gemini-3.5-flash-lite`, fallback `gemini-3.6-flash`), jobs, policy v1, AI usage |
+| Migrations applied | Vercel build log, `/api/audit/verify` | S7 chained the 5 existing audit events in SQL; S5 created the appeals table |
+| Audit chain intact | `/api/audit/verify` as admin | `intact: true`, 43 events checked |
+| Live journey | Demo users through the API and pages | 8 posts analysed by Gemini, 2 reports, a moderator decision (approve, HAR-1), an appeal with a neutral AI brief (no outcome field), and a scam post waiting for review |
+| Live AI runs recorded with tokens and cost | `/api/metrics`, `/status` | 12 runs, 0 failures, p50 3.4 s, p90 4.9 s, 21,926 tokens, 0.0098 USD |
+| CI green on the release commit | GitHub Actions run 42413737509 | verify and browser jobs succeeded |
 
 ### Rollback
 
