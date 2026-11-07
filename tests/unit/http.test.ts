@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { AppError } from '@/server/errors';
-import { handle, MAX_BODY_BYTES } from '@/server/http';
+import { handle, matchPathParams, MAX_BODY_BYTES } from '@/server/http';
 import { getLogger } from '@/server/logger';
 
 const ORIGIN = 'http://localhost:3000';
@@ -207,5 +207,28 @@ describe('http wrapper: authentication', () => {
     const res = await route(new Request(`${ORIGIN}/api/limited`, { method: 'POST', headers: { origin: ORIGIN } }));
     expect(res.status).toBe(429);
     expect(res.headers.get('retry-after')).toBe('840');
+  });
+});
+
+describe('path parameters', () => {
+  const byId = handle(
+    {
+      route: 'GET /api/things/:id/parts',
+      auth: 'public',
+      params: z.object({ id: z.string().regex(/^c[a-z0-9]{5,}$/) }),
+    },
+    async ({ params }) => ({ id: params.id }),
+  );
+
+  it('[SEC-3] reads ":id" from the URL and validates it with Zod', async () => {
+    const res = await byId(new Request(`${ORIGIN}/api/things/cabc123/parts`));
+    expect(res.status).toBe(200);
+    expect(await json(res)).toEqual({ data: { id: 'cabc123' } });
+  });
+
+  it('[SEC-3] an identifier that fails validation is a 404, never a database lookup', async () => {
+    const res = await byId(new Request(`${ORIGIN}/api/things/${encodeURIComponent("1' OR 1=1")}/parts`));
+    expect(res.status).toBe(404);
+    expect(matchPathParams('GET /api/things/:id/parts', '/api/things/x/other')).toBeNull();
   });
 });

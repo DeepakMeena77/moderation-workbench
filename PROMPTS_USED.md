@@ -15,7 +15,7 @@ Working instructions (delete this comment before submitting):
 
 | Prompt | Version | Model and settings | Output schema | Purpose |
 | --- | --- | --- | --- | --- |
-| [`classify`](prompts/classify.v1.md) | v1 | Gemini `<model>`, JSON mode + response schema, temperature `<t>`, max output 2048 | `ClassifyOutput` (`src/server/ai/output.ts`) | Findings with cited clauses, confirmed vs interpretation, action, severity, confidence, human-review reasons |
+| [`classify`](prompts/classify.v1.md) | v1 | Gemini `gemini-3.5-flash-lite` (fallback `gemini-3.5-flash`), JSON mode + response schema, temperature not set (model default), thinking level minimal, max output 2048 | `ClassifyOutput` (`src/server/ai/output.ts`) | Findings with cited clauses, confirmed vs interpretation, action, severity, confidence, human-review reasons |
 | [`appeal-brief`](prompts/appeal-brief.v1.md) | v1 | same | `AppealBrief` | Neutral summary of an appeal; never recommends an outcome |
 | Repair message (inline in `src/server/ai/classify.ts`) | - | same, second call only | same as the first call | Fix invalid output using the exact validation errors |
 

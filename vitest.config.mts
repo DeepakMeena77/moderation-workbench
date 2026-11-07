@@ -46,6 +46,9 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['tests/components/**/*.test.tsx'],
           setupFiles: ['tests/components/setup.ts'],
+          // user-event types key by key; under the full suite (integration running alongside) a form test can
+          // pass 5 s on a slower machine without anything being wrong.
+          testTimeout: 15_000,
         },
       },
     ],

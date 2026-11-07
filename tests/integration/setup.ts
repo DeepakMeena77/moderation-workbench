@@ -18,6 +18,14 @@ if (process.env.TEST_DATABASE !== 'true') {
   );
 }
 
+// Never call live Gemini in tests (docs/05-test-plan.md sec. 3): the mock provider is forced whatever the env file
+// says, pacing is off so consecutive analyses do not wait AI_MIN_INTERVAL_MS, and nominal prices make the recorded
+// cost deterministic.
+process.env.AI_PROVIDER = 'mock';
+process.env.AI_MIN_INTERVAL_MS = '0';
+process.env.AI_PRICE_INPUT_PER_MTOK = '0.1';
+process.env.AI_PRICE_OUTPUT_PER_MTOK = '0.4';
+
 // Imported only now: loading @prisma/client also loads .env into process.env, and a static import here would
 // run before .env.test is applied and point the tests at the dev database.
 const { getDb } = await import('@/server/db');
