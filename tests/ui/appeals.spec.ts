@@ -223,11 +223,13 @@ test('[APP-1] [APP-5] the author appeals at 360 px and a different senior overtu
   await form.getByRole('radio', { name: 'Overturn' }).click();
   await form.getByLabel(/Rationale/).fill('It quotes the film the thread is about.');
   await form.getByRole('button', { name: 'Overturn: make it visible again' }).click();
+  // The confirmation appears when the resolve request returns and stays for 6 s; on a slow CI runner the request
+  // itself can take longer than the default 5 s wait, so allow for the request, not just the render.
   await expect(
     page
       .getByRole('status')
       .filter({ hasText: 'Appeal resolved - decision overturned, the content is visible again.' }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('region', { name: 'Outcome' }).getByText('Overturned')).toBeVisible();
 
   // The author sees the outcome in My content and on the history page.
