@@ -1,5 +1,24 @@
 # Release notes
 
+## 1.0.5 (2026-11-08)
+
+- Every page has a header: section label, title and one line on what the page is for.
+- Case review: back and history links, a context line (case, source, priority), the recommendation's action,
+  severity and confidence side by side, and evidence tagged with its source and character range.
+- Decisions and appeal outcomes are option cards with a one-line consequence and a confirm button that states
+  the effect.
+- From 1200 px the queue is a table with the most specific reason a human is needed; needs-human reasons are
+  ranked most specific first wherever they are shown.
+- The policy publish panel can load the example v2 policy or start from the active version
+  (`GET /api/policies/drafts`, admin only, read only).
+
+No database migration.
+
+Post-deploy checks for `943576b`, 2026-11-08 08:20 UTC (13:50 in India): `/api/health` reports `943576b...` with the
+database connected; `/status` shows all six checks operational; `/api/audit/verify` reports `intact: true` over 53
+events; the drafts route returns the example policy to an admin; GitHub Actions run 42462318245 succeeded. The
+screenshots in `docs/screenshots` were taken from this deployment.
+
 ## 1.0.4 (2026-11-08)
 
 - Every evaluation report starts with the prompt version and its SHA-256 hash.

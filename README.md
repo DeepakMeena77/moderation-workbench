@@ -79,13 +79,14 @@ ID in their name. `npm run check:trace -- --strict` maps each criterion to its t
 
 Taken from the live deployment (light theme; dark theme follows the system setting or the toggle).
 
-| Case review | Appeal review |
+| Queue | Case review |
 | --- | --- |
-| ![Case review: the post, findings, recommendation and decision](docs/screenshots/case-review-desktop.png) | ![Appeal review: original decision, appeal evidence, neutral AI summary and outcome](docs/screenshots/appeal-review.png) |
-| **Policy** | **System status** |
-| ![Policy clauses as a spec sheet, and the publish steps](docs/screenshots/policy.png) | ![Public status page with every check operational](docs/screenshots/status.png) |
+| ![Queue table: priority, source, proposed action, severity, confidence and the most specific reason a human is needed](docs/screenshots/queue.png) | ![Case review: a quoted threat matched by a rule, the AI's reading of the context, the recommendation and the decision cards](docs/screenshots/case-review-desktop.png) |
+| **Appeal review** | **System status** |
+| ![Appeal review: original decision, appeal evidence, neutral AI summary and outcome cards](docs/screenshots/appeal-review.png) | ![Public status page with every check operational](docs/screenshots/status.png) |
 
-More in [docs/screenshots](docs/screenshots): sign-in, feed, my content, case review on a phone, audit and metrics.
+More in [docs/screenshots](docs/screenshots): sign-in, feed, my content, case review on a phone, policy, audit and
+metrics.
 
 ## Architecture
 
