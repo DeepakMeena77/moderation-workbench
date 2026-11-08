@@ -222,6 +222,7 @@ describe('appeal brief outcome language (AI-12)', () => {
       'I would uphold the original decision.',
       'Upholding the limit would be appropriate.',
       'The author is right and the label should be lifted.',
+      'The author argues the post is satire, and the decision should be overturned.',
     ]) {
       expect(hasOutcomeLanguage(brief(text)), text).toBe(true);
     }

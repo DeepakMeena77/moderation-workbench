@@ -172,6 +172,10 @@ content (evidence stays stable), notifications, real-time push (pages poll while
 
 ## Known limitations
 
+- When the model treats a keyword or pattern hit as interpretation only, that hit adds no action, so a genuine
+  threat the model misreads would be recommended as "none". It is never actioned that way: the case always goes
+  to a human with the hit, its high severity and the reason shown. Capping such hits at the clause's mildest
+  action instead would bring back "limit" for quoted news (E09); the evaluation favoured "none".
 - The appeal brief's output has no outcome field, its prompt forbids recommending one, and its summary is scanned
   for recommending language in the model's own voice (a match shows a warning on the appeal page). A reworded
   recommendation could still slip past the pattern; a senior moderator decides either way.

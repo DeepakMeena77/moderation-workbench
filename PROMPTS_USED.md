@@ -96,6 +96,9 @@ traced to the exact prompt that produced it.
   | Must-escalate recall | 100% | 100% |
   | False escalation on clean cases | 0 of 5 | 0 of 5 |
 
+- **Which prompt produced which file:** these six reports predate the "Prompt: classify.vN, sha256 ..." line that
+  every report now starts with, so the split is by time: the v1 runs finished at 22:06 UTC and the v2 prompt and
+  its runs came after (23:39 to 23:42 UTC). Every stored `AiRun` also records the prompt version and hash.
 - **Kept**, because strict precision and action agreement rose without losing must-escalate recall. E09 still
   fails its "must not confirm THR-1" label, because the deterministic pattern matches the quoted words, but its
   recommendation moved from "remove" to "none" with a plain reason for the human. E12 passed in two of three

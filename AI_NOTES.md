@@ -153,15 +153,20 @@ What the runs show:
   goes to a human.
 - **E12 is not deterministic.** "Exactly, they deserve it." under a post about a vandalised shop passed in two of
   three v2 runs ("none") and got THR-1 with "remove" in one. Every v1 run failed it.
-- **Over-citation dropped.** Friendly banter (E11) and the Spanish insult (E13) are no longer cited; E13 goes to a
-  human as insufficient context. Sarcasm (E10) is still labelled as possible harassment, which is why strict
-  precision stays below 80%.
+- **Over-citation dropped, with one new case.** Friendly banter (E11) and the Spanish insult (E13) are no longer
+  cited; E13 goes to a human as insufficient context. Sarcasm (E10) is still labelled as possible harassment. New
+  under v2: in two of three runs the home-address post (E17) was also cited as HAR-1 next to PII-1, because it
+  urges people to confront the woman named. Both keep strict precision below 80%.
 - **Fallback in practice.** Three calls across the v2 runs fell back to `gemini-3.6-flash` after the primary
   model used up its retries, and each still returned valid output. The local evaluation used the primary prices
   for them; production costs fallback calls at the fallback model's own prices (`AI_PRICE_FALLBACK_*`).
 
 ## 9. Known limitations
 
+- When the model treats a keyword or pattern hit as interpretation only, that hit adds no action, so a genuine
+  threat the model misreads would be recommended as "none". It is never actioned that way: the case always goes
+  to a human with the hit, its high severity and the reason shown. Capping such hits at the clause's mildest
+  action instead would bring back "limit" for quoted news (E09); the evaluation favoured "none".
 - Model prices are configuration copied from Google's published list on 2026-11-08: 0.30 / 2.50 USD per million
   tokens for the primary model and 0.75 / 3.75 for the fallback model, which rise to 1.50 / 7.50 on 2027-01-01.
 - Pacing is per serverless instance, best effort.

@@ -78,9 +78,12 @@ const REPORTS_AUTHOR =
   /\b(the )?author('s)? (says|said|argues|argued|asks|asked|claims|claimed|believes|thinks|feels|states|stated|wants|requests|requested|contends|maintains|disputes|position|view|request)\b/i;
 
 export function hasOutcomeLanguage(brief: Pick<AppealBrief, 'summary' | 'newPoints'>): boolean {
+  // Sentences, then clauses ("The author argues X, and the decision should be overturned" is two clauses), so an
+  // author-reporting clause cannot hide a recommendation that follows it in the same sentence.
   return [brief.summary, ...brief.newPoints]
     .flatMap((text) => text.split(/(?<=[.!?;])\s+/))
-    .some((sentence) => !REPORTS_AUTHOR.test(sentence) && OUTCOME_LANGUAGE.test(sentence));
+    .flatMap((sentence) => sentence.split(/,\s*(?:and|but|so|yet)?\s*|\s+(?:and|but|so|yet|while|whereas)\s+/i))
+    .some((clause) => !REPORTS_AUTHOR.test(clause) && OUTCOME_LANGUAGE.test(clause));
 }
 
 const str = (maxLength: number) => ({ type: 'string', maxLength });

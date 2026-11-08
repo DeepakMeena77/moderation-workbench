@@ -1,5 +1,14 @@
 # Release notes
 
+## 1.0.4 (2026-11-08)
+
+- Every evaluation report starts with the prompt version and its SHA-256 hash.
+- The appeal brief's outcome-language check works per clause, so "The author argues X, and the decision should be
+  overturned" is flagged.
+- AI_NOTES records the one new over-citation under prompt v2 (E17) and the trade-off of the unconfirmed-hit rule.
+
+No database migration; no change to moderation behaviour.
+
 ## 1.0.3 (2026-11-08)
 
 - Classify prompt v2 (`prompts/classify.v2.md`): quotations and reports are not the author's own threat, threat

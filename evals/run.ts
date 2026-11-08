@@ -10,7 +10,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { parseAiConfig } from '../src/server/ai/aiConfig';
 import { InMemoryAiRunSink } from '../src/server/ai/aiRun';
-import { classify, createAiProvider } from '../src/server/ai/classify';
+import { CLASSIFY_PROMPT, classify, createAiProvider } from '../src/server/ai/classify';
+import { loadPrompt } from '../src/server/ai/prompts';
 import { MockProvider } from '../src/server/ai/mock';
 import { createLogger } from '../src/server/logger';
 import { combine } from '../src/server/moderation/combine';
@@ -225,7 +226,10 @@ async function main(): Promise<void> {
 
   const mode = mock ? 'mock provider (pipeline check, not a quality measure)' : `live ${config.primaryModel}`;
   const lines: string[] = [];
+  const prompt = loadPrompt(CLASSIFY_PROMPT.name, CLASSIFY_PROMPT.version);
   lines.push(`# AI evaluation - ${new Date().toISOString().slice(0, 10)} - ${mode}`, '');
+  // Ties every report to the exact prompt that produced it.
+  lines.push(`Prompt: ${CLASSIFY_PROMPT.name}.v${CLASSIFY_PROMPT.version}, sha256 ${prompt.sha256}`, '');
   lines.push('| Metric | Value |', '| --- | --- |', ...metrics.map(([k, v]) => `| ${k} | ${v} |`), '');
   lines.push('| Case | Label | Result | Action | Clauses found | Escalated | AI | Latency ms |');
   lines.push('| --- | --- | --- | --- | --- | --- | --- | --- |');
