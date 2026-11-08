@@ -155,6 +155,20 @@ function ClauseText({ clause }: { clause: Clause | undefined }) {
   );
 }
 
+/**
+ * Where the recommendation's severity comes from: the first finding at that severity, rules before AI, for example
+ * "THR-1 rule" or "HAR-1 AI". null when there is no severity or no finding carries it.
+ */
+export function severitySource(analysis: Pick<Analysis, 'ruleFindings' | 'ai' | 'recommendation'>): string | null {
+  const severity = analysis.recommendation.severity;
+  if (!severity) return null;
+  const rule = analysis.ruleFindings.find((f) => f.severity === severity);
+  if (rule) return `${rule.clauseCode} rule`;
+  const ai = (analysis.ai?.findings ?? []).find((f) => f.severity === severity);
+  if (ai) return `${ai.clauseCode} ${ai.evidenceType === 'confirmed' ? 'AI' : 'AI interpretation'}`;
+  return null;
+}
+
 /** "Rule - keyword" for a rule match, "AI" for a quote the model gave and the server found in the text. */
 export function evidenceSourceLabel(finding: Pick<Finding, 'source' | 'ruleId'>): string {
   return finding.source === 'rule' ? `Rule - ${finding.ruleId ?? 'match'}` : 'AI';
@@ -353,6 +367,11 @@ export function RecommendationCard({ detail }: { detail: CaseDetail }) {
               {rec.severity ? SEVERITY_WORD[rec.severity] : 'None'}
             </Typography>
           </Box>
+          {severitySource(analysis) ? (
+            <Typography variant="caption" component="span" color="text.secondary" sx={{ display: 'block' }}>
+              from {severitySource(analysis)}
+            </Typography>
+          ) : null}
         </Glance>
         <Glance label="AI confidence in this result">
           <Typography variant="h3" component="span" sx={{ display: 'block' }}>

@@ -83,6 +83,32 @@ describe('verify', () => {
     expect(report.unverifiedQuotes).toEqual(['HAR-1']);
   });
 
+  it('[AI-3] a speculative interpretation (confidence below 0.4) carries at most low severity, with the reason', () => {
+    const speculative = finding({
+      evidenceType: 'interpretation',
+      quotes: [],
+      interpretation: 'Probably quoting a news report.',
+      severity: 'high',
+      severityReason: 'Threat wording.',
+      confidence: 0.2,
+    });
+    const { output: out } = verifyOutput(output([speculative]), POLICY, CONTENT);
+    expect(out.findings[0]).toMatchObject({ severity: 'low', confidence: 0.2 });
+    expect(out.findings[0]?.severityReason).toMatch(/^Speculative \(confidence below 0.4\), so capped at low\./);
+  });
+
+  it('[AI-3] an interpretation at 0.4 or above keeps its severity', () => {
+    const likely = finding({
+      evidenceType: 'interpretation',
+      quotes: [],
+      interpretation: 'Implied threat.',
+      severity: 'high',
+      confidence: 0.6,
+    });
+    const { output: out } = verifyOutput(output([likely]), POLICY, CONTENT);
+    expect(out.findings[0]).toMatchObject({ severity: 'high' });
+  });
+
   it('[AI-3] a finding with no verified quote and no interpretation is dropped', () => {
     const { output: out, report } = verifyOutput(
       output([finding({ quotes: ['not there'], interpretation: '' })]),

@@ -379,6 +379,9 @@ that fails Zod is **not** sent down the ladder again; it goes to the repair call
 1. Remove findings whose clause is not in the policy version (`invalidCitations[]`).
 2. For each quote, search the content after normalising case and whitespace. Store the offsets. If a quote is not
    found, move the finding to `interpretation` and cap its confidence at 0.5 (`unverifiedQuotes[]`).
+   An interpretation with confidence below 0.4 (the prompt rubric's "speculative" band) keeps at most `low`
+   severity, with "Speculative ..., so capped at low." before its severity reason, so a reading the model itself
+   doubts cannot raise the case's severity or priority.
 3. Drop findings with no verified quote **and** no interpretation.
 4. Lower `proposedAction` to the strongest action the remaining clauses allow whose rank is at or below the
    proposal (`actionLowered: from -> to`); never raise it. `none` is always allowed, so with clauses allowing only

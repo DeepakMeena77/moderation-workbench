@@ -6,6 +6,8 @@ import { actionRank, type ModAction, type PolicyView, type QuoteSpan } from './t
 // policy version and the content before anyone sees it. Pure: the caller logs what was found.
 
 export const UNVERIFIED_CONFIDENCE_CAP = 0.5;
+/** The prompt's rubric calls a confidence below this "speculative"; such a finding carries at most low severity. */
+export const SPECULATIVE_BELOW = 0.4;
 
 export interface VerifiedFinding extends Omit<AiFinding, 'quotes'> {
   /** Quotes found in the content, with offsets into the original text. */
@@ -106,6 +108,17 @@ export function verifyOutput(output: ClassifyOutput, policy: PolicyView, content
       verified.evidenceType = 'interpretation';
       verified.confidence = Math.min(finding.confidence, UNVERIFIED_CONFIDENCE_CAP);
       anyCapped = true;
+    }
+
+    // A speculative interpretation (the model itself doubts it) cannot raise the case's severity or priority: it
+    // keeps low severity and says why, so a reading such as "this quotes a news report" is not shown as high.
+    if (
+      verified.evidenceType === 'interpretation' &&
+      verified.confidence < SPECULATIVE_BELOW &&
+      verified.severity !== 'low'
+    ) {
+      verified.severity = 'low';
+      verified.severityReason = `Speculative (confidence below ${SPECULATIVE_BELOW}), so capped at low. ${verified.severityReason}`;
     }
 
     // 3. Nothing left to show a human: drop it.

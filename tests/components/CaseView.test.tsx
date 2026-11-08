@@ -157,7 +157,8 @@ describe('case page', () => {
   it('[AI-5] the recommendation shows action, severity and confidence as three labelled values, then the policy', () => {
     renderWithProviders(<CaseBody detail={withAi()} onReload={() => undefined} />);
     expect(glance('Proposed action')).toBe('Label');
-    expect(glance('Severity')).toBe('Medium');
+    // The severity says where it comes from: the first finding at that level, rules before AI.
+    expect(glance('Severity')).toBe('Mediumfrom HAR-1 rule');
     expect(glance('AI confidence in this result')).toBe('0.90Overall, for the whole result');
     const summary = screen.getByRole('region', { name: 'Recommendation' });
     const text = summary.textContent ?? '';

@@ -55,6 +55,7 @@ Model probe on the project key before choosing (one tiny JSON request each):
 | Server, not model, decides `needsHuman` | `src/server/moderation/combine.ts` | `tests/unit/combine.test.ts` `[AI-6]` |
 | Every clause must exist in that policy version | `src/server/ai/verify.ts` | `tests/unit/verify.test.ts` `[AI-2]` |
 | Confirmed quotes must appear verbatim, else interpretation with confidence <= 0.5 | `src/server/ai/verify.ts` | `tests/unit/verify.test.ts` `[AI-3]` |
+| A speculative interpretation (confidence below 0.4) carries at most low severity | `src/server/ai/verify.ts` | `tests/unit/verify.test.ts` `[AI-3]` |
 | Proposed action lowered to what the clauses allow, never raised | `src/server/ai/verify.ts` | `tests/unit/combine.test.ts`, `tests/unit/classify.test.ts` `[AI-4]` |
 | Prompt injection treated as content and routed to a human | `src/server/ai/prompts.ts` (`detectInjectionSignals`) | `tests/integration/analysis.test.ts` `[AI-8]` |
 | Parse ladder: direct, fenced, embedded, repaired | `src/server/ai/parse.ts` | `tests/unit/parse.test.ts` `[AI-9]` |

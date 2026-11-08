@@ -16,6 +16,7 @@ import { ApiError } from '../../api/client';
 import { useCase, useReanalyze, useReopen, type CaseDetail } from '../../api/hooks';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
+import { PageSectionLabel } from '../../components/PageHeader';
 import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { StatusTag } from '../../components/ModerationTags';
@@ -174,9 +175,12 @@ function CaseHeader({ detail, backHref }: { detail: CaseDetail; backHref: string
           Full moderation history
         </Link>
       </Box>
-      <Typography variant="caption" component="p" color="text.secondary" sx={monoSx}>
-        {caseContextLine(detail)}
-      </Typography>
+      <Box>
+        <PageSectionLabel>Moderation</PageSectionLabel>
+        <Typography variant="caption" component="p" color="text.secondary" sx={monoSx}>
+          {caseContextLine(detail)}
+        </Typography>
+      </Box>
       <Box
         sx={{
           display: 'flex',
