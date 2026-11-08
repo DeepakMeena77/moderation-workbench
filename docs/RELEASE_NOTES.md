@@ -1,5 +1,20 @@
 # Release notes
 
+## 1.0.6 (2026-11-08)
+
+- The recommendation's confidence is labelled as the AI's confidence in the whole result; per-finding rubric words
+  stay on findings.
+- The interpretation group reads "a reading of context, not confirmed evidence".
+- A case found clean but reported later shows "Report" as its source in the queue.
+- With no action recommended, the Approve card reads "Agree: no action needed".
+
+No database migration.
+
+Post-deploy checks for `8d5c04e`, 2026-11-08 09:24 UTC (14:54 in India): `/api/health` reports `8d5c04e...` with the
+database connected; `/status` shows all six checks operational; the queue lists the reported, otherwise clean post
+with source "Report"; `/api/audit/verify` reports `intact: true` over 53 events; GitHub Actions run 42466918663
+succeeded. The screenshots in `docs/screenshots` were retaken from this deployment.
+
 ## 1.0.5 (2026-11-08)
 
 - Every page has a header: section label, title and one line on what the page is for.
