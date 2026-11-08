@@ -32,9 +32,8 @@ export const pillRowSx = (theme: Theme) =>
   }) as const;
 
 /**
- * A sidebar row (03 sec. 3.1): 32 high, radius 6, no gap between rows, an 18 px monochrome icon and the label in
- * body text. The selected row takes the neutral selected fill, darker text at weight 500 and a 2 px accent marker
- * at its start (a pseudo-element box, not a border).
+ * A sidebar row (03 sec. 3.1): 32 high, radius 8, 2 px between rows, an 18 px monochrome icon and the label in
+ * body text. The selected row takes the neutral selected fill (a rounded highlight), darker text at weight 500.
  */
 export const drawerRowSx = (theme: Theme) => {
   const p = m3(theme);
@@ -43,7 +42,8 @@ export const drawerRowSx = (theme: Theme) => {
     minHeight: layout.drawerItemHeight,
     py: 0,
     px: 3,
-    borderRadius: `${layout.controlRadius}px`,
+    mb: 0.5,
+    borderRadius: `${layout.cardRadius}px`,
     color: p.onSurfaceVariant,
     '& .MuiListItemIcon-root': { color: p.onSurfaceVariant, minWidth: 28 },
     '& .MuiListItemIcon-root svg': { fontSize: 18 },
@@ -54,16 +54,6 @@ export const drawerRowSx = (theme: Theme) => {
       color: p.onSurface,
       '& .MuiListItemIcon-root': { color: p.onSurface },
       '& .MuiListItemText-primary': { fontWeight: 500 },
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        left: 0,
-        top: 8,
-        bottom: 8,
-        width: 2,
-        borderRadius: '1px',
-        backgroundColor: p.primary,
-      },
     },
     '&[aria-current="page"]:hover': { backgroundColor: layer(p.onSurface, p.selected, 4) },
   } as const;

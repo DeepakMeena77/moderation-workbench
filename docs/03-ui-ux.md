@@ -13,8 +13,8 @@ visibly different from what a human decided.**
 
 1. **Neutral first.** Pages are near-white (near-black in dark), surfaces are white with a 1 px hairline, text is
    near-black with two quieter levels. No tinted page or card backgrounds.
-2. **One accent.** The blue accent is used for primary buttons, links, focus rings and the selected navigation
-   marker, and nowhere else.
+2. **One accent.** The blue accent is used for primary buttons, links, focus rings and the marker on a selected
+   list row, and nowhere else.
 3. **Colour only with meaning.** Severity (high red, medium amber, low grey), success, warning and info use their
    hue as a small dot, a small icon or a soft badge. Facts such as actions, versions and clause codes are neutral.
    Colour is never the only signal: every coloured mark sits next to a word.
@@ -54,7 +54,7 @@ Components read colours as `theme.vars.palette.m3.<role>`.
 | `onSurface` (text) | `#18181B` | `#FAFAFA` | Primary text |
 | `onSurfaceVariant` | `#52525B` | `#A1A1AA` | Secondary text: meta, labels, row actions |
 | `textTertiary` | `#71717A` | `#8B8B94` | Tertiary text: section labels in the sidebar, placeholders, quiet detail; only on `canvas`, `card` and `chrome` |
-| `primary` (accent) | `#2563EB` | `#60A5FA` | Primary buttons, links, focus rings, the selected navigation marker |
+| `primary` (accent) | `#2563EB` | `#60A5FA` | Primary buttons, links, focus rings, the marker on a selected list row |
 | `onPrimary` | `#FFFFFF` | `#0B0B0C` | Text on the accent |
 
 Semantic colours (soft badge and banner: background / text / border; plus the strong hue for icons and dots):
@@ -113,8 +113,8 @@ with 0.06em letter spacing and the tertiary colour. Everything is left-aligned e
 
 ### 2.4 Shape, spacing, icons, motion
 
-- **Radius:** cards, panels, dialogs and menus 8; buttons, inputs, the search bar, filter chips, nested sections,
-  banners and navigation items 6; badges 4. Round shapes only for avatars, step markers and tiny count bubbles.
+- **Radius:** cards, panels, dialogs, menus and sidebar rows 8; buttons, inputs, the search bar, filter chips,
+  nested sections, banners and bottom-bar items 6; badges 4. Round shapes only for avatars, step markers and tiny count bubbles.
 - **Borders:** 1 px only, in `border` (structure), `borderStrong` / `borderHover` (secondary buttons and chips) or `fieldBorder` /
   `fieldBorderHover` (text fields and search).
   Focus uses a 2 px accent ring, not a thicker border.
@@ -155,10 +155,10 @@ role and account.
 | Extra-large | >= 1600 | Sidebar | Same | 2-3 (appeal review shows 3 columns) |
 
 **Sidebar:** white with a 1 px right hairline. The header is 56 high with a bottom hairline, level with the top
-bar's, and holds the product name (14/20, weight 500). Rows are 32 high with no gap between them, radius 6: an
+bar's, and holds the product name (14/20, weight 500). Rows are 32 high with 2 px between them, radius 8: an
 18 px icon and the label in body text, both in the secondary text colour. Hover darkens the text and adds a flat
-layer. The selected row has the neutral `selected` fill, the main text colour at weight 500 and a 2 px accent
-marker at its start. Section labels are 12/16 at weight 500 in the tertiary colour, 8 px above the first group and
+layer. The selected row is a rounded highlight in the neutral `selected` fill with the main text colour at weight
+500; it has no side marker. Section labels are 12/16 at weight 500 in the tertiary colour, 8 px above the first group and
 20 px above each following group. The theme toggle and "Switch demo user" sit at the bottom in the same rows.
 
 **Rail and bottom bar:** white, with a right (rail) or top (bar) hairline. Each item is an icon in a 28-high,
