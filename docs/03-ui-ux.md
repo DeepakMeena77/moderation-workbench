@@ -356,7 +356,8 @@ The case page is the exception: its header (sec. 6.6) names the item instead.
      - "Dropped by verification": invalid clauses and unverified quotes, shown for transparency
    - **Recommendation card** (supporting pane): an "AI + rules suggestion" label and the title, then:
      - **at a glance**, three labelled values side by side (label 12/16 in the secondary colour above, value in the
-       section style below): **Proposed action** (word), **Severity** (dot plus word), **AI confidence in this
+       section style below): **Proposed action** (word), **Severity** (dot plus word, with "from <clause> rule" or "from <clause> AI" under
+       it in meta text, naming the first finding at that level), **AI confidence in this
        result** (two decimals, "Overall, for the whole result" under it in meta text, and a 4 px accent bar on a
        hairline track; "None" and "AI pending" without an AI result). The per-finding rubric words ("Explicit",
        "Speculative") appear only on findings, so the overall number is never read as one finding's rating

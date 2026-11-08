@@ -54,7 +54,14 @@ describe('audit summary', () => {
         before: null,
         after: { method: 'POST', code: 'SAME_REVIEWER', role: 'senior_moderator' },
       }),
-    ).toBe('POST, SAME REVIEWER, as senior moderator');
+    ).toBe('Refused: they made the original decision (senior moderator)');
+    expect(
+      auditSummary({ action: 'access.denied', before: null, after: { code: 'FORBIDDEN', role: 'senior_moderator' } }),
+    ).toBe('Not allowed (senior moderator)');
+    // An unknown code still reads as words, never as the raw code.
+    expect(auditSummary({ action: 'access.denied', before: null, after: { code: 'SOMETHING_NEW' } })).toBe(
+      'Not allowed',
+    );
   });
 
   it('[AUD-5] an unknown event shows up to two plain fields and never an id', () => {

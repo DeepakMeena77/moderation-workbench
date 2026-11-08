@@ -13,6 +13,14 @@ const list = (value: unknown): string[] =>
 const join = (...parts: Array<string | null | false | undefined>): string =>
   parts.filter((p): p is string => typeof p === 'string' && p !== '').join(', ');
 
+/** Why access was refused, in words; the code itself stays in the expanded row. */
+const DENIAL_WORDS: Record<string, string> = {
+  FORBIDDEN: 'Not allowed',
+  SAME_REVIEWER: 'Refused: they made the original decision',
+  HUMAN_REQUIRED: 'Refused: only a human moderator can do this',
+  UNAUTHENTICATED: 'Not signed in',
+};
+
 /** The last 7 characters of an id, as on the case page ("case 5tyqti7"); the full id goes in a tooltip. */
 export function shortId(id: string): string {
   return id.length > 10 ? id.slice(-7) : id;
@@ -62,8 +70,11 @@ export function auditSummary(event: { action: string; before: unknown; after: un
       );
     case 'appeal.resolved':
       return join(str(a.outcome), str(a.finalAction) && `final action ${str(a.finalAction)}`);
-    case 'access.denied':
-      return join(str(a.method), words(a.code), words(a.role) && `as ${words(a.role)}`);
+    case 'access.denied': {
+      const reason = DENIAL_WORDS[str(a.code) ?? ''] ?? 'Not allowed';
+      const who = words(a.role);
+      return `${reason}${who ? ` (${who})` : ''}`;
+    }
     default: {
       // Other events: up to two plain fields, leaving out ids.
       const plain = Object.entries(a)
