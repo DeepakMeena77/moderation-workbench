@@ -14,6 +14,16 @@
 
 No database migration.
 
+Post-deploy checks for `560f10f`, 2026-11-08 00:21 UTC (05:51 in India):
+
+| Check | Result |
+| --- | --- |
+| Release live | `/api/health` reports `560f10f...`, database connected |
+| Status page | All six checks operational |
+| Prompt v2 on a real post | A news-style post quoting "I will hurt you" was analysed with `classify.v2`: action `none`, sent to a human with the reasons "High severity finding (THR-1)", "Clause THR-1 always goes to a human" and "Rules matched THR-1 by keyword or pattern, but the AI, reading the context, did not confirm it" |
+| Audit chain | `intact: true`, 51 events; the latest is event 51, `analysis.created` at 00:21:38 UTC |
+| CI on the release commit | GitHub Actions run 42429248591 succeeded |
+
 ## 1.0.2 (2026-11-08)
 
 - The visibility trigger also checks the actor: a change needs `app.actor_id` naming a user whose stored role is
