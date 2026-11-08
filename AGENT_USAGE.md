@@ -8,8 +8,6 @@ How AI coding tools were used to build this project, what they got wrong, and ho
 | --- | --- |
 | Claude Code (VS Code), planning chat | Requirements analysis, the docs in `docs/`, repository guards and hooks, reviewing every slice, merges, deployment and environment setup |
 | Claude Code (VS Code), build chats | Implementing one slice at a time from a written brief (S0 to S9), on their own branches and git worktrees |
-| `cc-open` | Starting and resuming the build chats from the planning chat, and watching their progress |
-| Chrome DevTools Protocol (a separate automation Chrome profile) | Clicking through account setup (Neon, Vercel, Google AI Studio). Sign-ins with passwords were done by hand |
 | Neon CLI, Vercel CLI and API | Database branches, environment variables per environment, deployments |
 | Google Gemini | Runtime only: the AI reviewer inside the product |
 
