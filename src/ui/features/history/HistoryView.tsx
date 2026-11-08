@@ -118,6 +118,34 @@ function AuditTrail({ events }: { events: NonNullable<ContentHistory['auditEvent
   );
 }
 
+/**
+ * One plain sentence for the author on where the item stands and what happens next (03 sec. 6.4). Staff see the
+ * status tag instead.
+ */
+export function authorStatusLine(
+  status: ContentHistory['caseStatus'],
+  type: ContentHistory['content']['type'],
+  visibility: ContentHistory['content']['visibility'],
+): string {
+  const noun = type === 'post' ? 'post' : 'comment';
+  switch (status) {
+    case null:
+      return `Your ${noun} passed the automatic checks; nothing needed a review.`;
+    case 'pending_analysis':
+      return `Automatic checks are still running. Nothing changes on your ${noun} while they run.`;
+    case 'awaiting_review':
+      return `A moderator will review this ${noun}. Nothing changes on it until they decide.`;
+    case 'auto_cleared':
+      return `The automatic checks found no issues. Your ${noun} stays visible.`;
+    case 'resolved':
+      return `A moderator has decided; others see it as ${visibility}. You can appeal from My content while the appeal window is open.`;
+    case 'appealed':
+      return `Your appeal is with a senior moderator who did not make the first decision. Nothing changes until they decide.`;
+    case 'appeal_resolved':
+      return `A senior moderator has reviewed your appeal; others see it as ${visibility}. This decision is final.`;
+  }
+}
+
 export function HistoryBody({ history }: { history: ContentHistory }) {
   const headingId = useId();
   const noun = history.content.type === 'post' ? 'Post' : 'Comment';
@@ -137,6 +165,11 @@ export function HistoryBody({ history }: { history: ContentHistory }) {
           <time dateTime={history.content.createdAt}>{relativeTime(history.content.createdAt)}</time> | visible to
           others as: {history.content.visibility}
         </Typography>
+        {history.view === 'author' ? (
+          <Banner tone="info">
+            {authorStatusLine(history.caseStatus, history.content.type, history.content.visibility)}
+          </Banner>
+        ) : null}
       </Card>
       <Card component="section" aria-label="Timeline" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <Typography variant="h3" component="h2">

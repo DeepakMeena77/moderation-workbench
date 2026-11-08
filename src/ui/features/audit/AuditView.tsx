@@ -22,7 +22,7 @@ import { QueryState } from '../../components/QueryState';
 import { RowList } from '../../components/RowList';
 import { SearchBar } from '../../components/SearchBar';
 import { CardSkeleton } from '../../components/Skeletons';
-import { layout, m3, pageSx } from '../../theme/theme';
+import { layout, m3, monoSx, pageSx } from '../../theme/theme';
 import { shortDateTime } from '../feed/format';
 import {
   ACTION_LABEL,
@@ -38,6 +38,7 @@ import {
   type AuditRow,
 } from './api';
 import { auditSearch, hasAuditFilters, parseAuditFilters, rangeError } from './auditFilters';
+import { auditSummary, shortId } from './auditSummary';
 
 // The Audit page (03 sec. 6.10; AUD-3, AUD-5): the integrity banner, filters in the URL, search, a table from
 // 840 px and a list below it. A row expands to its before and after summaries as plain text in the theme font
@@ -175,12 +176,25 @@ function EventDetails({ row }: { row: AuditRow }) {
   );
 }
 
+/** "Case 5tyqti7": the entity type and its short id, with the full id in a tooltip. */
+function EntityText({ row }: { row: AuditRow }) {
+  return (
+    <span title={`${entityLabel(row.entityType)} ${row.entityId}`}>
+      {entityLabel(row.entityType)}{' '}
+      <Box component="span" sx={monoSx}>
+        {shortId(row.entityId)}
+      </Box>
+    </span>
+  );
+}
+
 const COLUMNS: Array<DataColumn<AuditRow>> = [
-  { key: 'id', header: 'Event', width: '12%', render: (row) => `#${row.id}` },
-  { key: 'at', header: 'Time', width: '16%', render: (row) => <Time iso={row.at} /> },
-  { key: 'actor', header: 'Actor', width: '20%', render: (row) => actorLabel(row) },
-  { key: 'action', header: 'Action', width: '22%', render: (row) => <ActionText action={row.action} /> },
-  { key: 'entity', header: 'Entity', render: (row) => `${entityLabel(row.entityType)} ${row.entityId}` },
+  { key: 'id', header: 'Event', width: '8%', render: (row) => `#${row.id}` },
+  { key: 'at', header: 'Time', width: '13%', render: (row) => <Time iso={row.at} /> },
+  { key: 'actor', header: 'Actor', width: '15%', render: (row) => actorLabel(row) },
+  { key: 'action', header: 'Action', width: '18%', render: (row) => <ActionText action={row.action} /> },
+  { key: 'entity', header: 'Entity', width: '16%', render: (row) => <EntityText row={row} /> },
+  { key: 'details', header: 'Details', render: (row) => auditSummary(row) },
 ];
 
 function EventListItem({ row }: { row: AuditRow }) {
@@ -207,8 +221,13 @@ function EventListItem({ row }: { row: AuditRow }) {
             <ActionText action={row.action} />
           </Typography>
           <Typography variant="caption" color="text.secondary" component="p" sx={{ overflowWrap: 'anywhere' }}>
-            #{row.id}, {actorLabel(row)}, {entityLabel(row.entityType)} {row.entityId}, <Time iso={row.at} />
+            #{row.id}, {actorLabel(row)}, <EntityText row={row} />, <Time iso={row.at} />
           </Typography>
+          {auditSummary(row) ? (
+            <Typography variant="caption" color="text.secondary" component="p" sx={{ overflowWrap: 'anywhere' }}>
+              {auditSummary(row)}
+            </Typography>
+          ) : null}
         </Box>
         <IconButton
           label={`Details of event #${row.id}`}

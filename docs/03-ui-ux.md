@@ -306,7 +306,9 @@ The case page is the exception: its header (sec. 6.6) names the item instead.
    - A timeline: created -> analysis v1 (staff: findings, AI run) -> decision -> appeal -> outcome -> re-analysis
      after a policy change. A decision made under an older policy carries a warning banner "Policy changed since
      this decision" with the version it stays under.
-   - The author sees plain language and no AI internals or reporter identities.
+   - The author sees plain language and no AI internals or reporter identities. Under their content, an info banner
+     says in one sentence where the item stands and what happens next, for every case state (for example "A
+     moderator will review this post. Nothing changes on it until they decide.").
 5. **Queue** `/queue`
    - Search bar; a filter-chip row: Needs review (default), Analysing, Auto-cleared, High, Reported,
      AI unavailable, Policy v...
@@ -416,8 +418,10 @@ The case page is the exception: its header (sec. 6.6) names the item instead.
       the first broken event and a **Show event** button that searches for it).
     - Filters (in the URL): actor type chips (People, System, AI), action and entity selects, a from/to date
       range. Search covers a person's name or email, the entity, the request ID and `#<event>`. A table from
-      840 px, a row list below, "Showing 25 of 248" and **Load more**. A row expands to its details and the
-      before/after JSON as plain text.
+      840 px, a row list below, "Showing 25 of 248" and **Load more**. Columns: event, time, actor, action, entity
+      (type and a 7-character short id in monospace, the full id in a tooltip) and **Details**, one plain line read
+      from the event's summaries ("visible -> limited", "modify, final action limit, HAR-1", "recommends label,
+      priority 55"). A row expands to the full before/after summaries as plain text.
 11. **Metrics** `/metrics`
     - Stat cards as plain bordered panels: agreement %, overrides, AI failure %, **auto-cleared, then revisited**
       (the rate as the value; the detail line gives "n of m auto-cleared cases later reported or reopened" and the
