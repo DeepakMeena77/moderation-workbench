@@ -28,7 +28,7 @@ moderator. Every state change is written to a tamper-evident audit trail.
 | 3 | `author@example.com` | My content: the post shows the decision in plain words. Appeal it with a statement of 20+ characters. |
 | 4 | `senior@example.com` | Open the appeal: you made the original decision, so the review controls are off and the API refuses a resolve with `SAME_REVIEWER`. Refusals are written to the audit trail. |
 | 5 | `senior2@example.com` | Appeals: open it, read the AI's neutral summary (its output has no outcome field and the prompt forbids recommending one), then uphold, overturn or modify. |
-| 6 | `admin@example.com` | Policy: upload [policies/policy.v2.json](policies/policy.v2.json), review the clause diff and impact, and publish; unresolved cases are re-analysed with progress (the waiting crypto post, which v1 does not cover, is then cited under the new SCAM-1). Audit: the chain shows "intact". Metrics: agreement, overrides, failures, latency and cost. |
+| 6 | `admin@example.com` | Policy: choose **Load example v2** (the same file as [policies/policy.v2.json](policies/policy.v2.json)), review the clause diff and impact, and publish; unresolved cases are re-analysed with progress (the waiting crypto post, which v1 does not cover, is then cited under the new SCAM-1). Audit: the chain shows "intact". Metrics: agreement, overrides, failures, latency and cost. |
 | 7 | anyone | `/status`: app, database, AI model, jobs, policy and AI usage, checked live. |
 
 Demo accounts: `author@`, `author2@`, `moderator@`, `senior@`, `senior2@`, `admin@` (all `@example.com`).
