@@ -12,6 +12,7 @@ import { MoreSheet } from './MoreSheet';
 import { NAV_BAR_HEIGHT, NavBar } from './NavBar';
 import { NavDrawer } from './NavDrawer';
 import { NavRail } from './NavRail';
+import { RoleProvider } from './RoleContext';
 import { TopAppBar } from './TopAppBar';
 
 export interface AppShellProps {
@@ -89,7 +90,7 @@ export function AppShell({ user, demoAccounts, children }: AppShellProps) {
           // reachable. Theme spacing units: 20 x 4 px = 80 px.
           sx={{ flex: 1, minWidth: 0, pb: { xs: (NAV_BAR_HEIGHT + 16) / 4, sm: 0 }, '&:focus': { outline: 'none' } }}
         >
-          {children}
+          <RoleProvider role={user.role}>{children}</RoleProvider>
         </Box>
       </Box>
       <NavBar role={user.role} pathname={pathname} moreOpen={moreOpen} onOpenMore={() => setMoreOpen(true)} />

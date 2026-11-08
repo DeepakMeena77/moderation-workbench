@@ -121,6 +121,16 @@ export function useValidatePolicy() {
   });
 }
 
+export type PolicyDraftSource = 'example' | 'active';
+
+/** A starting point for the editor: the bundled example policy (v2) or the active version, as policy-file JSON. */
+export function usePolicyDraft() {
+  return useMutation({
+    mutationFn: (source: PolicyDraftSource) =>
+      api.get<{ source: PolicyDraftSource; text: string }>(`/api/policies/drafts?source=${source}`),
+  });
+}
+
 export function usePublishPolicy() {
   const queryClient = useQueryClient();
   return useMutation({

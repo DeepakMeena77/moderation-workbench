@@ -2,9 +2,10 @@
 
 import DynamicFeedRounded from '@mui/icons-material/DynamicFeedRounded';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { useCreatePost, useFeed } from '../../api/hooks';
+import { PageHeader } from '../../components/PageHeader';
+import { useSectionLabel } from '../../shell/RoleContext';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
@@ -12,7 +13,7 @@ import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { useSnackbar } from '../../components/SnackbarProvider';
 import { RowList } from '../../components/RowList';
-import { layout, pageSx, titleGap } from '../../theme/theme';
+import { layout, pageSx } from '../../theme/theme';
 import { Composer } from './Composer';
 import { PostCard } from './PostCard';
 import { ReportDialog, type ReportTarget } from './ReportDialog';
@@ -32,17 +33,20 @@ function FeedSkeleton() {
 
 export function FeedView({ canPost }: { canPost: boolean }) {
   const feed = useFeed();
+  const section = useSectionLabel('feed');
   const createPost = useCreatePost();
   const notify = useSnackbar();
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
   return (
     <Box data-ui="section" sx={pageSx}>
+      <PageHeader
+        section={section}
+        title="Feed"
+        description="Posts from the community, newest first. Every post is checked against the active policy."
+        maxWidth={layout.readingWidth}
+      />
       <Box sx={{ maxWidth: layout.readingWidth, display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
-        <Typography variant="h1" sx={{ mb: { xs: titleGap.xs - layout.stackGap, sm: titleGap.sm - layout.stackGap } }}>
-          Feed
-        </Typography>
-
         {canPost ? (
           <Card component="section" aria-label="New post">
             <Composer

@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from './helpers/userEvent';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -146,5 +146,43 @@ describe('PublishFlow', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
     expect(await screen.findByText(/identical to policy v2/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Publish v3' })).toBeDisabled();
+  });
+});
+
+describe('PublishFlow shortcuts', () => {
+  it('[POL-2] "Load example v2" fills the editor from the read-only drafts route', async () => {
+    const example = '{\n  "version": 2,\n  "clauses": []\n}\n';
+    const fetchMock = respondWith({ source: 'example', text: example });
+    renderWithProviders(<PublishFlow onPublished={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Load example v2' }));
+    await waitFor(() => expect(screen.getByLabelText('Policy JSON')).toHaveValue(example));
+    const [url] = fetchMock.mock.calls[0] as unknown as [string];
+    expect(url).toBe('/api/policies/drafts?source=example');
+    // Nothing had been typed, so there is nothing to restore.
+    expect(screen.queryByRole('button', { name: 'Restore my text' })).toBeNull();
+  });
+
+  it('[POL-2] "Start from active version" replaces typed text but keeps it, so it can be restored', async () => {
+    const active = '{\n  "version": 1,\n  "clauses": []\n}\n';
+    const fetchMock = respondWith({ source: 'active', text: active });
+    renderWithProviders(<PublishFlow onPublished={vi.fn()} />);
+    const field = screen.getByLabelText('Policy JSON');
+    fireEvent.change(field, { target: { value: '{"my": "draft"}' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Start from active version' }));
+    await waitFor(() => expect(field).toHaveValue(active));
+    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toBe('/api/policies/drafts?source=active');
+    expect(screen.getByText(/The editor holds the active version now/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Restore my text' }));
+    expect(field).toHaveValue('{"my": "draft"}');
+  });
+
+  it('[POL-2] a failed load keeps the typed text and shows the error', async () => {
+    respondWith({ code: 'NOT_FOUND', message: 'There is no active policy yet.', requestId: 'r1' }, 404);
+    renderWithProviders(<PublishFlow onPublished={vi.fn()} />);
+    const field = screen.getByLabelText('Policy JSON');
+    fireEvent.change(field, { target: { value: '{"my": "draft"}' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Start from active version' }));
+    expect(await screen.findByText('There is no active policy yet.')).toBeInTheDocument();
+    expect(field).toHaveValue('{"my": "draft"}');
   });
 });

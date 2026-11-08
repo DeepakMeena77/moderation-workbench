@@ -9,6 +9,7 @@ import type { SvgIconProps } from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
 import type { ReactElement, ReactNode } from 'react';
 import { useStatus, type CheckState, type StatusCheck, type StatusReport } from '../../api/hooks';
+import { PageHeader } from '../../components/PageHeader';
 import { Banner, type BannerTone } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -171,11 +172,12 @@ export function StatusView({ signedIn }: { signedIn: boolean }) {
         </Button>
       </Box>
       <Box sx={pageSx}>
-        <Box sx={{ maxWidth: layout.workWidth, display: 'flex', flexDirection: 'column', gap: titleGap }}>
-          <Box
-            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 3 }}
-          >
-            <Typography variant="h1">System status</Typography>
+        <PageHeader
+          section="System"
+          title="System status"
+          description="Live checks of the app, database, AI model, background jobs and policy."
+          maxWidth={layout.workWidth}
+          action={
             <Button
               variant="secondary"
               startIcon={<RefreshRounded />}
@@ -184,7 +186,9 @@ export function StatusView({ signedIn }: { signedIn: boolean }) {
             >
               Refresh
             </Button>
-          </Box>
+          }
+        />
+        <Box sx={{ maxWidth: layout.workWidth, display: 'flex', flexDirection: 'column', gap: titleGap }}>
           <QueryState query={query} loadingLabel="Loading system status">
             {(report) => <Report report={report} />}
           </QueryState>

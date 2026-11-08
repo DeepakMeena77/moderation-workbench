@@ -75,15 +75,15 @@ for (const scheme of ['light', 'dark'] as const) {
         expect(await auditStyles(page, scheme)).toEqual([]);
         await openPage(page, `/queue/${caseId}`, width);
         await expect(page.getByRole('heading', { name: 'Recommendation' })).toBeVisible();
-        await page.getByRole('button', { name: 'Modify' }).click();
-        await expect(page.getByRole('form', { name: 'Modify the recommendation' })).toBeVisible();
+        await page.getByRole('radio', { name: 'Modify' }).click();
+        await expect(page.getByRole('button', { name: /^Modify: / })).toBeVisible();
         expect(await auditStyles(page, scheme)).toEqual([]);
       });
     }
   });
 }
 
-test('[UX-2] list-detail: one pane below 840 px, list and case side by side from 840 px', async ({ page }) => {
+test('[UX-2] list-detail: one pane below 840 px, list and case side by side from 840 to 1199 px', async ({ page }) => {
   const caseId = await ensureCase(page);
   const cases = page.getByRole('region', { name: 'Cases', exact: true });
   const detail = page.getByRole('region', { name: 'Case', exact: true });
@@ -91,7 +91,8 @@ test('[UX-2] list-detail: one pane below 840 px, list and case side by side from
   await openPage(page, `/queue/${caseId}`, 600);
   await expect(detail).toBeVisible();
   await expect(cases).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Back to the queue' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Back to queue' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Full moderation history' })).toBeVisible();
 
   await page.setViewportSize({ width: 840, height: 900 });
   await expect(cases).toBeVisible();
@@ -103,9 +104,57 @@ test('[UX-2] list-detail: one pane below 840 px, list and case side by side from
     'page',
   );
 
+  // From 1200 px the case is the whole page; the queue is one link away.
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await expect(cases).toBeHidden();
+  await expect(detail).toBeVisible();
+
   await openPage(page, '/queue', 360);
   await expect(cases).toBeVisible();
   await expect(detail).toBeHidden();
+});
+
+test('[UX-2] the queue is a table at 1366 px and a list at 390 px; Enter on a row opens the case', async ({ page }) => {
+  const caseId = await ensureCase(page);
+  await openPage(page, '/queue', 1366);
+  const table = page.getByRole('table', { name: 'Cases, highest priority first' });
+  const list = page.getByRole('list', { name: 'Cases' });
+  await expect(table).toBeVisible();
+  await expect(list).toBeHidden();
+  await expect(page.getByRole('region', { name: 'Case', exact: true })).toBeHidden();
+  await expect(table.getByRole('columnheader')).toHaveText([
+    'Priority',
+    'Content',
+    'Source',
+    'Proposed action',
+    'Severity',
+    'Confidence',
+    'Why a human',
+    'Policy',
+    'Age',
+  ]);
+  // Header words never break inside: "Confidence" is one line of text at this width.
+  const confidenceLines = await table.getByRole('columnheader', { name: 'Confidence' }).evaluate((th) => {
+    const range = document.createRange();
+    range.selectNodeContents(th);
+    return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+  });
+  expect(confidenceLines).toBe(1);
+  const row = table.getByRole('row').filter({ hasText: 'UI suite case from Ben' }).first();
+  await row.focus();
+  await expect(row).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new RegExp(`/queue/${caseId}$`));
+  await expect(page.getByRole('heading', { level: 1, name: /^Post by/ })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to queue' }).click();
+  await expect(page).toHaveURL(/\/queue$/);
+  await expect(table).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  await expect(table).toBeHidden();
+  await expect(list).toBeVisible();
+  await expect(page.getByRole('link', { name: /UI suite case from Ben/ }).first()).toBeVisible();
+  expect(await horizontalOverflow(page)).toBe(0);
 });
 
 test('[UX-2] the case gets a sticky supporting pane once the detail pane is wide enough', async ({ page }) => {
@@ -115,7 +164,8 @@ test('[UX-2] the case gets a sticky supporting pane once the detail pane is wide
   const recommendation = await page.getByRole('region', { name: 'Recommendation' }).boundingBox();
   expect(recommendation?.x ?? 0).toBeGreaterThan((content?.x ?? 0) + (content?.width ?? 0) - 1);
 
-  await page.setViewportSize({ width: 1280, height: 900 });
+  // At 1000 px the case sits beside the list, so its pane is too narrow for a second column.
+  await page.setViewportSize({ width: 1000, height: 900 });
   const narrowContent = await page.getByRole('region', { name: /^Post by/ }).boundingBox();
   const narrowRecommendation = await page.getByRole('region', { name: 'Recommendation' }).boundingBox();
   expect(narrowRecommendation?.y ?? 0).toBeGreaterThan(narrowContent?.y ?? 0);
@@ -154,7 +204,7 @@ test('[HUM-7] an admin opens the case read-only, with no decision controls', asy
   await signInAs(page, 'admin');
   await openPage(page, `/queue/${caseId}`, 1280);
   await expect(page.getByText('Read-only oversight')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Approve recommendation/ })).toHaveCount(0);
+  await expect(page.getByRole('radiogroup', { name: 'Decision' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Re-analyse' })).toHaveCount(0);
 });
 
@@ -166,16 +216,16 @@ test('[HUM-3] a moderator rejects a recommendation: inline validation, then succ
   await expect(page.getByText(/AI review pending or unavailable/).first()).toBeVisible();
   await expect(page.getByLabel(/^Evidence for HAR-1/).first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Reject recommendation' }).click();
-  const form = page.getByRole('form', { name: 'Reject the recommendation' });
-  await form.getByRole('button', { name: 'Reject recommendation' }).click();
+  const form = page.getByRole('form', { name: 'Decide on the recommendation' });
+  await form.getByRole('radio', { name: 'Reject' }).click();
+  await form.getByRole('button', { name: 'Reject: keep visible' }).click();
   await expect(form.getByText('Choose a reason.')).toBeVisible();
   await expect(form.getByRole('radio', { name: 'False positive' })).toBeFocused();
   expect(await seriousAxeViolations(page)).toEqual([]);
 
   await form.getByRole('radio', { name: 'False positive' }).click();
   await form.getByLabel(/Note/).fill('Friendly banter between two regulars.');
-  await form.getByRole('button', { name: 'Reject recommendation' }).click();
+  await form.getByRole('button', { name: 'Reject: keep visible' }).click();
   await expect(
     page.getByRole('status').filter({ hasText: 'Decision saved - no action, the content stays visible.' }),
   ).toBeVisible();

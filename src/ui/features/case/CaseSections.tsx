@@ -23,7 +23,9 @@ import {
   PolicyVersionTag,
   SeverityTag,
 } from '../../components/ModerationTags';
-import { layout, m3 } from '../../theme/theme';
+import { confidenceLabel } from '../../components/ConfidenceMeter';
+import { Dot, Tag } from '../../components/Tag';
+import { layout, m3, monoSx } from '../../theme/theme';
 import { relativeTime } from '../feed/format';
 import { REASON_LABEL } from './decisionForm';
 
@@ -93,12 +95,12 @@ export function evidenceHighlights(analysis: Analysis | null, clauses: readonly 
 export function ContentCard({ detail }: { detail: CaseDetail }) {
   const headingId = useId();
   const clauses = detail.policy?.clauses ?? [];
+  // The page title already says whose post it is; the region keeps that name so it can be found by it.
+  const name = `${detail.content.type === 'post' ? 'Post' : 'Comment'} by ${detail.content.author.name}`;
   return (
-    <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Card component="section" aria-label={name} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box>
-        <SectionTitle id={headingId}>
-          {detail.content.type === 'post' ? 'Post' : 'Comment'} by {detail.content.author.name}
-        </SectionTitle>
+        <SectionTitle id={headingId}>Content</SectionTitle>
         <Typography variant="caption" color="text.secondary" component="p">
           <time dateTime={detail.content.createdAt}>{relativeTime(detail.content.createdAt)}</time>
           {' | '}visible to others as: {detail.content.visibility}
@@ -154,6 +156,31 @@ function ClauseText({ clause }: { clause: Clause | undefined }) {
   );
 }
 
+/** "Rule - keyword" for a rule match, "AI" for a quote the model gave and the server found in the text. */
+export function evidenceSourceLabel(finding: Pick<Finding, 'source' | 'ruleId'>): string {
+  return finding.source === 'rule' ? `Rule - ${finding.ruleId ?? 'match'}` : 'AI';
+}
+
+/** "chars 44-61": where the quote sits in the content text, so a moderator can check it; null when unknown. */
+export function charRangeLabel(quote: Finding['quotes'][number]): string | null {
+  return quote.start !== null && quote.end !== null ? `chars ${quote.start}-${quote.end}` : null;
+}
+
+// Where a confirmed quote comes from and where it sits in the text (03 sec. 6.6).
+function QuoteSource({ finding, quote }: { finding: Finding; quote: Finding['quotes'][number] }) {
+  const range = charRangeLabel(quote);
+  return (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
+      <Tag label={evidenceSourceLabel(finding)} mono />
+      {range ? (
+        <Typography variant="caption" color="text.secondary" sx={monoSx}>
+          {range}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+
 function FindingItem({ finding, clause, policyVersion }: { finding: Finding; clause?: Clause; policyVersion: number }) {
   const ruleLabel = finding.ruleId ? (RULE_LABEL[finding.ruleId] ?? `${finding.ruleId} rule`) : null;
   // Rules carry no model reasons, so their reasons are stated from what a rule is (AI-5 for every finding).
@@ -177,9 +204,14 @@ function FindingItem({ finding, clause, policyVersion }: { finding: Finding; cla
       {finding.quotes.length > 0 ? (
         <Box component="ul" sx={{ m: 0, pl: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
           {finding.quotes.map((q, i) => (
-            <Typography key={`${q.text}-${i}`} component="li" variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-              &quot;{q.text}&quot;
-            </Typography>
+            <Box key={`${q.text}-${i}`} component="li" sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+                &quot;{q.text}&quot;
+              </Typography>
+              {finding.source === 'rule' || finding.evidenceType === 'confirmed' ? (
+                <QuoteSource finding={finding} quote={q} />
+              ) : null}
+            </Box>
           ))}
         </Box>
       ) : null}
@@ -269,12 +301,34 @@ export function FindingsCard({ detail }: { detail: CaseDetail }) {
   );
 }
 
+function Glance({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+      <Typography component="dt" variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Box component="dd" sx={{ m: 0, minWidth: 0 }}>
+        {children}
+      </Box>
+    </Box>
+  );
+}
+
+const SEVERITY_WORD: Record<NonNullable<Analysis['recommendation']['severity']>, string> = {
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+};
+
+// The recommendation (03 sec. 6.6): proposed action, severity and confidence side by side as three labelled values,
+// then why (the reasons, the clauses, why a human must decide), and the policy version it was made under.
 export function RecommendationCard({ detail }: { detail: CaseDetail }) {
   const headingId = useId();
   const analysis = detail.analysis;
   if (!analysis) return null;
   const rec = analysis.recommendation;
   const ai = analysis.ai;
+  const confidence = rec.confidence === null ? null : Math.min(1, Math.max(0, rec.confidence));
   return (
     <Card component="section" aria-labelledby={headingId} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box>
@@ -283,12 +337,68 @@ export function RecommendationCard({ detail }: { detail: CaseDetail }) {
         </Typography>
         <SectionTitle id={headingId}>Recommendation</SectionTitle>
       </Box>
+      <Box
+        component="dl"
+        aria-label="Recommendation at a glance"
+        sx={{ m: 0, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 3 }}
+      >
+        <Glance label="Proposed action">
+          <Typography variant="h3" component="span" sx={{ display: 'block' }}>
+            {ACTION_LABEL[rec.action]}
+          </Typography>
+        </Glance>
+        <Glance label="Severity">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Dot tone={rec.severity ?? 'low'} />
+            <Typography variant="h3" component="span">
+              {rec.severity ? SEVERITY_WORD[rec.severity] : 'None'}
+            </Typography>
+          </Box>
+        </Glance>
+        <Glance label="Confidence">
+          <Typography variant="h3" component="span" sx={{ display: 'block' }}>
+            {confidence === null ? 'None' : confidence.toFixed(2)}
+          </Typography>
+          <Typography variant="caption" component="span" color="text.secondary" sx={{ display: 'block' }}>
+            {confidence === null ? 'AI pending' : confidenceLabel(confidence)}
+          </Typography>
+          <Box
+            aria-hidden
+            sx={(t) => ({ mt: 1, height: 4, borderRadius: '2px', backgroundColor: m3(t).border, overflow: 'hidden' })}
+          >
+            {confidence === null ? null : (
+              <Box
+                sx={(t) => ({
+                  height: '100%',
+                  width: `${Math.round(confidence * 100)}%`,
+                  backgroundColor: m3(t).primary,
+                })}
+              />
+            )}
+          </Box>
+        </Glance>
+      </Box>
       <TagRow>
-        <ActionTag action={rec.action} />
-        <SeverityTag severity={rec.severity} />
         <AiStateTag status={analysis.aiStatus} fallbackUsed={analysis.aiRun?.fallbackUsed ?? false} />
         {ai?.insufficientContext ? <InsufficientContextTag /> : null}
       </TagRow>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {ai?.severityReason ? (
+          <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+            Severity: {ai.severityReason}
+          </Typography>
+        ) : null}
+        {ai?.confidenceReason ? (
+          <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+            Confidence: {ai.confidenceReason}
+          </Typography>
+        ) : null}
+        {!ai ? (
+          <Typography variant="body2" color="text.secondary">
+            {AI_PENDING}. The suggestion comes from the rules alone.
+          </Typography>
+        ) : null}
+      </Box>
       {rec.clauseCodes.length > 0 ? (
         <TagRow>
           <Typography variant="body2" color="text.secondary">
@@ -299,17 +409,6 @@ export function RecommendationCard({ detail }: { detail: CaseDetail }) {
           ))}
         </TagRow>
       ) : null}
-      {ai?.severityReason ? (
-        <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-          Severity: {ai.severityReason}
-        </Typography>
-      ) : null}
-      <ConfidenceMeter
-        value={rec.confidence}
-        reason={ai?.confidenceReason ?? null}
-        emptyLabel={AI_PENDING}
-        emphasis="main"
-      />
       {rec.needsHuman ? (
         <Nested label="Why a human must decide">
           <Typography variant="overline" component="h3" color="text.secondary">
@@ -324,12 +423,14 @@ export function RecommendationCard({ detail }: { detail: CaseDetail }) {
           </Box>
         </Nested>
       ) : null}
-      <TagRow>
-        <PolicyVersionTag version={analysis.policyVersion} />
-        <Typography variant="caption" color="text.secondary">
-          Analysis v{analysis.seq} of {detail.versions.length}
-        </Typography>
-      </TagRow>
+      <Typography
+        variant="caption"
+        component="p"
+        color="text.secondary"
+        sx={(t) => ({ pt: 3, borderTop: `1px solid ${m3(t).border}` })}
+      >
+        Analysed under policy v{analysis.policyVersion}, analysis v{analysis.seq} of {detail.versions.length}
+      </Typography>
     </Card>
   );
 }

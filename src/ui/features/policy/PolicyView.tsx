@@ -7,6 +7,8 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useState, type ReactNode } from 'react';
+import { PageHeader } from '../../components/PageHeader';
+import { useSectionLabel } from '../../shell/RoleContext';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
@@ -250,15 +252,19 @@ function CompareCard({ versions }: { versions: PolicySummary[] }) {
 
 export function PolicyView({ canPublish, canSeeRuns }: { canPublish: boolean; canSeeRuns: boolean }) {
   const policies = usePolicies();
+  const section = useSectionLabel('policy');
   const [selected, setSelected] = useState<number | null>(null);
   const [publishedRunId, setPublishedRunId] = useState<string | null>(null);
 
   return (
     <Box data-ui="section" sx={pageSx}>
+      <PageHeader
+        section={section}
+        title="Policy"
+        description="Policies are versioned data. Every analysis and decision records the version it used."
+        maxWidth={layout.formWidth}
+      />
       <Box sx={{ maxWidth: layout.formWidth, display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
-        <Typography variant="h1" sx={{ mb: { xs: 0, sm: 1 } }}>
-          Policy
-        </Typography>
         <QueryState
           query={policies}
           loadingLabel="Loading policy versions"

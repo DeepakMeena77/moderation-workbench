@@ -26,6 +26,7 @@ import { Card } from '../../components/Card';
 import { ChoiceChips, type ChoiceChipsHandle } from '../../components/ChoiceChips';
 import { HighlightedText, type Highlight } from '../../components/HighlightedText';
 import { ACTION_LABEL, ActionTag, ClauseTag, PolicyVersionTag, StatusTag } from '../../components/ModerationTags';
+import { OptionCards, type OptionCardsHandle } from '../../components/OptionCards';
 import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { useSnackbar } from '../../components/SnackbarProvider';
@@ -39,6 +40,7 @@ import {
   MODIFY_ACTIONS,
   modifyActionReason,
   OUTCOMES,
+  resolveButtonLabel,
   RESOLVE_FIELDS,
   resolveSuccessMessage,
   toResolveRequest,
@@ -277,7 +279,7 @@ function ResolveForm({ detail, onReload }: { detail: AppealDetail; onReload: () 
   const [draft, setDraft] = useState<ResolveDraft>(EMPTY_RESOLVE);
   const [errors, setErrors] = useState<ResolveErrors>({});
   const [failure, setFailure] = useState<{ conflict: boolean; message: string } | null>(null);
-  const outcomeRef = useRef<ChoiceChipsHandle>(null);
+  const outcomeRef = useRef<OptionCardsHandle>(null);
   const actionRef = useRef<ChoiceChipsHandle>(null);
   const rationaleRef = useRef<HTMLTextAreaElement>(null);
   const blocked = detail.permissions.isOriginalDecider;
@@ -370,13 +372,13 @@ function ResolveForm({ detail, onReload }: { detail: AppealDetail; onReload: () 
           {failure.message}
         </Banner>
       ) : null}
-      <ChoiceChips<AppealOutcome>
+      <OptionCards<AppealOutcome>
         ref={outcomeRef}
         label="Outcome"
         options={OUTCOMES.map((o) => ({ ...o, disabledReason: locked ? lockReason : undefined }))}
-        value={draft.outcome ? [draft.outcome] : []}
+        value={draft.outcome}
         error={errors.outcome}
-        onChange={([outcome]) => update({ outcome: outcome ?? null, finalAction: null }, 'outcome')}
+        onChange={(outcome) => update({ outcome, finalAction: null }, 'outcome')}
       />
       {draft.outcome === 'modify' ? (
         <ChoiceChips<ModAction>
@@ -414,9 +416,9 @@ function ResolveForm({ detail, onReload }: { detail: AppealDetail; onReload: () 
           </Box>
         }
       />
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button type="submit" loading={resolve.isPending} disabled={locked}>
-          Resolve appeal
+      <Box>
+        <Button type="submit" size="large" loading={resolve.isPending} disabled={locked}>
+          {resolveButtonLabel(draft.outcome, detail.original.finalAction, draft.finalAction)}
         </Button>
       </Box>
     </Box>

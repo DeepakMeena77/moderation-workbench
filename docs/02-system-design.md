@@ -405,6 +405,11 @@ autoClear  = AUTO_CLEAR_ENABLED && AI ok && 0 findings && 0 reports && confidenc
 priority   = Q-2 formula
 ```
 
+The reasons are stored in the order `combine` finds them and read back most specific first
+(`moderation/reasonOrder.ts#rankReasons`, applied in `parseRecommendation`), so the queue table's first reason and
+the case page's list agree, for analyses stored before the order existed too. The generic "any action needs a human
+decision" reason comes last (03 sec. 6.5).
+
 ### 5.7 Appeal brief (`ai/appealBrief.ts`) [AI-12]
 
 - **Input:** original findings and decision, the appeal statement and evidence (escaped; attribute values such as
@@ -504,13 +509,14 @@ Lists use `?cursor=&limit=`.
 | POST `/api/content/:id/reports` | any (not own) | reports | 409 `ALREADY_REPORTED` [CNT-3] |
 | GET `/api/content/:id/history` | the author, or staff | history | Plain view for the author, built on the server (no AI internals, staff names or reporters); another author gets 403 [CNT-4, SEC-2] |
 | GET `/api/me/content` | author | content | Status, decision and appeal deadline |
-| GET `/api/cases`, GET `/api/cases/:id` | moderator, senior, admin | cases | Filters and search [Q-1] |
+| GET `/api/cases`, GET `/api/cases/:id` | moderator, senior, admin | cases | Filters and search [Q-1]. Each row and the detail carry `entry`: how the case entered the queue (`report`, `rules`, `ai` or null), from the trigger and the latest analysis's findings; list rows also carry the analysis confidence and the server's reasons for a human decision |
 | POST `/api/cases/:id/decisions` | moderator, senior | decisions | Body `{analysisId, kind, finalAction?, clauseCodes?, reasonCategory?, rationale?}` [HUM-2..6] |
 | POST `/api/cases/:id/reanalyze`, POST `/api/cases/:id/reopen` | moderator, senior | cases | [Q-4] Re-analyse: `pending_analysis`, `awaiting_review` or `appealed` only (the job skips other statuses), 10 per minute per moderator. Reopen: `auto_cleared` only. Otherwise 409 `INVALID_TRANSITION` |
 | POST `/api/decisions/:id/appeals` | the content author | appeals | [APP-1, 2] |
 | GET `/api/appeals`, GET `/api/appeals/:id` | senior, admin (and moderator read) | appeals | [APP-4] |
 | POST `/api/appeals/:id/resolve` | senior != decider | appeals | 403 `SAME_REVIEWER` [APP-3, 5] |
 | GET `/api/policies`, GET `/api/policies/:version`, GET `/api/policies/compare?from=&to=` | any | policy | [POL-5] |
+| GET `/api/policies/drafts?source=example\|active` | admin | policy | Read-only editor starting points `{source, text}`: the bundled `policies/policy.v2.json`, or the active version as a policy file; 404 when no policy is active [POL-2] |
 | POST `/api/policies/validate`, POST `/api/policies` | admin | policy | Body `{json}`: the pasted text, so a syntax error is reported like any other. Validate answers 200 with `{valid, errors: [{path, message}], preview: {fromVersion, nextVersion, diff, sameAsVersion, impact: {unresolvedCases}}}` and writes nothing. Publish answers `{version, run}`; 400 `VALIDATION_FAILED` with the same paths; 409 `POLICY_UNCHANGED` when the clauses match **any** existing version (`contentHash` is unique) [POL-2, 3] |
 | GET `/api/reevaluations/:id`, POST `/api/reevaluations/:id/retry` | staff, admin | reevaluation | `{id, fromVersion, toVersion, total, done, failed, state: running, finished or finished_with_failures}`. Retry answers `{run, retried}`; with nothing failed it is a no-op [POL-3] |
 | GET `/api/audit`, GET `/api/audit/verify` | staff | audit | [AUD-3, 5] |

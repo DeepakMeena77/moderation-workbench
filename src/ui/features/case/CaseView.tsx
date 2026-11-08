@@ -5,8 +5,13 @@ import CloudOffRounded from '@mui/icons-material/CloudOffRounded';
 import HourglassTopRounded from '@mui/icons-material/HourglassTopRounded';
 import LockOpenRounded from '@mui/icons-material/LockOpenRounded';
 import RefreshRounded from '@mui/icons-material/RefreshRounded';
+import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
+import HistoryRounded from '@mui/icons-material/HistoryRounded';
 import Box from '@mui/material/Box';
+import Link from '@mui/material/Link';
+import type { Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
+import NextLink from 'next/link';
 import { ApiError } from '../../api/client';
 import { useCase, useReanalyze, useReopen, type CaseDetail } from '../../api/hooks';
 import { Banner } from '../../components/Banner';
@@ -14,7 +19,6 @@ import { Button } from '../../components/Button';
 import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { StatusTag } from '../../components/ModerationTags';
-import { Tag } from '../../components/Tag';
 import { useSnackbar } from '../../components/SnackbarProvider';
 import {
   AI_PENDING,
@@ -25,7 +29,7 @@ import {
   FindingsCard,
   RecommendationCard,
 } from './CaseSections';
-import { layout } from '../../theme/theme';
+import { layout, m3, monoSx } from '../../theme/theme';
 import { DecisionPanel } from './DecisionPanel';
 
 // The case page (03 sec. 6.6). One column until the detail pane is wide enough, then a main column with a sticky
@@ -121,7 +125,89 @@ function CaseBanners({ detail }: { detail: CaseDetail }) {
   return banners.length > 0 ? <>{banners}</> : null;
 }
 
-export function CaseBody({ detail, onReload }: { detail: CaseDetail; onReload: () => void }) {
+// A middle dot between spaces, built from its code point so the source stays ASCII.
+const SEPARATOR = ` ${String.fromCharCode(0xb7)} `;
+
+const ENTRY_LABEL: Record<NonNullable<CaseDetail['entry']>, string> = {
+  report: 'user report',
+  rules: 'flagged by rules',
+  ai: 'flagged by AI',
+};
+
+/** "case 7f3k2qz . user report . priority 65" with middle dots; the short id is the end of the case id. */
+export function caseContextLine(detail: Pick<CaseDetail, 'id' | 'entry' | 'priority'>): string {
+  const parts = [
+    `case ${detail.id.slice(-7)}`,
+    detail.entry ? ENTRY_LABEL[detail.entry] : 'no findings',
+    `priority ${detail.priority}`,
+  ];
+  return parts.join(SEPARATOR);
+}
+
+const quietLink = (t: Theme) => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 1,
+  ...t.typography.body2,
+  color: m3(t).onSurfaceVariant,
+  textDecoration: 'none',
+  '&:hover': { color: m3(t).onSurface, textDecoration: 'underline' },
+  '& svg': { fontSize: 16 },
+});
+
+/**
+ * The case header (03 sec. 6.6): back to the queue and the item's full moderation history; a monospace context line
+ * (short case id, how it entered the queue, priority); then the title (the page's h1) with its status tag, and
+ * Re-analyse or Reopen on the right.
+ */
+function CaseHeader({ detail, backHref }: { detail: CaseDetail; backHref: string }) {
+  const noun = detail.content.type === 'post' ? 'Post' : 'Comment';
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: layout.stackGap }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 4, rowGap: 1 }}>
+        <Link component={NextLink} href={backHref} scroll={false} sx={quietLink}>
+          <ArrowBackRounded aria-hidden />
+          Back to queue
+        </Link>
+        <Link component={NextLink} href={`/content/${encodeURIComponent(detail.content.id)}/history`} sx={quietLink}>
+          <HistoryRounded aria-hidden />
+          Full moderation history
+        </Link>
+      </Box>
+      <Typography variant="caption" component="p" color="text.secondary" sx={monoSx}>
+        {caseContextLine(detail)}
+      </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          columnGap: 3,
+          rowGap: 2,
+        }}
+      >
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 3, rowGap: 1, minWidth: 0 }}>
+          <Typography variant="h1" sx={{ overflowWrap: 'anywhere' }}>
+            {noun} by {detail.content.author.name}
+          </Typography>
+          <StatusTag status={detail.status} />
+        </Box>
+        <CaseActions detail={detail} />
+      </Box>
+    </Box>
+  );
+}
+
+export function CaseBody({
+  detail,
+  onReload,
+  backHref = '/queue',
+}: {
+  detail: CaseDetail;
+  onReload: () => void;
+  backHref?: string;
+}) {
   const decisionArea = detail.permissions.canDecide ? (
     <DecisionPanel detail={detail} onReload={onReload} />
   ) : detail.decision ? (
@@ -130,6 +216,7 @@ export function CaseBody({ detail, onReload }: { detail: CaseDetail; onReload: (
 
   return (
     <Box sx={{ containerType: 'inline-size' }}>
+      <CaseHeader detail={detail} backHref={backHref} />
       <Box
         sx={{
           display: 'grid',
@@ -142,24 +229,6 @@ export function CaseBody({ detail, onReload }: { detail: CaseDetail; onReload: (
         }}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap, minWidth: 0 }}>
-          {/* One header row: status and priority on the left, actions on the right. When it wraps (phones), the
-              actions start a new line at the left edge, under the tags. */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              columnGap: 3,
-              rowGap: 2,
-            }}
-          >
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
-              <StatusTag status={detail.status} />
-              <Tag label={`P ${detail.priority}`} tone="neutral" title="Queue priority, 0-100" />
-            </Box>
-            <CaseActions detail={detail} />
-          </Box>
           <CaseBanners detail={detail} />
           <ContentCard detail={detail} />
           <FindingsCard detail={detail} />
@@ -189,11 +258,11 @@ export function CaseBody({ detail, onReload }: { detail: CaseDetail; onReload: (
   );
 }
 
-export function CaseView({ caseId }: { caseId: string }) {
+export function CaseView({ caseId, backHref }: { caseId: string; backHref?: string }) {
   const query = useCase(caseId);
   return (
     <QueryState query={query} loadingLabel="Loading the case" skeleton={<CaseSkeleton />}>
-      {(detail) => <CaseBody detail={detail} onReload={() => void query.refetch()} />}
+      {(detail) => <CaseBody detail={detail} onReload={() => void query.refetch()} backHref={backHref} />}
     </QueryState>
   );
 }

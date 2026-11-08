@@ -218,10 +218,14 @@ export interface QueueFilters {
   q?: string;
 }
 
+/** How a case entered the queue (server: services/cases.ts caseEntry). */
+export type CaseEntry = 'report' | 'rules' | 'ai';
+
 export interface CaseRow {
   id: string;
   status: CaseStatus;
   trigger: CaseTrigger;
+  entry: CaseEntry | null;
   priority: number;
   reportCount: number;
   createdAt: string;
@@ -232,7 +236,9 @@ export interface CaseRow {
     aiStatus: AiStatus;
     action: ModAction;
     severity: Severity | null;
+    confidence: number | null;
     clauseCodes: string[];
+    reasons: string[];
   } | null;
 }
 
@@ -343,6 +349,7 @@ export interface CaseDetail {
   id: string;
   status: CaseStatus;
   trigger: CaseTrigger;
+  entry: CaseEntry | null;
   priority: number;
   reportCount: number;
   createdAt: string;

@@ -9,6 +9,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useId, useMemo, useState, type ReactNode } from 'react';
+import { PageHeader } from '../../components/PageHeader';
+import { useSectionLabel } from '../../shell/RoleContext';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -308,6 +310,7 @@ export function AuditView() {
   // An inverted date range stays in the fields (typed input is never lost) but is not sent to the API.
   const sent = useMemo(() => (rangeError(filters) ? { ...filters, to: undefined } : filters), [filters]);
   const events = useAuditEvents(sent);
+  const section = useSectionLabel('audit');
 
   const setFilters = useCallback(
     (next: AuditFilters) => router.replace(`${pathname}${auditSearch(next)}`, { scroll: false }),
@@ -320,104 +323,108 @@ export function AuditView() {
   const total = events.data?.pages[0]?.total ?? 0;
 
   return (
-    <Box sx={{ ...pageSx, display: 'flex', flexDirection: 'column', gap: layout.stackGap, minWidth: 0 }}>
-      <Typography variant="h1" sx={{ mb: { xs: 0, sm: 1 } }}>
-        Audit
-      </Typography>
-      <IntegrityBanner onShowEvent={(id) => setFilters({ q: `#${id}` })} />
+    <Box sx={{ ...pageSx, minWidth: 0 }}>
+      <PageHeader
+        section={section}
+        title="Audit"
+        description="Every state change, newest first, in a hash-chained trail that shows any tampering."
+      />
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap, minWidth: 0 }}>
+        <IntegrityBanner onShowEvent={(id) => setFilters({ q: `#${id}` })} />
 
-      <Card component="section" aria-label="Filters" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <SearchBar
-          value={filters.q ?? ''}
-          onSearch={onSearch}
-          label="Search the audit trail"
-          placeholder="Search actor, entity, request ID or #event"
-        />
-        <Filters filters={filters} onChange={setFilters} />
-        {hasAuditFilters(filters) ? (
-          <Box>
-            <Button variant="ghost" startIcon={<FilterAltOffRounded />} onClick={clear} sx={{ ml: -3 }}>
-              Clear filters
-            </Button>
-          </Box>
-        ) : null}
-      </Card>
+        <Card component="section" aria-label="Filters" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <SearchBar
+            value={filters.q ?? ''}
+            onSearch={onSearch}
+            label="Search the audit trail"
+            placeholder="Search actor, entity, request ID or #event"
+          />
+          <Filters filters={filters} onChange={setFilters} />
+          {hasAuditFilters(filters) ? (
+            <Box>
+              <Button variant="ghost" startIcon={<FilterAltOffRounded />} onClick={clear} sx={{ ml: -3 }}>
+                Clear filters
+              </Button>
+            </Box>
+          ) : null}
+        </Card>
 
-      <Box
-        component="section"
-        aria-label="Events"
-        sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap, minWidth: 0 }}
-      >
-        <QueryState
-          query={events}
-          loadingLabel="Loading audit events"
-          isEmpty={(data) => (data.pages[0]?.items.length ?? 0) === 0}
-          empty={
-            <Card>
-              {hasAuditFilters(filters) ? (
-                <EmptyState
-                  icon={<FilterAltOffRounded />}
-                  title={filters.q ? `No events match '${filters.q}'.` : 'No events match these filters.'}
-                  action={
-                    <Button variant="secondary" onClick={clear}>
-                      Clear filters
-                    </Button>
-                  }
-                />
-              ) : (
-                <EmptyState
-                  icon={<HistoryRounded />}
-                  title="No audit events yet."
-                  description="Posts, reports, analyses and decisions are recorded here as they happen."
-                />
-              )}
-            </Card>
-          }
+        <Box
+          component="section"
+          aria-label="Events"
+          sx={{ display: 'flex', flexDirection: 'column', gap: layout.stackGap, minWidth: 0 }}
         >
-          {() => (
-            <>
-              <Card sx={{ display: { xs: 'none', md: 'block' }, p: { md: 2 } }}>
-                <DataTable
-                  caption="Audit events, newest first"
-                  columns={COLUMNS}
-                  rows={loaded}
-                  rowKey={(row) => row.id}
-                  renderExpanded={(row) => <EventDetails row={row} />}
-                  expandLabel={(row) => `Details of event #${row.id}`}
-                />
+          <QueryState
+            query={events}
+            loadingLabel="Loading audit events"
+            isEmpty={(data) => (data.pages[0]?.items.length ?? 0) === 0}
+            empty={
+              <Card>
+                {hasAuditFilters(filters) ? (
+                  <EmptyState
+                    icon={<FilterAltOffRounded />}
+                    title={filters.q ? `No events match '${filters.q}'.` : 'No events match these filters.'}
+                    action={
+                      <Button variant="secondary" onClick={clear}>
+                        Clear filters
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <EmptyState
+                    icon={<HistoryRounded />}
+                    title="No audit events yet."
+                    description="Posts, reports, analyses and decisions are recorded here as they happen."
+                  />
+                )}
               </Card>
-              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-                <RowList component="ul" aria-label="Audit events, newest first">
-                  {loaded.map((row) => (
-                    <EventListItem key={row.id} row={row} />
-                  ))}
-                </RowList>
-              </Box>
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 2,
-                }}
-              >
-                <Typography variant="caption" color="text.secondary" role="status">
-                  Showing {loaded.length} of {total}
-                </Typography>
-                {events.hasNextPage ? (
-                  <Button
-                    variant="secondary"
-                    loading={events.isFetchingNextPage}
-                    onClick={() => void events.fetchNextPage()}
-                  >
-                    Load more
-                  </Button>
-                ) : null}
-              </Box>
-            </>
-          )}
-        </QueryState>
+            }
+          >
+            {() => (
+              <>
+                <Card sx={{ display: { xs: 'none', md: 'block' }, p: { md: 2 } }}>
+                  <DataTable
+                    caption="Audit events, newest first"
+                    columns={COLUMNS}
+                    rows={loaded}
+                    rowKey={(row) => row.id}
+                    renderExpanded={(row) => <EventDetails row={row} />}
+                    expandLabel={(row) => `Details of event #${row.id}`}
+                  />
+                </Card>
+                <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                  <RowList component="ul" aria-label="Audit events, newest first">
+                    {loaded.map((row) => (
+                      <EventListItem key={row.id} row={row} />
+                    ))}
+                  </RowList>
+                </Box>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 2,
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" role="status">
+                    Showing {loaded.length} of {total}
+                  </Typography>
+                  {events.hasNextPage ? (
+                    <Button
+                      variant="secondary"
+                      loading={events.isFetchingNextPage}
+                      onClick={() => void events.fetchNextPage()}
+                    >
+                      Load more
+                    </Button>
+                  ) : null}
+                </Box>
+              </>
+            )}
+          </QueryState>
+        </Box>
       </Box>
     </Box>
   );

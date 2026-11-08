@@ -14,6 +14,7 @@ import { getDb } from '../db';
 import { AppError } from '../errors';
 import { analyzeDedupeKey, enqueue } from '../jobs/queue';
 import { getLogger } from '../logger';
+import { rankReasons } from '../moderation/reasonOrder';
 import type { PolicyChange } from '../policy/diff';
 import { clausesSchema, MOD_ACTIONS, SEVERITIES, type ModAction, type Severity } from '../policy/schema';
 import { append, type Tx } from './audit';
@@ -51,7 +52,8 @@ export const recommendationSchema = z.object({
   severity: severity.nullable().catch(null),
   confidence: z.number().min(0).max(1).nullable().catch(null),
   needsHuman: z.boolean().catch(true),
-  reasons: z.array(z.string()).catch([]),
+  // Most specific first (moderation/reasonOrder.ts), so the queue's first reason and the case page agree.
+  reasons: z.array(z.string()).catch([]).transform(rankReasons),
   autoClear: z.boolean().catch(false),
   priority: z.number().catch(0),
   clauseCodes: z.array(z.string()).catch([]),
@@ -191,10 +193,25 @@ export const caseListQuerySchema = z.object({
 
 export type CaseListQuery = z.infer<typeof caseListQuerySchema>;
 
+/** How a case entered the queue: a user report, a deterministic rule, or the AI review alone. */
+export type CaseEntry = 'report' | 'rules' | 'ai';
+
+/**
+ * A report comes first (someone asked for a review); otherwise rule findings, then AI findings. null when the
+ * analysis found nothing (for example the AI was unavailable and the case waits for a human anyway).
+ */
+export function caseEntry(trigger: CaseTrigger, ruleFindings: number, aiFindings: number): CaseEntry | null {
+  if (trigger === 'report') return 'report';
+  if (ruleFindings > 0) return 'rules';
+  if (aiFindings > 0) return 'ai';
+  return null;
+}
+
 export interface CaseRow {
   id: string;
   status: CaseStatus;
   trigger: CaseTrigger;
+  entry: CaseEntry | null;
   priority: number;
   reportCount: number;
   createdAt: string;
@@ -205,7 +222,10 @@ export interface CaseRow {
     aiStatus: AiStatus;
     action: ModAction;
     severity: Severity | null;
+    confidence: number | null;
     clauseCodes: string[];
+    /** Why a human must decide, as on the case page. */
+    reasons: string[];
   } | null;
 }
 
@@ -257,7 +277,16 @@ export async function listCases(query: CaseListQuery): Promise<CaseListPage> {
         reportCount: true,
         createdAt: true,
         content: { select: { id: true, type: true, body: true, author: { select: { name: true } } } },
-        currentAnalysis: { select: { seq: true, policyVersion: true, aiStatus: true, recommendation: true } },
+        currentAnalysis: {
+          select: {
+            seq: true,
+            policyVersion: true,
+            aiStatus: true,
+            recommendation: true,
+            ruleFindings: true,
+            aiFindings: true,
+          },
+        },
       },
     }),
     db.case.count({ where }),
@@ -266,10 +295,13 @@ export async function listCases(query: CaseListQuery): Promise<CaseListPage> {
   return {
     items: page.map((row) => {
       const rec = row.currentAnalysis ? parseRecommendation(row.currentAnalysis.recommendation) : null;
+      const ruleCount = row.currentAnalysis ? parseRuleFindings(row.currentAnalysis.ruleFindings).length : 0;
+      const aiCount = row.currentAnalysis ? (parseAiDetail(row.currentAnalysis.aiFindings)?.findings.length ?? 0) : 0;
       return {
         id: row.id,
         status: row.status,
         trigger: row.trigger,
+        entry: caseEntry(row.trigger, ruleCount, aiCount),
         priority: row.priority,
         reportCount: row.reportCount,
         createdAt: row.createdAt.toISOString(),
@@ -287,7 +319,9 @@ export async function listCases(query: CaseListQuery): Promise<CaseListPage> {
                 aiStatus: row.currentAnalysis.aiStatus,
                 action: rec.action,
                 severity: rec.severity,
+                confidence: rec.confidence,
                 clauseCodes: rec.clauseCodes,
+                reasons: rec.reasons,
               }
             : null,
       };
@@ -360,6 +394,7 @@ export interface CaseDetail {
   id: string;
   status: CaseStatus;
   trigger: CaseTrigger;
+  entry: CaseEntry | null;
   priority: number;
   reportCount: number;
   createdAt: string;
@@ -504,10 +539,13 @@ export async function getCase(actor: Actor, caseId: string): Promise<CaseDetail>
   ]);
 
   const decider = DECIDER_ROLES.has(actor.role);
+  const ruleFindings = current ? parseRuleFindings(current.ruleFindings) : [];
+  const aiDetail = current ? parseAiDetail(current.aiFindings) : null;
   return {
     id: row.id,
     status: row.status,
     trigger: row.trigger,
+    entry: caseEntry(row.trigger, ruleFindings.length, aiDetail?.findings.length ?? 0),
     priority: row.priority,
     reportCount: row.reportCount,
     createdAt: row.createdAt.toISOString(),
@@ -534,8 +572,8 @@ export async function getCase(actor: Actor, caseId: string): Promise<CaseDetail>
           createdAt: current.createdAt.toISOString(),
           aiStatus: current.aiStatus,
           recommendation: parseRecommendation(current.recommendation),
-          ruleFindings: parseRuleFindings(current.ruleFindings),
-          ai: parseAiDetail(current.aiFindings),
+          ruleFindings,
+          ai: aiDetail,
           aiRun,
         }
       : null,

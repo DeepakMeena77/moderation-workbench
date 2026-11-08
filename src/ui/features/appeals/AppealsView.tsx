@@ -7,6 +7,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppeals, type AppealRow, type AppealStatus } from '../../api/hooks';
+import { PageHeader } from '../../components/PageHeader';
+import { useSectionLabel } from '../../shell/RoleContext';
 import { Banner } from '../../components/Banner';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
@@ -69,11 +71,16 @@ export function AppealsView({ selectedId }: { selectedId: string | null }) {
   const status: AppealStatus = searchParams.get('status') === 'resolved' ? 'resolved' : 'pending';
   const search = status === 'resolved' ? '?status=resolved' : '';
   const appeals = useAppeals(status);
+  const section = useSectionLabel('appeals');
 
   return (
     <Box data-ui="section" sx={pageSx}>
-      <Box sx={{ display: { xs: selectedId ? 'none' : 'block', md: 'block' }, mb: titleGap }}>
-        <Typography variant="h1">Appeals</Typography>
+      <Box sx={{ display: { xs: selectedId ? 'none' : 'block', md: 'block' } }}>
+        <PageHeader
+          section={section}
+          title="Appeals"
+          description="Second reviews of moderation decisions. A senior moderator who did not make the decision resolves each one."
+        />
       </Box>
       {selectedId ? (
         <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 2, mb: titleGap, ml: -3 }}>

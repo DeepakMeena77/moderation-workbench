@@ -24,12 +24,25 @@ export interface DataTableProps<T> {
   renderExpanded?: (row: T) => ReactNode;
   /** The expand button's accessible name, e.g. "Details of event #12". */
   expandLabel?: (row: T) => string;
+  /**
+   * When set, each row is focusable and opens with a click or Enter (the queue table). The row should also hold a
+   * link to the same place, so the target has a name for assistive technology and can open in a new tab.
+   */
+  onRowOpen?: (row: T) => void;
 }
 
 // Data table (03 sec. 4, audit at >= 840 px): inside a bordered panel; header in the 12/16 label style and the
 // secondary text colour; 1 px hairlines between rows; a flat hover layer on rows. The fixed layout
 // and wrapping cells keep it inside the pane at every width it is shown. Below 840 px pages show a list instead.
-export function DataTable<T>({ caption, columns, rows, rowKey, renderExpanded, expandLabel }: DataTableProps<T>) {
+export function DataTable<T>({
+  caption,
+  columns,
+  rows,
+  rowKey,
+  renderExpanded,
+  expandLabel,
+  onRowOpen,
+}: DataTableProps<T>) {
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const baseId = useId();
   const toggle = (key: string) =>
@@ -55,6 +68,8 @@ export function DataTable<T>({ caption, columns, rows, rowKey, renderExpanded, e
         '& thead tr, & tbody tr': { borderBottom: `1px solid ${m3(t).border}` },
         '& tbody tr:last-of-type': { borderBottom: 0 },
         '& tbody tr.data-row:hover': { backgroundColor: layer(m3(t).onSurface, 'transparent', 4) },
+        '& tbody tr.data-row[tabindex]': { cursor: 'pointer' },
+        '& tbody tr.data-row:focus-visible': { outlineOffset: -2 },
       })}
     >
       <Box component="caption" sx={visuallyHidden}>
@@ -83,7 +98,29 @@ export function DataTable<T>({ caption, columns, rows, rowKey, renderExpanded, e
           const detailId = `${baseId}-${key}`;
           return (
             <Fragment key={key}>
-              <tr className="data-row">
+              <tr
+                className="data-row"
+                tabIndex={onRowOpen ? 0 : undefined}
+                onClick={
+                  onRowOpen
+                    ? (event) => {
+                        // A click on the row's own link or a button is left to that control.
+                        if ((event.target as HTMLElement).closest('a, button')) return;
+                        onRowOpen(row);
+                      }
+                    : undefined
+                }
+                onKeyDown={
+                  onRowOpen
+                    ? (event) => {
+                        if (event.key === 'Enter' && event.target === event.currentTarget) {
+                          event.preventDefault();
+                          onRowOpen(row);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 {renderExpanded ? (
                   <td>
                     <IconButton

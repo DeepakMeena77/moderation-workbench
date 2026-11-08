@@ -3,12 +3,14 @@
 import RefreshRounded from '@mui/icons-material/RefreshRounded';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import { PageHeader } from '../../components/PageHeader';
+import { useSectionLabel } from '../../shell/RoleContext';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { QueryState } from '../../components/QueryState';
 import { CardSkeleton } from '../../components/Skeletons';
 import { StatCard } from '../../components/StatCard';
-import { layout, m3, pageSx, titleGap } from '../../theme/theme';
+import { layout, m3, pageSx } from '../../theme/theme';
 import { shortDateTime } from '../feed/format';
 import { useMetrics, type Metrics } from './api';
 
@@ -216,19 +218,24 @@ function Report({ metrics }: { metrics: Metrics }) {
 
 export function MetricsView() {
   const query = useMetrics();
+  const section = useSectionLabel('metrics');
   return (
-    <Box sx={{ ...pageSx, display: 'flex', flexDirection: 'column', gap: titleGap, minWidth: 0 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 3 }}>
-        <Typography variant="h1">Metrics</Typography>
-        <Button
-          variant="secondary"
-          startIcon={<RefreshRounded />}
-          onClick={() => void query.refetch()}
-          loading={query.isFetching}
-        >
-          Refresh
-        </Button>
-      </Box>
+    <Box sx={{ ...pageSx, minWidth: 0 }}>
+      <PageHeader
+        section={section}
+        title="Metrics"
+        description="How often people agree with the AI, how often it fails, and what it costs."
+        action={
+          <Button
+            variant="secondary"
+            startIcon={<RefreshRounded />}
+            onClick={() => void query.refetch()}
+            loading={query.isFetching}
+          >
+            Refresh
+          </Button>
+        }
+      />
       <QueryState
         query={query}
         loadingLabel="Loading metrics"

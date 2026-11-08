@@ -108,7 +108,8 @@ on hover and turns accent on focus. The focus ring is the accent at 2 px (5.2:1 
 | Mono | 12 / 16 | 400 | Clause codes, IDs, request IDs (`ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`) | `monoSx` |
 | Stat value | 28 / 36 | 500 | The number on a stat card (tabular figures) | `display` |
 
-Sentence case everywhere; no uppercase labels. Everything is left-aligned except the sign-in card.
+Sentence case everywhere. The one uppercase text is the page header's section label (sec. 4), in the label style
+with 0.06em letter spacing and the tertiary colour. Everything is left-aligned except the sign-in card.
 
 ### 2.4 Shape, spacing, icons, motion
 
@@ -190,9 +191,11 @@ All navigation items carry `aria-current="page"` when active.
 
 | Component | Spec | Notes |
 | --- | --- | --- |
+| **Page header** | The top of every page: the navigation section ("Moderation", "Community", "Governance", "Oversight", "System") as a 12/16 uppercase label with 0.06em letter spacing in the tertiary colour; the page title (the page's one `h1`) 4 px below; one plain sentence in the secondary colour saying what the page is for (body text, max 680 wide); an optional page action on the right (**Refresh**), which wraps under the text on narrow screens. The section follows the role's navigation group, so the queue reads "Moderation" for moderators and "Oversight" for admins | Every page; sentences in sec. 6 |
+| **Option cards** | One choice as a row of selectable bordered cards (radius 6, padding 12, 1 px `border`, `card` fill): a 16 px radio mark, a title in strong body and a one-line consequence in meta text. Selected: the `selected` fill, `borderHover` border and a filled radio mark in the main text colour. Three columns; one column below 480 px of container width. A radio group: Tab reaches the selected card (or the first), arrow keys move between cards, Space or Enter selects. A disabled card is at 50% opacity with its reason in a tooltip. An error shows under the cards and describes the group | The decision (Approve, Reject, Modify) and the appeal outcome (Uphold, Overturn, Modify) |
 | **Button** | Radius 6, height 32 (36 with `size="large"` for the main action of a page), padding 12 (16 for the large size; 8 before a 16 px leading icon), 14/20 weight 500. **Primary:** solid accent, `onPrimary` text. **Secondary:** `card` fill, 1 px `borderStrong`, main text colour. **Ghost:** no fill, a transparent 1 px border (so it lines up with a secondary button beside it), main text colour (secondary colour for row actions), hover layer. **Destructive:** primary becomes solid error; a destructive ghost stays neutral at rest and turns error on hover and focus. Disabled at 50% opacity | One primary per view. Buttons in one row share a height and padding. |
 | **Icon button** | 32 x 32, radius 6, 18 px icon in the secondary colour, hover layer; 44 px touch target on phones | Always has an `aria-label` and a tooltip |
-| **Filter chip** | Content width, height 28, radius 6, 1 px `border`, `card` fill, body text in the secondary colour, the label left-aligned with 12 px side padding. Selected: the same shape with the `selected` fill, `borderStrong`, main text colour and a 14 px check right before the label. Chips sit in one wrapping row with an 8 px gap | Every chip group is this one component: queue, audit and appeal filters; report reasons; decision reasons and the Modify form's choices; the appeal outcome. One horizontally scrolling row on compact. |
+| **Filter chip** | Content width, height 28, radius 6, 1 px `border`, `card` fill, body text in the secondary colour, the label left-aligned with 12 px side padding. Selected: the same shape with the `selected` fill, `borderStrong`, main text colour and a 14 px check right before the label. Chips sit in one wrapping row with an 8 px gap | Every chip group is this one component: queue, audit and appeal filters; report reasons; decision reasons and the Modify form's clauses and action; the appeal's new action. One horizontally scrolling row on compact. |
 | **Badge** (`Tag`, not interactive) | Height 20, radius 4, padding 8, 12/16 weight 500, a soft tint with darker text and a 1 px border in the same hue (sec. 2.1); neutral by default; text only, no icons; clause codes in monospace | StatusTag, ActionTag, AiStateTag, PolicyVersionTag, ClauseTag, EvidenceTag |
 | **Dot label** | An 8 px dot plus a word, 12/16 beside badges or 14/20 in definition lists | Severity, check states |
 | **Search bar** | An input: height 36, radius 6, `field` fill, 1 px `fieldBorder` (`fieldBorderHover` on hover, accent plus a 2 px accent ring at 30% on focus), 16 px search icon, placeholder in the tertiary colour, a 28 px clear button | Queue: "Search text, author or clause (e.g. HAR-1)". Debounced 300 ms; synced to `?q=`. |
@@ -200,9 +203,9 @@ All navigation items carry `aria-current="page"` when active.
 | **Select / menu** | A text field with a menu: radius 8, `card` fill, 1 px hairline, 32 px items | Policy versions, audit filters |
 | **Card / panel** | `card` fill, 1 px `border`, radius 8, padding 16 (12 below 840 px), no shadow | Optional title in the section style with trailing actions |
 | **Nested section** | Radius 6, 1 px `border`, padding 12; transparent, or `cardNested` for quoted content and inline forms | Findings, "Why a human must decide", parent post, comments, decision form |
-| **Row list** | One bordered panel holding rows edge to edge, a 1 px hairline between rows | Feed posts, queue, appeals, audit (below 840 px) |
+| **Row list** | One bordered panel holding rows edge to edge, a 1 px hairline between rows | Feed posts, queue (below 1200 px), appeals, audit (below 840 px) |
 | **List row** | Min height 56, padding 12 / 16, a 2-line headline in body text, supporting text 12/16 in the secondary colour (a severity dot first where it applies), a trailing column (badge and age); hover layer; selected = `selected` fill, a 2 px accent marker at its start and `aria-current="page"`; inset focus ring | Queue (severity dot), appeals |
-| **Data table** (audit, >= 840 px) | Inside a bordered panel; header 12/16 weight 500 in the secondary colour; 1 px hairlines between rows; hover layer | Becomes a row list on compact |
+| **Data table** (audit from 840 px, queue from 1200 px) | Inside a bordered panel; a fixed layout with wrapping cells; header 12/16 weight 500 in the secondary colour; 1 px hairlines between rows; hover layer. Rows that open a page (the queue) are focusable with an inset focus ring; a click or Enter opens it, and the row also holds a link to the same page | Becomes a row list below its breakpoint |
 | **Stepper** | An ordered list of 20 px numbered markers joined by a 1 px hairline: done steps filled with the accent and a check, the current step filled with the accent and its label at weight 500 with `aria-current="step"`, later steps outlined in `borderStrong`. Labels wrap; the steps stack below 600 px of container width | Policy publish (4 steps) |
 | **Dialog** | Radius 8, `card` fill, 1 px hairline, padding 24, scrim 40%, max width 560 | **Full-screen on compact** for the composer, appeal and policy publish |
 | **Bottom sheet** | Top radius 8, `card` fill, top hairline, a small drag handle | Compact: report form, "More" menu |
@@ -213,7 +216,7 @@ All navigation items carry `aria-current="page"` when active.
 | **EmptyState** | Left-aligned: an 18 px icon in the tertiary colour beside a 14/20 weight-500 title, one line of help in the secondary colour and an optional secondary action | sec. 7 |
 | **ErrorState** | Left-aligned: an 18 px `error_outline` icon in `error`, the message, the request ID in monospace, a **Retry** button (or **Reload** for 409) | sec. 7 |
 | **HighlightedText** | Plain text with evidence spans in `<mark tabindex=0>` (info tint, 1 px accent underline, radius 2). Focus or hover shows a tooltip with the clause code and title. Overlapping spans are merged. | **Never `dangerouslySetInnerHTML`** [SEC-3] |
-| **ConfidenceMeter** | The label "0.72, Likely", a 4 px bar (radius 2, max 240 wide) on a track in the `border` colour, and the reason. Fill: the secondary text colour per finding; the accent for the recommendation's overall confidence | |
+| **ConfidenceMeter** | The label "0.72, Likely", a 4 px bar (radius 2, max 240 wide) on a track in the `border` colour, and the reason. Fill: the secondary text colour | Per finding. The recommendation shows its overall confidence as a labelled value with an accent bar (sec. 6.6) |
 | **Timeline** | A 1 px hairline joining 24 px outlined markers with a 14 px icon; each event is plain text beside its marker (title, time, details), grouped by day | History, appeal outcome |
 | **DiffView** | A bordered section per clause with an Added (success), Removed (error) or Changed (warning) badge and the change in words (field before -> after) | Policy compare and publish preview |
 | **StatCard** | A plain bordered panel: a 12/16 label in the secondary colour, the number in the stat style, one line of detail in the tertiary colour | Metrics |
@@ -232,7 +235,8 @@ All navigation items carry `aria-current="page"` when active.
   - work pages (queue, case, appeals, audit, metrics): fluid; status up to 1600
 - **Gutters:** 16 in list-detail at 840-1199, 24 from 1200; 12 between stacked panels and grid cards.
 - **No horizontal scroll from 320 px.** Long words and URLs use `overflow-wrap: anywhere`. Chip rows scroll
-  horizontally inside their own container. Tables become row lists below 840.
+  horizontally inside their own container. The audit table becomes a row list below 840 px, the queue table below
+  1200 px.
 - **Sticky elements:** the top bar; the sidebar; the decision pane (supporting pane, when the detail is wide
   enough); the bottom bar on phones.
 - **Targets:** see sec. 2.4. Hover-only information is also available on focus or tap.
@@ -241,8 +245,8 @@ All navigation items carry `aria-current="page"` when active.
 
 | Screen | Compact (< 600) | Medium (600-839) | Expanded (840-1199) | Large and up (>= 1200) |
 | --- | --- | --- | --- | --- |
-| Queue -> case | List; tap opens the case full screen | Same | **List-detail**: list 360 + case | List 400 + case; the case shows a **supporting pane** (recommendation and decision panel 360, sticky) once the detail pane itself is >= 760 wide (a container query: with the sidebar and the list beside it, that is from about 1480 px) |
-| Case detail | Single column, header row, decision panel at the end | Same | Single column in the detail pane, decision card at the end | Main column + sticky decision pane |
+| Queue -> case | List; tap opens the case full screen | Same | **List-detail**: list 360 + case | **Table** at full width; a row opens the case as a full-width page |
+| Case detail | Single column, case header, decision panel at the end | Same | Single column in the detail pane, decision card at the end | Main column + **supporting pane** (recommendation and decision panel 360, sticky). A container query decides: the pane appears once the case itself is >= 760 wide |
 | Appeals -> review | List -> full-screen review, stacked panels | Same | List-detail; review shows the panels stacked | 2 columns (Original, Appeal) + Outcome full width below; **>= 1600: 3 columns** |
 | Feed | Single column, composer at the top | Left-aligned, max 760 | Same | Same |
 | Policy | Versions, clauses, compare, publish stacked | Same | Same, max 960 | Same |
@@ -253,7 +257,22 @@ All navigation items carry `aria-current="page"` when active.
 
 ## 6. Screens
 
-Each screen uses QueryState plus the states in sec. 7.
+Each screen uses QueryState plus the states in sec. 7. Each page starts with the page header (sec. 4):
+
+| Page | Section | Sentence |
+| --- | --- | --- |
+| Feed | Community | Posts from the community, newest first. Every post is checked against the active policy. |
+| My content | Community | Everything you have posted, with its review status. You can appeal a decision until its deadline. |
+| History | Community (author) or Moderation (staff) | Every step this item went through, oldest first. |
+| Queue | Moderation (Oversight for admins) | Sorted by priority, then oldest first. Everything here needs a human decision. |
+| Appeals | Moderation | Second reviews of moderation decisions. A senior moderator who did not make the decision resolves each one. |
+| Policy | Governance | Policies are versioned data. Every analysis and decision records the version it used. |
+| Audit | Governance (Oversight for admins) | Every state change, newest first, in a hash-chained trail that shows any tampering. |
+| Metrics | Governance (Oversight for admins) | How often people agree with the AI, how often it fails, and what it costs. |
+| Status | System | Live checks of the app, database, AI model, background jobs and policy. |
+| Not found, no access, error | System | One sentence on what happened (sec. 6.13) |
+
+The case page is the exception: its header (sec. 6.6) names the item instead.
 
 1. **Sign-in** `/sign-in`
    - A centred card (max 440), the one centred page: email and password fields with labels above; **Sign in**
@@ -282,6 +301,7 @@ Each screen uses QueryState plus the states in sec. 7.
      note.
    - Appeal state and outcome are shown inline as a nested section.
 4. **History** `/content/[id]/history`
+   - A ghost **Back** button above the page header.
    - A timeline: created -> analysis v1 (staff: findings, AI run) -> decision -> appeal -> outcome -> re-analysis
      after a policy change. A decision made under an older policy carries a warning banner "Policy changed since
      this decision" with the version it stays under.
@@ -289,33 +309,70 @@ Each screen uses QueryState plus the states in sec. 7.
 5. **Queue** `/queue`
    - Search bar; a filter-chip row: Needs review (default), Analysing, Auto-cleared, High, Reported,
      AI unavailable, Policy v...
-   - Rows in one bordered panel:
+   - Below 1200 px, rows in one bordered panel:
      - headline: the excerpt (2 lines)
      - supporting: a severity dot, then "High, Post, Alex, HAR-1, PII-1, 2 reports" (the severity in words first)
      - trailing: a priority badge ("P 85", error tint from 75) and the age ("12 m")
+   - From 1200 px, a full-width data table, one row per case:
+     - **Priority:** a 24 px bar (error fill from 75, secondary text colour below) and the number in monospace
+     - **Content:** the excerpt as a link (2 lines), then a type badge (Post, Comment) and a report-count badge
+       ("2 reports") when reported
+     - **Source:** how the case entered the queue: Rules, AI or Report
+     - **Proposed action**, **Severity** (dot plus word), **Confidence** (two decimals in monospace)
+     - **Why a human:** the most specific reason (the order below), then "2 more" in the tertiary colour
+     - **Policy** ("v2" in monospace) and **Age**
+     - Each row is focusable; a click or Enter opens `/queue/[caseId]` with the filters kept.
+   - **Order of the reasons a human must decide**, most specific first, so the first one says something the other
+     columns do not: reported by users; instructions aimed at the AI; a high-severity finding or a clause that
+     always goes to a human; rules and AI disagree; a rule hit the AI did not confirm; findings dropped or an action
+     lowered by verification; the AI asked for review; low confidence; not enough context; the AI result missing;
+     last, "The recommended action is ...; any action needs a human decision." Reasons of the same kind keep their
+     order.
    - "Showing 20 of 54" and "Load more".
 6. **Case** `/queue/[caseId]`
-   - **Header row:** the status and priority badges on the left; secondary **Reopen for review** and
-     **Re-analyse** buttons (leading icon) on the right. When the row wraps (phones), the buttons start the next
-     line at the left edge, under the badges.
-   - **Content card:** HighlightedText; parent post (for comments) as a nested section; report reasons (counts
-     only).
+   - **Case header:**
+     - a row of two quiet links with 16 px icons: **Back to queue** (the queue with its filters) and **Full
+       moderation history** (`/content/[id]/history`)
+     - a context line in 12/16 monospace and the secondary colour, parts joined by middle dots: the short case id
+       (its last 7 characters), how the case entered the queue ("user report", "flagged by rules" or "flagged by
+       AI") and its priority (for example "case 7f3k2qz", "flagged by rules", "priority 55")
+     - the title "Post by Asha Rao" (the page's `h1`) with the status badge beside it; secondary **Reopen for
+       review** and **Re-analyse** buttons (leading icon) on the right. When the row wraps (phones), the buttons
+       start the next line at the left edge.
+     - Below 840 px the case is its own screen and the header's back link leads to the list; from 1200 px the case
+       is a full-width page.
+   - **Content card:** titled "Content" (its region is named after the item, "Post by Asha Rao");
+     HighlightedText; parent post (for comments) as a nested section; report reasons (counts only).
    - **Findings card**, three groups under 12/16 group labels:
      - "Confirmed evidence": rule and verified-AI findings, each a nested section with the clause code, the
        evidence badge, the severity dot, quotes, the ConfidenceMeter with reasons and the clause text (a quiet
-       disclosure)
+       disclosure). Under each quote: a monospace source badge ("Rule - keyword", "Rule - pattern",
+       "Rule - links", "AI") and the character range in 12/16 monospace ("chars 44-61"), so the moderator can check
+       it against the text. Interpretations carry neither.
      - "AI interpretation - not verified evidence"
      - "Dropped by verification": invalid clauses and unverified quotes, shown for transparency
-   - **Recommendation card** (supporting pane): an "AI + rules suggestion" label; action badge; severity dot; AI
-     state badge; clause codes; ConfidenceMeter; "**Why a human must decide**" as a nested list; policy version
-     badge; "Analysis v3 of 3".
-   - **Decision panel**, all large buttons:
-     - **Approve recommendation** (primary)
-     - **Modify** (secondary): opens action chips (disallowed actions disabled with a reason), clause chips, a
-       reason category and a rationale, in a nested form
-     - **Reject recommendation** (ghost, red only on hover and focus): reason and note
-     - Submit shows progress. A 409 shows a banner: "This case was re-analysed (policy v2). Reload to see the
-       latest analysis."
+   - **Recommendation card** (supporting pane): an "AI + rules suggestion" label and the title, then:
+     - **at a glance**, three labelled values side by side (label 12/16 in the secondary colour above, value in the
+       section style below): **Proposed action** (word), **Severity** (dot plus word), **Confidence** (two
+       decimals, the confidence word under it in meta text, and a 4 px accent bar on a hairline track; "None" and
+       "AI pending" without an AI result)
+     - the explanation: the AI state badge (and "Insufficient context" when it applies), the severity and
+       confidence reasons, clause codes, and "**Why a human must decide**" as a nested list in the same order as
+       the queue table (sec. 6.5)
+     - at the bottom, above a hairline: "Analysed under policy v2, analysis v3 of 3" in meta text
+   - **Decision panel:** "Your decision" with the policy and analysis versions it is saved with, then:
+     - three **option cards**, each with its consequence: **Approve** "Take the recommended action (limit)",
+       **Reject** "No violation; keep it visible", **Modify** "Choose a different action or clause"
+     - Modify adds clause chips (the recommended clauses preselected) and action chips (disallowed actions
+       disabled with a reason); Reject and Modify add reason chips and a required rationale ("Note" for Reject)
+       with a counter
+     - one primary large button whose label says exactly what will happen: "Choose a decision" before a choice,
+       then "Approve: limit this post", "Reject: keep visible", "Modify: label under HAR-1" (or "Modify: choose an
+       action")
+     - Submitting without a choice shows "Choose approve, reject or modify." under the cards and focuses them;
+       other errors show on their field and focus moves to the first. Submit shows progress. A 409 shows a
+       banner: "This case was re-analysed (policy v2). Reload to see the latest analysis." The choice and typed
+       text are kept.
    - **Human decision** (once decided): who, when, the suggested and final actions, the rationale, and the
      "Policy changed since this decision" warning banner when a newer policy is active.
    - **Analysis versions** and **AI run details**: bordered disclosures.
@@ -326,8 +383,12 @@ Each screen uses QueryState plus the states in sec. 7.
    - **Original decision** panel: action, clauses, rationale, decider, policy version, evidence highlights.
    - **Appeal evidence** panel: the statement and links, plus the **AI summary** section ("does not recommend an
      outcome", new points, disputed findings).
-   - **Outcome** panel: pending, or the result, plus the resolve form: Uphold, Overturn, Modify (filter chips),
-     action (for modify), rationale.
+   - **Outcome** panel: pending, or the result, plus the resolve form:
+     - three **option cards**: **Uphold** "Keep the original decision", **Overturn** "Reverse it; the content is
+       visible again", **Modify** "Choose a different action"
+     - for Modify, the new action as chips; then the rationale
+     - one primary large button that says what will happen: "Choose an outcome" before a choice, then "Uphold: keep
+       it limited", "Overturn: make it visible again" or "Modify: label it instead"
    - The original decider sees "You made the original decision - another senior moderator must review this".
      Controls are disabled.
    - "Policy changed since decision" warning banner when applicable.
@@ -343,7 +404,9 @@ Each screen uses QueryState plus the states in sec. 7.
        signals (one plain line, for example "Keywords: worthless, idiot; 1 pattern")
    - **Compare** (two selects + DiffView).
    - **Publish** (admin), a 4-step flow shown with the **Stepper**: 1 Paste or upload JSON (a plain multi-line
-     field; no editor dependency) -> 2 Validate (error list with JSON paths) -> 3 Review the diff and the impact
+     field; no editor dependency; beside **Upload JSON file**, two secondary shortcuts fill the field: **Load
+     example v2** (the bundled `policies/policy.v2.json`) and **Start from active version**; when they replace
+     typed text, a neutral banner offers **Restore my text**) -> 2 Validate (error list with JSON paths) -> 3 Review the diff and the impact
      ("12 unresolved cases will be re-analysed under v2") -> 4 Confirm dialog.
    - Then a re-evaluation progress card (linear progress, done/failed counts, **Retry failed**).
 10. **Audit** `/audit`
@@ -370,7 +433,8 @@ Each screen uses QueryState plus the states in sec. 7.
       **Retry** button. The role is read on the client, so the page never waits for the database.
     - Timestamps show as local times ("7 Nov, 19:13") with the ISO value in the tooltip.
 13. **Errors:** 404 "Not found", 403 "You don't have access to this", and a global error boundary with Retry and
-    the request ID. Each is a left-aligned page heading and one card with the message and the next action.
+    the request ID. Each is a page header (section "System", the title, one sentence) and one card with the
+    message and the next action.
 
 ---
 

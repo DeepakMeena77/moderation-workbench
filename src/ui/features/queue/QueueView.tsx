@@ -1,6 +1,5 @@
 'use client';
 
-import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import FilterAltOffRounded from '@mui/icons-material/FilterAltOffRounded';
 import InboxRounded from '@mui/icons-material/InboxRounded';
 import TouchAppRounded from '@mui/icons-material/TouchAppRounded';
@@ -13,21 +12,24 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { FilterChip } from '../../components/FilterChip';
-import { IconButton } from '../../components/IconButton';
 import { ListRow } from '../../components/ListRow';
 import type { DotTone } from '../../components/Tag';
 import { QueryState } from '../../components/QueryState';
 import { RowList } from '../../components/RowList';
 import { SearchBar } from '../../components/SearchBar';
 import { Tag } from '../../components/Tag';
-import { layout, pageSx, titleGap } from '../../theme/theme';
+import { PageHeader } from '../../components/PageHeader';
+import { layout, pageSx } from '../../theme/theme';
+import { useSectionLabel } from '../../shell/RoleContext';
 import { CaseView } from '../case/CaseView';
 import { relativeTime } from '../feed/format';
 import { hasNarrowingFilters, parseQueueFilters } from './queueFilters';
+import { QueueTable } from './QueueTable';
 
-// The Queue page (03 sec. 6.5, Q-1, Q-3) as a list-detail layout (03 sec. 5.1): below 840 px the list and the
-// case are separate screens (/queue and /queue/[caseId]); from 840 px the case opens beside the list. Panes are
-// switched with CSS, so the server render and the first client render agree. Filters and search are in the URL.
+// The Queue page (03 sec. 6.5, Q-1, Q-3). Below 840 px the list and the case are separate screens (/queue and
+// /queue/[caseId]); from 840 to 1199 px the case opens beside the list (list-detail, 03 sec. 5.1); from 1200 px the
+// queue is a full-width table and the case is a full-width page. Panes are switched with CSS, so the server render
+// and the first client render agree. Filters and search are in the URL.
 
 /** The severity dot before the supporting text, which names the severity in words (03 sec. 2.2). */
 function severityDot(severity: Severity | null): DotTone | null {
@@ -163,6 +165,7 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
   const filters = useMemo(() => parseQueueFilters(searchParams), [searchParams]);
   const cases = useCases(filters);
   const search = queueSearch(filters);
+  const section = useSectionLabel('queue');
 
   const setFilters = useCallback(
     (next: QueueFilters) => router.replace(`${pathname}${queueSearch(next)}`, { scroll: false }),
@@ -176,23 +179,20 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
 
   return (
     <Box data-ui="section" sx={pageSx}>
-      <Box sx={{ display: { xs: selectedId ? 'none' : 'block', md: 'block' }, mb: titleGap }}>
-        <Typography variant="h1">Queue</Typography>
-      </Box>
-      {selectedId ? (
-        <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 2, mb: titleGap, ml: -3 }}>
-          <IconButton label="Back to the queue" onClick={() => router.push(`/queue${search}`, { scroll: false })}>
-            <ArrowBackRounded />
-          </IconButton>
-          <Typography variant="h1">Case review</Typography>
-        </Box>
-      ) : null}
+      {/* With a case open, the case title is the page's heading and the queue header steps aside. */}
+      {selectedId ? null : (
+        <PageHeader
+          section={section}
+          title="Queue"
+          description="Sorted by priority, then oldest first. Everything here needs a human decision."
+        />
+      )}
 
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '360px minmax(0, 1fr)', lg: '400px minmax(0, 1fr)' },
-          gap: { md: 4, lg: 6 },
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '360px minmax(0, 1fr)', lg: 'minmax(0, 1fr)' },
+          gap: { md: 4 },
           alignItems: 'start',
         }}
       >
@@ -200,7 +200,7 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
           component="section"
           aria-label="Cases"
           sx={{
-            display: { xs: selectedId ? 'none' : 'flex', md: 'flex' },
+            display: selectedId ? { xs: 'none', md: 'flex', lg: 'none' } : 'flex',
             flexDirection: 'column',
             gap: layout.stackGap,
             minWidth: 0,
@@ -225,16 +225,23 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
           >
             {() => (
               <>
-                <RowList component="ul" aria-label="Cases">
-                  {loaded.map((row) => (
-                    <QueueRow
-                      key={row.id}
-                      row={row}
-                      selected={row.id === selectedId}
-                      href={`/queue/${row.id}${search}`}
-                    />
-                  ))}
-                </RowList>
+                <Box sx={{ display: selectedId ? 'block' : { xs: 'block', lg: 'none' } }}>
+                  <RowList component="ul" aria-label="Cases">
+                    {loaded.map((row) => (
+                      <QueueRow
+                        key={row.id}
+                        row={row}
+                        selected={row.id === selectedId}
+                        href={`/queue/${row.id}${search}`}
+                      />
+                    ))}
+                  </RowList>
+                </Box>
+                {selectedId ? null : (
+                  <Card sx={{ display: { xs: 'none', lg: 'block' }, p: { md: 2 } }}>
+                    <QueueTable rows={loaded} search={search} />
+                  </Card>
+                )}
                 <Box
                   sx={{
                     display: 'flex',
@@ -265,10 +272,10 @@ export function QueueView({ selectedId }: { selectedId: string | null }) {
         <Box
           component="section"
           aria-label="Case"
-          sx={{ display: { xs: selectedId ? 'block' : 'none', md: 'block' }, minWidth: 0 }}
+          sx={{ display: selectedId ? 'block' : { xs: 'none', md: 'block', lg: 'none' }, minWidth: 0 }}
         >
           {selectedId ? (
-            <CaseView caseId={selectedId} />
+            <CaseView caseId={selectedId} backHref={`/queue${search}`} />
           ) : (
             <Card>
               <EmptyState icon={<TouchAppRounded />} title="Select a case to review it here." />

@@ -6,11 +6,38 @@ import type { AppealOutcome, Clause, ModAction, ResolveRequest, ResolvedAppeal }
 export const MIN_RATIONALE_CHARS = 10;
 export const MAX_RATIONALE_CHARS = 2000;
 
-export const OUTCOMES: ReadonlyArray<{ value: AppealOutcome; label: string }> = [
-  { value: 'uphold', label: 'Uphold' },
-  { value: 'overturn', label: 'Overturn' },
-  { value: 'modify', label: 'Modify' },
+/** The three outcomes as option cards, each with its consequence (03 sec. 6.8). */
+export const OUTCOMES: ReadonlyArray<{ value: AppealOutcome; title: string; description: string }> = [
+  { value: 'uphold', title: 'Uphold', description: 'Keep the original decision' },
+  { value: 'overturn', title: 'Overturn', description: 'Reverse it; the content is visible again' },
+  { value: 'modify', title: 'Modify', description: 'Choose a different action' },
 ];
+
+const KEEP: Record<ModAction, string> = {
+  none: 'keep no action',
+  label: 'keep the label',
+  limit: 'keep it limited',
+  remove: 'keep it removed',
+};
+
+const INSTEAD: Record<ModAction, string> = {
+  none: 'no action instead',
+  label: 'label it instead',
+  limit: 'limit it instead',
+  remove: 'remove it instead',
+};
+
+/** "Uphold: keep it limited", "Overturn: make it visible again", "Modify: label it instead". */
+export function resolveButtonLabel(
+  outcome: AppealOutcome | null,
+  originalAction: ModAction,
+  finalAction: ModAction | null,
+): string {
+  if (outcome === 'uphold') return `Uphold: ${KEEP[originalAction]}`;
+  if (outcome === 'overturn') return 'Overturn: make it visible again';
+  if (outcome === 'modify') return finalAction ? `Modify: ${INSTEAD[finalAction]}` : 'Modify: choose an action';
+  return 'Choose an outcome';
+}
 
 /** Modify sets a new action; "none" is an Overturn. */
 export const MODIFY_ACTIONS: readonly ModAction[] = ['label', 'limit', 'remove'];

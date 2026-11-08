@@ -7,7 +7,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppealDetail } from '@/ui/api/hooks';
 import { SnackbarProvider } from '@/ui/components/SnackbarProvider';
 import { AppealBody, BLOCKED_MESSAGE } from '@/ui/features/appeals/AppealReview';
-import { modifyActionReason, resolveSuccessMessage, validateResolve } from '@/ui/features/appeals/resolveForm';
+import {
+  modifyActionReason,
+  resolveButtonLabel,
+  resolveSuccessMessage,
+  validateResolve,
+} from '@/ui/features/appeals/resolveForm';
 import { theme } from '@/ui/theme/theme';
 import { CLAUSES } from './helpers/caseDetail';
 
@@ -167,7 +172,7 @@ describe('appeal review', () => {
     expect(
       screen.getByText(/AI quota reached - retry later. Review the appeal from the evidence above./),
     ).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Resolve appeal' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Choose an outcome' })).toBeEnabled();
   });
 
   it('[APP-3] the original decider sees the blocked message with every control disabled', () => {
@@ -178,11 +183,32 @@ describe('appeal review', () => {
       />,
     );
     expect(screen.getByText(BLOCKED_MESSAGE)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Resolve appeal' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Choose an outcome' })).toBeDisabled();
     expect(screen.getByLabelText(/Rationale/)).toBeDisabled();
     for (const name of ['Uphold', 'Overturn', 'Modify']) {
       expect(screen.getByRole('radio', { name })).toHaveAttribute('aria-disabled', 'true');
     }
+  });
+
+  it('[APP-5] the outcome is three option cards with their consequences; the button says what will happen', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AppealBody detail={makeAppeal()} onReload={() => undefined} />);
+    const group = screen.getByRole('radiogroup', { name: 'Outcome' });
+    expect(
+      within(group)
+        .getAllByRole('radio')
+        .map((card) => card.textContent),
+    ).toEqual([
+      'UpholdKeep the original decision',
+      'OverturnReverse it; the content is visible again',
+      'ModifyChoose a different action',
+    ]);
+    await user.click(within(group).getByRole('radio', { name: 'Uphold' }));
+    expect(screen.getByRole('button', { name: 'Uphold: keep it limited' })).toBeInTheDocument();
+    await user.click(within(group).getByRole('radio', { name: 'Modify' }));
+    expect(screen.getByRole('button', { name: 'Modify: choose an action' })).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Remove' }));
+    expect(screen.getByRole('button', { name: 'Modify: remove it instead' })).toBeInTheDocument();
   });
 
   it('[AI-12] the "policy changed since decision" banner shows when the server says so', () => {
@@ -211,7 +237,7 @@ describe('appeal review', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderWithProviders(<AppealBody detail={makeAppeal()} onReload={() => undefined} />);
 
-    await user.click(screen.getByRole('button', { name: 'Resolve appeal' }));
+    await user.click(screen.getByRole('button', { name: 'Choose an outcome' }));
     expect(screen.getByText('Choose uphold, overturn or modify.')).toBeVisible();
     expect(screen.getByRole('radio', { name: 'Uphold' })).toHaveFocus();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -219,7 +245,7 @@ describe('appeal review', () => {
     await user.click(screen.getByRole('radio', { name: 'Overturn' }));
     await user.click(screen.getByLabelText(/Rationale/));
     await user.paste('It quotes the film being discussed.');
-    await user.click(screen.getByRole('button', { name: 'Resolve appeal' }));
+    await user.click(screen.getByRole('button', { name: 'Overturn: make it visible again' }));
     expect(
       await screen.findByText('Appeal resolved - decision overturned, the content is visible again.'),
     ).toBeVisible();
@@ -272,6 +298,10 @@ describe('resolve form rules', () => {
   });
 
   it('[APP-5] the success message names the outcome', () => {
+    expect(resolveButtonLabel(null, 'limit', null)).toBe('Choose an outcome');
+    expect(resolveButtonLabel('uphold', 'label', null)).toBe('Uphold: keep the label');
+    expect(resolveButtonLabel('overturn', 'remove', null)).toBe('Overturn: make it visible again');
+    expect(resolveButtonLabel('modify', 'remove', 'label')).toBe('Modify: label it instead');
     expect(resolveSuccessMessage({ outcome: 'uphold', finalAction: 'limit' })).toBe(
       'Appeal resolved - decision upheld.',
     );

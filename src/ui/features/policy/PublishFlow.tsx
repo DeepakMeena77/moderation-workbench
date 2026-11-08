@@ -1,5 +1,7 @@
 'use client';
 
+import ContentCopyRounded from '@mui/icons-material/ContentCopyRounded';
+import DescriptionRounded from '@mui/icons-material/DescriptionRounded';
 import UploadFileRounded from '@mui/icons-material/UploadFileRounded';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
@@ -11,7 +13,13 @@ import { Banner as SharedBanner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Stepper } from '../../components/Stepper';
 import { useSnackbar } from '../../components/SnackbarProvider';
-import { usePublishPolicy, useValidatePolicy, type PolicyValidation } from './api';
+import {
+  usePolicyDraft,
+  usePublishPolicy,
+  useValidatePolicy,
+  type PolicyDraftSource,
+  type PolicyValidation,
+} from './api';
 import { DiffView } from './DiffView';
 
 // Publish (03 sec. 6.9, POL-2, POL-3), admin only, in four steps: 1 paste or upload JSON (a plain text field, no
@@ -39,6 +47,10 @@ export function PublishFlow({ onPublished }: { onPublished: (runId: string) => v
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const validate = useValidatePolicy();
+  const draft = usePolicyDraft();
+  const [loading, setLoading] = useState<PolicyDraftSource | null>(null);
+  // Text the admin had typed before a shortcut replaced it, so it can be restored (typed input is never lost).
+  const [replaced, setReplaced] = useState<{ text: string; source: PolicyDraftSource } | null>(null);
   const publish = usePublishPolicy();
   const notify = useSnackbar();
   const dialogTitleId = useId();
@@ -73,6 +85,28 @@ export function PublishFlow({ onPublished }: { onPublished: (runId: string) => v
     });
   };
 
+  const loadDraft = (source: PolicyDraftSource) => {
+    setLoading(source);
+    setRequestError(null);
+    draft.mutate(source, {
+      onSuccess: (loaded) => {
+        const previous = text;
+        changeText(loaded.text);
+        setReplaced(previous.trim().length > 0 && previous !== loaded.text ? { text: previous, source } : null);
+        fieldRef.current?.focus();
+      },
+      onError: (error) =>
+        setRequestError(
+          error instanceof ApiError
+            ? error.message
+            : source === 'example'
+              ? "Couldn't load the example policy. Try again."
+              : "Couldn't load the active version. Try again.",
+        ),
+      onSettled: () => setLoading(null),
+    });
+  };
+
   const onFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -91,6 +125,7 @@ export function PublishFlow({ onPublished }: { onPublished: (runId: string) => v
         setConfirmOpen(false);
         notify(`Policy v${published.version} published. Re-evaluating ${published.run.total} unresolved cases.`);
         changeText('');
+        setReplaced(null);
         onPublished(published.run.id);
       },
       onError: (error) =>
@@ -125,6 +160,24 @@ export function PublishFlow({ onPublished }: { onPublished: (runId: string) => v
         <Button variant="secondary" startIcon={<UploadFileRounded />} onClick={() => fileRef.current?.click()}>
           Upload JSON file
         </Button>
+        <Button
+          variant="secondary"
+          startIcon={<DescriptionRounded />}
+          loading={loading === 'example'}
+          disabled={loading !== null && loading !== 'example'}
+          onClick={() => loadDraft('example')}
+        >
+          Load example v2
+        </Button>
+        <Button
+          variant="secondary"
+          startIcon={<ContentCopyRounded />}
+          loading={loading === 'active'}
+          disabled={loading !== null && loading !== 'active'}
+          onClick={() => loadDraft('active')}
+        >
+          Start from active version
+        </Button>
         <Box
           component="input"
           ref={fileRef}
@@ -136,6 +189,30 @@ export function PublishFlow({ onPublished }: { onPublished: (runId: string) => v
           sx={{ display: 'none' }}
         />
       </Box>
+
+      {replaced ? (
+        <SharedBanner
+          tone="info"
+          role="status"
+          action={
+            <Button
+              variant="ghost"
+              onClick={() => {
+                changeText(replaced.text);
+                setReplaced(null);
+              }}
+            >
+              Restore my text
+            </Button>
+          }
+        >
+          <Typography variant="body2">
+            {replaced.source === 'example'
+              ? 'The editor holds the example policy now. Your earlier text is kept.'
+              : 'The editor holds the active version now. Your earlier text is kept.'}
+          </Typography>
+        </SharedBanner>
+      ) : null}
 
       {requestError ? (
         <Banner tone="error">

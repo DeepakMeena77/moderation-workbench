@@ -66,14 +66,15 @@ for (const width of [1280, 390]) {
       const reasons = page.getByRole('group', { name: 'Why a human must decide' });
       await expect(reasons.getByRole('listitem').first()).toBeVisible();
 
-      await page.getByRole('button', { name: 'Modify' }).click();
-      const form = page.getByRole('form', { name: 'Modify the recommendation' });
+      // Three option cards state their effect; the button says exactly what will happen.
+      const form = page.getByRole('form', { name: 'Decide on the recommendation' });
+      await form.getByRole('radio', { name: 'Modify' }).click();
       const clause = form.getByRole('checkbox', { name: 'HAR-1' });
       if ((await clause.getAttribute('aria-checked')) !== 'true') await clause.click();
       await form.getByRole('radio', { name: 'Limit' }).click();
       await form.getByRole('radio', { name: 'Severity too low' }).click();
       await form.getByLabel(/Rationale/).fill('A direct insult aimed at another member; limit its reach.');
-      await form.getByRole('button', { name: 'Save modified decision' }).click();
+      await form.getByRole('button', { name: 'Modify: limit under HAR-1' }).click();
       await expect(status(page, 'Decision saved - content limited under HAR-1.')).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Human decision' })).toBeVisible();
     });
@@ -109,7 +110,7 @@ for (const width of [1280, 390]) {
       await expect(
         page.getByText('You made the original decision - another senior moderator must review this.'),
       ).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Resolve appeal' })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'Choose an outcome' })).toBeDisabled();
 
       // The page offers no way to resolve, so the decider tries the API directly with their own session.
       const forced = await page.request.post(`/api/appeals/${run.appealId}/resolve`, {
@@ -146,7 +147,7 @@ for (const width of [1280, 390]) {
       const form = page.getByRole('form', { name: 'Resolve the appeal' });
       await form.getByRole('radio', { name: 'Overturn' }).click();
       await form.getByLabel(/Rationale/).fill('The words quote the film the thread is about, not a member.');
-      await form.getByRole('button', { name: 'Resolve appeal' }).click();
+      await form.getByRole('button', { name: 'Overturn: make it visible again' }).click();
       await expect(status(page, 'Appeal resolved - decision overturned, the content is visible again.')).toBeVisible();
       await expect(page.getByRole('region', { name: 'Outcome' }).getByText('Overturned')).toBeVisible();
 

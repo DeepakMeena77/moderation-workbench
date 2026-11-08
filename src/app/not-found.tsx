@@ -5,15 +5,19 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { Button } from '@/ui/components/Button';
 import { Card } from '@/ui/components/Card';
-import { layout, pageSx, titleGap } from '@/ui/theme/theme';
+import { PageHeader } from '@/ui/components/PageHeader';
+import { layout, pageSx } from '@/ui/theme/theme';
 
 // 404 (03 sec. 6.13).
 export default function NotFound() {
   return (
     <Box component="main" id="content" sx={{ minHeight: '100dvh', ...pageSx, pt: { xs: 6, sm: 10 } }}>
-      <Typography variant="h1" sx={{ mb: titleGap }}>
-        Not found
-      </Typography>
+      <PageHeader
+        section="System"
+        title="Not found"
+        description="There is no page at this address."
+        maxWidth={layout.readingWidth}
+      />
       <Card sx={{ maxWidth: layout.readingWidth }}>
         <Box data-ui="stack" sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
           <SearchOffRounded aria-hidden sx={{ fontSize: 20, color: 'text.secondary' }} />

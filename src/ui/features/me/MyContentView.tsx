@@ -7,6 +7,8 @@ import Typography from '@mui/material/Typography';
 import NextLink from 'next/link';
 import { useState } from 'react';
 import { useMyContent, type CaseStatus, type MyContentItem } from '../../api/hooks';
+import { PageHeader } from '../../components/PageHeader';
+import { useSectionLabel } from '../../shell/RoleContext';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
@@ -118,14 +120,18 @@ function ContentRow({ item, onAppeal }: { item: MyContentItem; onAppeal: (target
 
 export function MyContentView() {
   const query = useMyContent();
+  const section = useSectionLabel('me');
   const [target, setTarget] = useState<AppealTarget | null>(null);
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
   return (
     <Box data-ui="section" sx={pageSx}>
+      <PageHeader
+        section={section}
+        title="My content"
+        description="Everything you have posted, with its review status. You can appeal a decision until its deadline."
+        maxWidth={layout.readingWidth}
+      />
       <Box sx={{ maxWidth: layout.readingWidth, display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
-        <Typography variant="h1" sx={{ mb: { xs: 0, sm: 1 } }}>
-          My content
-        </Typography>
         <QueryState
           query={query}
           loadingLabel="Loading your content"

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 import { GET as versionRoute } from '@/app/api/policies/[version]/route';
 import { GET as compareRoute } from '@/app/api/policies/compare/route';
+import { GET as draftsRoute } from '@/app/api/policies/drafts/route';
 import { GET as listRoute, POST as publishRoute } from '@/app/api/policies/route';
 import { POST as validateRoute } from '@/app/api/policies/validate/route';
 import { getDb } from '@/server/db';
@@ -18,6 +19,7 @@ import {
   policyChangeNotice,
   publishPolicy,
   type PolicyComparison,
+  type PolicyDraft,
   type PolicyList,
   type PolicyValidation,
 } from '@/server/services/policy';
@@ -132,6 +134,33 @@ describe('validate and publish', () => {
       details: [{ path: 'clauses' }],
     });
     expect(await getDb().policy.count()).toBe(1);
+  });
+});
+
+describe('editor starting points', () => {
+  const draft = (source: string, cookie: string) =>
+    draftsRoute(apiRequest(`/api/policies/drafts?source=${source}`, { cookie }));
+
+  it('[POL-2] an admin loads the example v2 or the active version as editor text; others get 403', async () => {
+    const { cookie } = await cookieFor('admin');
+    expect((await draft('active', cookie)).status).toBe(404);
+
+    await installPolicy(1);
+    const example = await draft('example', cookie);
+    expect(example.status).toBe(200);
+    const exampleText = (await readJson<{ data: PolicyDraft }>(example)).data.text;
+    expect(JSON.parse(exampleText)).toEqual(JSON.parse(V2_TEXT));
+
+    const active = (await readJson<{ data: PolicyDraft }>(await draft('active', cookie))).data;
+    expect(active.source).toBe('active');
+    const file = JSON.parse(active.text) as { version: number; clauses: Array<{ code: string }> };
+    expect(file.version).toBe(1);
+    expect(file.clauses.map((c) => c.code)).toEqual((await getActivePolicy())?.clauses.map((c) => c.code));
+
+    expect((await draft('other', cookie)).status).toBe(400);
+    const { cookie: modCookie } = await cookieFor('moderator');
+    expect((await draft('example', modCookie)).status).toBe(403);
+    expect((await draftsRoute(apiRequest('/api/policies/drafts?source=example'))).status).toBe(401);
   });
 });
 

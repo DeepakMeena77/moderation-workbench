@@ -9,6 +9,7 @@ import { policyChangeSince, policyDiff, type PolicyChange, type PolicyDiff } fro
 import { clausesSchema, policyContentHash, policyFileSchema, type ActivePolicy, type Clause } from '../policy/schema';
 import { append, type Tx } from './audit';
 import { toRunView, type ReevaluationRunView } from './reevaluation';
+import examplePolicy from '../../../policies/policy.v2.json';
 
 // Policy versions (POL-1..5, docs/02-system-design.md sec. 4 and sec. 6): reads, compare, validate and publish.
 // Stored clauses are parsed again on read: they were validated on publish, and a bad row must fail loudly rather
@@ -119,6 +120,33 @@ async function loadVersion(db: Tx | PrismaClient, version: number): Promise<{ ro
   const row = await db.policy.findUnique({ where: { version }, select: POLICY_SELECT });
   if (!row) throw new AppError('NOT_FOUND', `Policy v${version} does not exist.`);
   return { row, clauses: clausesSchema.parse(row.clauses) };
+}
+
+export const policyDraftQuerySchema = z.object({ source: z.enum(['example', 'active']) });
+
+export interface PolicyDraft {
+  source: 'example' | 'active';
+  /** Pretty-printed policy JSON, ready to paste into the publish editor. */
+  text: string;
+}
+
+/**
+ * Publish shortcuts (03 sec. 6.9): the bundled example (policies/policy.v2.json, imported at build time so it ships
+ * with the server) or the active version written back out as a policy file. Read-only.
+ */
+export async function getPolicyDraft(source: PolicyDraft['source']): Promise<PolicyDraft> {
+  if (source === 'example') return { source, text: asPolicyText(examplePolicy) };
+  const db = getDb();
+  const active = await db.policy.findFirst({ where: { status: 'active' }, select: { version: true } });
+  if (!active) throw new AppError('NOT_FOUND', 'There is no active policy yet.');
+  const { row, clauses } = await loadVersion(db, active.version);
+  const file = { version: row.version, ...(row.notes ? { notes: row.notes } : {}), clauses };
+  return { source, text: asPolicyText(file) };
+}
+
+/** Two-space JSON with a trailing newline, like the files in policies/. */
+function asPolicyText(value: unknown): string {
+  return JSON.stringify(value, null, 2) + '\n';
 }
 
 export async function getPolicy(version: number): Promise<PolicyDetail> {

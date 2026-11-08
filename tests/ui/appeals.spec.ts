@@ -171,7 +171,7 @@ test('[APP-3] the original decider sees the blocked message with the controls di
   await expect(
     page.getByText('You made the original decision - another senior moderator must review this.'),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Resolve appeal' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Choose an outcome' })).toBeDisabled();
   await expect(page.getByRole('radio', { name: 'Overturn' })).toHaveAttribute('aria-disabled', 'true');
 });
 
@@ -222,7 +222,7 @@ test('[APP-1] [APP-5] the author appeals at 360 px and a different senior overtu
   const form = page.getByRole('form', { name: 'Resolve the appeal' });
   await form.getByRole('radio', { name: 'Overturn' }).click();
   await form.getByLabel(/Rationale/).fill('It quotes the film the thread is about.');
-  await form.getByRole('button', { name: 'Resolve appeal' }).click();
+  await form.getByRole('button', { name: 'Overturn: make it visible again' }).click();
   await expect(
     page
       .getByRole('status')

@@ -19,10 +19,11 @@ import Typography from '@mui/material/Typography';
 import { useRouter } from 'next/navigation';
 import { useId, useState, type ReactElement } from 'react';
 import { useHistory, type ContentHistory, type HistoryEvent, type HistoryEventKind } from '../../api/hooks';
+import { PageHeader } from '../../components/PageHeader';
+import { useSectionLabel } from '../../shell/RoleContext';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { IconButton } from '../../components/IconButton';
 import { ActionTag, PolicyVersionTag, StatusTag } from '../../components/ModerationTags';
 import { QueryState } from '../../components/QueryState';
 import { layout, pageSx } from '../../theme/theme';
@@ -159,16 +160,22 @@ export function HistoryBody({ history }: { history: ContentHistory }) {
 
 export function HistoryView({ contentId }: { contentId: string }) {
   const query = useHistory(contentId);
+  const section = useSectionLabel('history');
   const router = useRouter();
   return (
     <Box data-ui="section" sx={pageSx}>
+      <Box sx={{ mb: 2, ml: -3 }}>
+        <Button variant="ghost" startIcon={<ArrowBackRounded />} onClick={() => router.back()}>
+          Back
+        </Button>
+      </Box>
+      <PageHeader
+        section={section}
+        title="Moderation history"
+        description="Every step this item went through, oldest first."
+        maxWidth={layout.readingWidth}
+      />
       <Box sx={{ maxWidth: layout.readingWidth, display: 'flex', flexDirection: 'column', gap: layout.stackGap }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: -3, my: -1 }}>
-          <IconButton label="Back" onClick={() => router.back()}>
-            <ArrowBackRounded />
-          </IconButton>
-          <Typography variant="h1">Moderation history</Typography>
-        </Box>
         <QueryState
           query={query}
           loadingLabel="Loading the history"

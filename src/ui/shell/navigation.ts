@@ -102,6 +102,29 @@ const NAVIGATION: Record<Role, RoleNavigation> = {
 
 const toDestinations = (keys: DestinationKey[]): Destination[] => keys.map((key) => DESTINATIONS[key]);
 
+/** The section a page belongs to without a role (public pages, tests): the most common grouping. */
+const DEFAULT_SECTION: Record<DestinationKey, string> = {
+  feed: 'Community',
+  me: 'Community',
+  queue: 'Moderation',
+  appeals: 'Moderation',
+  policy: 'Governance',
+  audit: 'Governance',
+  metrics: 'Governance',
+  status: 'System',
+};
+
+/**
+ * The page-header section label (03 sec. 4): the navigation group that holds the page for this role, so the queue
+ * reads "Moderation" for moderators and "Oversight" for admins. "history" belongs with the author's own content, or
+ * with moderation for staff.
+ */
+export function sectionLabel(key: DestinationKey | 'history', role: Role | null): string {
+  if (key === 'history') return role === null || role === 'author' ? 'Community' : 'Moderation';
+  const group = role ? NAVIGATION[role].groups.find((g) => g.items.includes(key)) : undefined;
+  return group?.label ?? DEFAULT_SECTION[key];
+}
+
 export function barDestinations(role: Role): Destination[] {
   return toDestinations(NAVIGATION[role].bar);
 }

@@ -6,7 +6,8 @@ import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import type { AiDetail, AiRun } from '@/ui/api/hooks';
 import { SnackbarProvider } from '@/ui/components/SnackbarProvider';
-import { CaseBody } from '@/ui/features/case/CaseView';
+import { charRangeLabel, evidenceSourceLabel } from '@/ui/features/case/CaseSections';
+import { CaseBody, caseContextLine } from '@/ui/features/case/CaseView';
 import { theme } from '@/ui/theme/theme';
 import { makeDetail } from './helpers/caseDetail';
 
@@ -16,7 +17,13 @@ const meterLines = (root: HTMLElement = document.body) =>
     .getAllByText((_, el) => el?.tagName === 'P' && /^Confidence:/.test(el.textContent ?? ''))
     .map((el) => el.textContent);
 
-// The case page body (03 sec. 6.6; AI-5, AI-10, HUM-7, DET-5, SEC-3).
+/** The value under a label in the recommendation summary (a dt and its dd). */
+const glance = (label: string) => {
+  const summary = screen.getByRole('region', { name: 'Recommendation' });
+  return within(summary).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+};
+
+// The case page body (03 sec. 6.6; AI-3, AI-5, AI-10, CNT-4, HUM-7, DET-5, SEC-3).
 
 function renderWithProviders(ui: ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -102,8 +109,7 @@ describe('case page', () => {
     renderWithProviders(<CaseBody detail={makeDetail()} onReload={() => undefined} />);
     expect(screen.getByText(/AI review pending or unavailable\. Rule findings are shown/)).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Finding HAR-1' })).toBeInTheDocument();
-    const recommendation = screen.getByRole('region', { name: 'Recommendation' });
-    expect(meterLines(recommendation)).toEqual(['Confidence: AI review pending or unavailable']);
+    expect(glance('Confidence')).toBe('NoneAI pending');
     await user.click(screen.getByRole('button', { name: 'AI run details' }));
     expect(screen.getByText(/AI review pending or unavailable\. Rule findings are shown \(label/)).toBeInTheDocument();
   });
@@ -114,7 +120,9 @@ describe('case page', () => {
     expect(screen.getByText('Explicit insult with no benign reading.')).toBeInTheDocument();
     const meters = meterLines();
     expect(meters).toContain('Confidence: 0.92, Explicit');
-    expect(meters).toContain('Confidence: 0.90, Explicit');
+    expect(meters).toContain('Confidence: 1.00, Explicit');
+    expect(glance('Confidence')).toBe('0.90Explicit');
+    expect(screen.getByText('Confidence: Clear insult.')).toBeInTheDocument();
     // Rule findings get reasons stated from the rule itself.
     expect(screen.getByText('Severity: Default severity of HAR-1 in policy v1.')).toBeInTheDocument();
     expect(screen.getByText('Deterministic match: the keyword rule found the exact text.')).toBeInTheDocument();
@@ -122,6 +130,65 @@ describe('case page', () => {
     expect(screen.getByRole('heading', { name: 'AI interpretation - not verified evidence' })).toBeInTheDocument();
     expect(screen.getByText('Possibly part of a running feud.')).toBeInTheDocument();
     expect(screen.getByText('Removed: HAR-9 is not a clause of policy v1.')).toBeInTheDocument();
+  });
+
+  it('[CNT-4] the header links back to the queue and to the full history, with a monospace context line', () => {
+    renderWithProviders(<CaseBody detail={makeDetail()} onReload={() => undefined} backHref="/queue?trigger=report" />);
+    expect(screen.getByRole('link', { name: 'Back to queue' })).toHaveAttribute('href', '/queue?trigger=report');
+    expect(screen.getByRole('link', { name: 'Full moderation history' })).toHaveAttribute(
+      'href',
+      '/content/c1/history',
+    );
+    const dot = String.fromCharCode(0xb7);
+    expect(screen.getByText(`case case1 ${dot} flagged by rules ${dot} priority 55`)).toBeInTheDocument();
+    const title = screen.getByRole('heading', { level: 1, name: 'Post by Asha Rao' });
+    expect(title.parentElement).toHaveTextContent('Needs review');
+    expect(screen.getByRole('region', { name: 'Post by Asha Rao' })).toBeInTheDocument();
+  });
+
+  it('[CNT-4] a reported case says it entered the queue from a user report', () => {
+    renderWithProviders(<CaseBody detail={makeDetail({ entry: 'report' })} onReload={() => undefined} />);
+    expect(screen.getByText(/user report/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to queue' })).toHaveAttribute('href', '/queue');
+  });
+
+  it('[AI-5] the recommendation shows action, severity and confidence as three labelled values, then the policy', () => {
+    renderWithProviders(<CaseBody detail={withAi()} onReload={() => undefined} />);
+    expect(glance('Proposed action')).toBe('Label');
+    expect(glance('Severity')).toBe('Medium');
+    expect(glance('Confidence')).toBe('0.90Explicit');
+    const summary = screen.getByRole('region', { name: 'Recommendation' });
+    const text = summary.textContent ?? '';
+    // The values come first, the explanation after them, and the policy version last.
+    expect(text.indexOf('Proposed action')).toBeLessThan(text.indexOf('Why a human must decide'));
+    expect(text.trim().endsWith('Analysed under policy v1, analysis v1 of 1')).toBe(true);
+  });
+
+  it('[AI-3] each confirmed quote names its source and its character range', () => {
+    renderWithProviders(<CaseBody detail={withAi()} onReload={() => undefined} />);
+    const findings = screen.getAllByRole('group', { name: 'Finding HAR-1' });
+    const ruleFinding = findings.find((g) => within(g).queryByText('Rule - keyword'));
+    const aiFinding = findings.find((g) => within(g).queryByText('"worthless idiot"'));
+    expect(ruleFinding && within(ruleFinding).getByText('chars 20-25')).toBeInTheDocument();
+    expect(aiFinding && within(aiFinding).getByText('AI')).toBeInTheDocument();
+    expect(aiFinding && within(aiFinding).getByText('chars 10-25')).toBeInTheDocument();
+    // An interpretation is not evidence, so it carries no source tag or range.
+    const interpretation = findings.find((g) => within(g).queryByText('Possibly part of a running feud.'));
+    expect(interpretation && within(interpretation).queryByText(/^chars /)).toBeNull();
+  });
+
+  it('[AI-3] source and range labels', () => {
+    expect(evidenceSourceLabel({ source: 'rule', ruleId: 'links' })).toBe('Rule - links');
+    expect(evidenceSourceLabel({ source: 'ai', ruleId: null })).toBe('AI');
+    expect(charRangeLabel({ text: 'x', start: 44, end: 61 })).toBe('chars 44-61');
+    expect(charRangeLabel({ text: 'x', start: null, end: null })).toBeNull();
+    const dot = String.fromCharCode(0xb7);
+    expect(caseContextLine({ id: 'cm9abcdefghijk', entry: 'ai', priority: 80 })).toBe(
+      `case efghijk ${dot} flagged by AI ${dot} priority 80`,
+    );
+    expect(caseContextLine({ id: 'c2', entry: null, priority: 0 })).toBe(
+      `case c2 ${dot} no findings ${dot} priority 0`,
+    );
   });
 
   it('[AI-10] shows the AI run details: model, tokens, cost, latency, attempts and parse strategy', async () => {
@@ -151,7 +218,7 @@ describe('case page', () => {
       />,
     );
     expect(screen.getByText('Read-only oversight')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Approve recommendation/ })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'Decision' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Re-analyse' })).toBeNull();
   });
 

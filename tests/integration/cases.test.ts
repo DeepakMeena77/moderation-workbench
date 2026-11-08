@@ -6,7 +6,7 @@ import { POST as reopenRoute } from '@/app/api/cases/[id]/reopen/route';
 import { GET as listRoute } from '@/app/api/cases/route';
 import { getDb } from '@/server/db';
 import { runPendingJobs } from '@/server/jobs/runner';
-import type { CaseDetail, CaseListPage } from '@/server/services/cases';
+import { caseEntry, type CaseDetail, type CaseListPage } from '@/server/services/cases';
 import { createPost } from '@/server/services/content';
 import { actorFor, installPolicy } from './helpers/moderation';
 import { apiRequest, createUser, readJson, sessionCookieFor } from './helpers/users';
@@ -50,6 +50,29 @@ async function detail(caseId: string, as = cookie): Promise<CaseDetail> {
 const post = (path: string, as = cookie) => apiRequest(path, { method: 'POST', cookie: as });
 
 describe('queue', () => {
+  it('[Q-1] each row says how the case entered the queue, its confidence and why a human must decide', async () => {
+    const asha = await createUser('author');
+    const insult = await postAs(asha, 'You are a worthless idiot [mock:invalid]');
+    const clean = await postAs(asha, 'A lovely day at the lake [mock:invalid]');
+    await runPendingJobs();
+    const rows = (await list()).items;
+    const insultRow = rows.find((row) => row.id === insult.caseId);
+    expect(insultRow).toMatchObject({ entry: 'rules', analysis: { confidence: null } });
+    expect(insultRow?.analysis?.reasons.length).toBeGreaterThan(0);
+    expect(rows.find((row) => row.id === clean.caseId)?.entry).toBeNull();
+    const insultDetail = await detail(insult.caseId);
+    expect(insultDetail.entry).toBe('rules');
+    // [AI-6] The row and the case page list the reasons in the same order, the generic action reason last.
+    expect(insultRow?.analysis?.reasons).toEqual(insultDetail.analysis?.recommendation.reasons);
+    expect(insultRow?.analysis?.reasons.at(-1)).toMatch(/^The recommended action is /);
+
+    // A report wins over findings; rule findings over AI findings; nothing found is no entry.
+    expect(caseEntry('report', 1, 1)).toBe('report');
+    expect(caseEntry('new_content', 1, 2)).toBe('rules');
+    expect(caseEntry('new_content', 0, 2)).toBe('ai');
+    expect(caseEntry('new_content', 0, 0)).toBeNull();
+  });
+
   it('[Q-1] lists awaiting_review by default, ordered by priority then age, with filters and search', async () => {
     const asha = await createUser('author');
     const ben = await createUser('author');

@@ -27,6 +27,7 @@ export function makeDetail(overrides: Partial<CaseDetail> = {}): CaseDetail {
     id: 'case1',
     status: 'awaiting_review',
     trigger: 'new_content',
+    entry: 'rules',
     priority: 55,
     reportCount: 0,
     createdAt: new Date().toISOString(),

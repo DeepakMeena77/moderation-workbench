@@ -6,7 +6,8 @@ import Typography from '@mui/material/Typography';
 import type { Role } from '../api/hooks';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { layout, pageSx, titleGap } from '../theme/theme';
+import { PageHeader } from '../components/PageHeader';
+import { layout, pageSx } from '../theme/theme';
 import { homeFor, railDestinations, ROLE_LABEL } from './navigation';
 
 // 403 inside the shell (03 sec. 6.13): the page exists, but this role may not open it (SEC-1).
@@ -15,9 +16,12 @@ export function Forbidden({ role }: { role: Role }) {
   const homeLabel = railDestinations(role).find((destination) => destination.href === home)?.label ?? 'the start page';
   return (
     <Box data-ui="section" sx={pageSx}>
-      <Typography variant="h1" sx={{ mb: titleGap }}>
-        You don&apos;t have access to this
-      </Typography>
+      <PageHeader
+        section="System"
+        title="You don't have access to this"
+        description="The page exists, but your role can't open it."
+        maxWidth={layout.readingWidth}
+      />
       <Card sx={{ maxWidth: layout.readingWidth }}>
         <Box data-ui="stack" sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
           <BlockRounded aria-hidden sx={{ fontSize: 20, color: 'text.secondary' }} />

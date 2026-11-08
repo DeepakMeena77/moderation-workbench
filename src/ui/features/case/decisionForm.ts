@@ -31,6 +31,47 @@ export const MODIFY_ACTIONS: readonly ModAction[] = ['label', 'limit', 'remove']
 
 export type DecisionMode = 'reject' | 'modify';
 
+/** The three decisions as option cards, each with its consequence (03 sec. 6.6). */
+export type DecisionChoice = 'approve' | 'reject' | 'modify';
+
+export const DECISION_OPTIONS: ReadonlyArray<{ value: DecisionChoice; title: string; description: string }> = [
+  { value: 'approve', title: 'Approve', description: 'Take the recommended action' },
+  { value: 'reject', title: 'Reject', description: 'No violation; keep it visible' },
+  { value: 'modify', title: 'Modify', description: 'Choose a different action or clause' },
+];
+
+const ACTION_VERB: Record<ModAction, string> = {
+  none: 'take no action on',
+  label: 'label',
+  limit: 'limit',
+  remove: 'remove',
+};
+
+/**
+ * The submit button says exactly what will happen: "Approve: limit this post", "Reject: keep visible",
+ * "Modify: label under HAR-1". Before a choice it asks for one.
+ */
+export function decisionButtonLabel(
+  choice: DecisionChoice | null,
+  context: {
+    recommended: ModAction;
+    contentType: 'post' | 'comment';
+    finalAction: ModAction | null;
+    clauseCodes: readonly string[];
+  },
+): string {
+  if (choice === 'approve') return `Approve: ${ACTION_VERB[context.recommended]} this ${context.contentType}`;
+  if (choice === 'reject') return 'Reject: keep visible';
+  if (choice === 'modify') {
+    if (!context.finalAction) return 'Modify: choose an action';
+    const under = context.clauseCodes.length > 0 ? ` under ${context.clauseCodes.join(', ')}` : '';
+    return `Modify: ${context.finalAction}${under}`;
+  }
+  return 'Choose a decision';
+}
+
+export const CHOICE_ERROR = 'Choose approve, reject or modify.';
+
 export interface DecisionDraft {
   mode: DecisionMode;
   finalAction: ModAction | null;
