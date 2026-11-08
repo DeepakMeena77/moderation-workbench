@@ -1,5 +1,22 @@
 # Release notes
 
+## 1.0.7 (2026-11-08)
+
+- A brand mark (shield and check on a light accent tile) in the sidebar, the phone bar, sign-in and the status page,
+  and the same drawing as the tab icon.
+- Sidebar rows are rounded highlights 2 px apart; the case page carries the section label like every other page.
+- The recommendation says where its severity comes from ("from THR-1 rule").
+- Verify keeps a speculative interpretation (confidence below 0.4) at low severity and says why.
+- The audit table shows short entity ids and a Details column; the author's history says in one sentence where the
+  item stands and what happens next.
+
+No database migration.
+
+Post-deploy checks for `96700e1`, 2026-11-08 11:15 UTC (16:45 in India): `/api/health` reports `96700e1...` with the
+database connected; `/status` shows all six checks operational; `/api/audit/verify` reports `intact: true` over 53
+events; GitHub Actions run 42474772629 succeeded. The screenshots in `docs/screenshots` were retaken from this
+deployment.
+
 ## 1.0.6 (2026-11-08)
 
 - The recommendation's confidence is labelled as the AI's confidence in the whole result; per-finding rubric words
