@@ -98,7 +98,7 @@ test('[CNT-1] a new post appears at once and gets its rule-only analysis within 
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await expect(
     page.getByRole('status').filter({ hasText: /^Posted - being checked against policy v\d+\.$/ }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 }); // the confirmation waits on its request (up to 20 s on a loaded runner)
   const card = page.getByRole('article').filter({ hasText: text });
   await expect(card).toBeVisible();
   await expect(page.getByLabel('Write a post')).toHaveValue('');

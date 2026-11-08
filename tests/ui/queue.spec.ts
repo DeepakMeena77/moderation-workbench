@@ -228,7 +228,7 @@ test('[HUM-3] a moderator rejects a recommendation: inline validation, then succ
   await form.getByRole('button', { name: 'Reject: keep visible' }).click();
   await expect(
     page.getByRole('status').filter({ hasText: 'Decision saved - no action, the content stays visible.' }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 }); // the confirmation waits on its request (up to 20 s on a loaded runner)
   await expect(page.getByRole('heading', { name: 'Human decision' })).toBeVisible();
   await expect(page.getByText('Resolved').first()).toBeVisible();
 });

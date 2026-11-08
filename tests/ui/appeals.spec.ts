@@ -209,7 +209,7 @@ test('[APP-1] [APP-5] the author appeals at 360 px and a different senior overtu
   await dialog.getByRole('button', { name: 'Send appeal' }).click();
   await expect(
     page.getByRole('status').filter({ hasText: 'Appeal sent. A senior moderator will review it.' }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 }); // the confirmation waits on its request (up to 20 s on a loaded runner)
   await expect(item.getByText('Appeal sent. A senior moderator will review it.')).toBeVisible();
 
   // A senior moderator who did not decide overturns it.

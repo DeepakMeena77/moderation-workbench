@@ -19,6 +19,10 @@ const ORIGIN = new URL(BASE_URL).origin;
 // The analysis waits for the AI deadline (AI_DEADLINE_MS, 25 s by default) before the case is ready.
 const ANALYSIS_TIMEOUT_MS = 60_000;
 
+// A confirmation message appears when its request returns and then stays 6 s. On a loaded runner the request alone
+// can take longer than the default 5 s wait, so allow for the request; polling still catches the message at once.
+const CONFIRMATION_TIMEOUT_MS = 20_000;
+
 function status(page: Page, text: string | RegExp) {
   return page.getByRole('status').filter({ hasText: text });
 }
@@ -39,7 +43,9 @@ for (const width of [1280, 390]) {
       await expect(page).toHaveURL(/\/feed$/);
       await page.getByLabel('Write a post').fill(body);
       await page.getByRole('button', { name: 'Post', exact: true }).click();
-      await expect(status(page, /^Posted - being checked against policy v\d+\.$/)).toBeVisible();
+      await expect(status(page, /^Posted - being checked against policy v\d+\.$/)).toBeVisible({
+        timeout: CONFIRMATION_TIMEOUT_MS,
+      });
 
       const card = page.getByRole('article').filter({ hasText: words });
       await expect(card.getByText('Analysing...')).toBeVisible();
@@ -75,7 +81,9 @@ for (const width of [1280, 390]) {
       await form.getByRole('radio', { name: 'Severity too low' }).click();
       await form.getByLabel(/Rationale/).fill('A direct insult aimed at another member; limit its reach.');
       await form.getByRole('button', { name: 'Modify: limit under HAR-1' }).click();
-      await expect(status(page, 'Decision saved - content limited under HAR-1.')).toBeVisible();
+      await expect(status(page, 'Decision saved - content limited under HAR-1.')).toBeVisible({
+        timeout: CONFIRMATION_TIMEOUT_MS,
+      });
       await expect(page.getByRole('heading', { name: 'Human decision' })).toBeVisible();
     });
 
@@ -92,7 +100,9 @@ for (const width of [1280, 390]) {
       const dialog = page.getByRole('dialog', { name: 'Appeal this decision' });
       await dialog.getByLabel(/Why should the decision change/).fill(statement);
       await dialog.getByRole('button', { name: 'Send appeal' }).click();
-      await expect(status(page, 'Appeal sent. A senior moderator will review it.')).toBeVisible();
+      await expect(status(page, 'Appeal sent. A senior moderator will review it.')).toBeVisible({
+        timeout: CONFIRMATION_TIMEOUT_MS,
+      });
       await expect(item.getByText('Appeal sent. A senior moderator will review it.')).toBeVisible();
     });
 
@@ -148,7 +158,9 @@ for (const width of [1280, 390]) {
       await form.getByRole('radio', { name: 'Overturn' }).click();
       await form.getByLabel(/Rationale/).fill('The words quote the film the thread is about, not a member.');
       await form.getByRole('button', { name: 'Overturn: make it visible again' }).click();
-      await expect(status(page, 'Appeal resolved - decision overturned, the content is visible again.')).toBeVisible();
+      await expect(status(page, 'Appeal resolved - decision overturned, the content is visible again.')).toBeVisible({
+        timeout: CONFIRMATION_TIMEOUT_MS,
+      });
       await expect(page.getByRole('region', { name: 'Outcome' }).getByText('Overturned')).toBeVisible();
 
       await signInAs(page, 'author');
