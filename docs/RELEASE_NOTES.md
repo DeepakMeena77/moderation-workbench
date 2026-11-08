@@ -1,5 +1,17 @@
 # Release notes
 
+## 1.0.8 (2026-11-08)
+
+- Refused access in the audit Details column reads as words ("Refused: they made the original decision") with the
+  role; the code itself stays in the expanded row.
+- The UI spec names where the recommendation's severity comes from.
+
+No database migration.
+
+Post-deploy checks for `4bcae20`, 2026-11-08 12:00 UTC (17:30 in India): `/api/health` reports `4bcae20...` with the
+database connected; the audit page shows the chain intact over 55 events; GitHub Actions run 42477422311
+succeeded. The screenshots in `docs/screenshots` were retaken from this deployment.
+
 ## 1.0.7 (2026-11-08)
 
 - A brand mark (shield and check on a light accent tile) in the sidebar, the phone bar, sign-in and the status page,
