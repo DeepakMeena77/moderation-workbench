@@ -18,6 +18,7 @@ import { DotLabel, type DotTone } from '../../components/Tag';
 import { layout, m3, pageSx, titleGap } from '../../theme/theme';
 import { shortDateTime } from '../feed/format';
 import { JobsAdminPanel } from './JobsAdminPanel';
+import { BrandLockup } from '../../components/BrandMark';
 
 // Public status page (docs/03-ui-ux.md sec. 6.12): the overall state and one card per check. Timestamps show as
 // readable local times, with the ISO value in the tooltip.
@@ -164,7 +165,7 @@ export function StatusView({ signedIn }: { signedIn: boolean }) {
         })}
       >
         <Typography variant="subtitle1" component="p" noWrap sx={{ flex: 1, minWidth: 0 }}>
-          Moderation Workbench
+          <BrandLockup>Moderation Workbench</BrandLockup>
         </Typography>
         {/* The public page's only way into the app (03 sec. 6.12). */}
         <Button variant="ghost" href={signedIn ? '/' : '/sign-in'}>

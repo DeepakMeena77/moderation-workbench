@@ -14,6 +14,7 @@ import type { Role } from '../api/hooks';
 import { layer, layout, m3 } from '../theme/theme';
 import { drawerGroups, isActive } from './navigation';
 import { ThemeToggleItem } from './ThemeToggle';
+import { BrandLockup } from '../components/BrandMark';
 
 /** A More-sheet row (phones): 44 high for touch, radius 6, selected = the neutral selected fill and darker text. */
 export const pillRowSx = (theme: Theme) =>
@@ -125,7 +126,7 @@ export function NavDrawer({
           })}
         >
           <Typography variant="subtitle1" component="p" noWrap sx={{ pl: headingIndent }}>
-            Moderation Workbench
+            <BrandLockup>Moderation Workbench</BrandLockup>
           </Typography>
         </Box>
         {drawerGroups(role).map((group, index) => {

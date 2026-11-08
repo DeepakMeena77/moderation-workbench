@@ -9,6 +9,7 @@ import { Tag } from '../components/Tag';
 import { layout, m3 } from '../theme/theme';
 import { AccountMenu } from './AccountMenu';
 import { pageTrail, ROLE_LABEL } from './navigation';
+import { BrandLockup } from '../components/BrandMark';
 
 // Top bar (03 sec. 3.1 and sec. 4): 56 high including its bottom hairline, white. On the left the current page as a
 // short breadcrumb ("Queue / Case"), or the product name on phones; on the right the role badge and the account
@@ -50,7 +51,7 @@ export function TopAppBar({
         {/* Phones name the product; from 600 px the bar names the current page instead (the sidebar header carries
             the product name from 1200 px). */}
         <Typography variant="subtitle1" component="p" noWrap sx={{ display: { sm: 'none' }, flex: 1, minWidth: 0 }}>
-          Moderation Workbench
+          <BrandLockup>Moderation Workbench</BrandLockup>
         </Typography>
         <Typography
           component="p"

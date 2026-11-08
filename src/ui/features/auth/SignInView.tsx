@@ -20,6 +20,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { homeFor, ROLE_LABEL } from '../../shell/navigation';
 import { layer, layout, m3 } from '../../theme/theme';
+import { BrandMark } from '../../components/BrandMark';
 
 // Sign-in page (03 sec. 6.1): email and password for any seeded account, and in demo mode one-click cards per
 // role (UX-5). Typed input is kept on every error (03 sec. 7).
@@ -126,7 +127,10 @@ export function SignInView({ demoMode, accounts, next }: SignInViewProps) {
       <Box
         sx={{ width: '100%', maxWidth: 880, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
       >
-        <Box sx={{ textAlign: 'center' }}>
+        <Box sx={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box sx={{ mb: 3 }}>
+            <BrandMark size={40} />
+          </Box>
           <Typography variant="overline" component="p" color="text.secondary">
             Moderation Workbench
           </Typography>
