@@ -200,10 +200,17 @@ export type CaseEntry = 'report' | 'rules' | 'ai';
  * A report comes first (someone asked for a review); otherwise rule findings, then AI findings. null when the
  * analysis found nothing (for example the AI was unavailable and the case waits for a human anyway).
  */
-export function caseEntry(trigger: CaseTrigger, ruleFindings: number, aiFindings: number): CaseEntry | null {
+export function caseEntry(
+  trigger: CaseTrigger,
+  ruleFindings: number,
+  aiFindings: number,
+  reportCount = 0,
+): CaseEntry | null {
   if (trigger === 'report') return 'report';
   if (ruleFindings > 0) return 'rules';
   if (aiFindings > 0) return 'ai';
+  // Nothing was found, but users reported it later: the reports are why it needs a human.
+  if (reportCount > 0) return 'report';
   return null;
 }
 
@@ -301,7 +308,7 @@ export async function listCases(query: CaseListQuery): Promise<CaseListPage> {
         id: row.id,
         status: row.status,
         trigger: row.trigger,
-        entry: caseEntry(row.trigger, ruleCount, aiCount),
+        entry: caseEntry(row.trigger, ruleCount, aiCount, row.reportCount),
         priority: row.priority,
         reportCount: row.reportCount,
         createdAt: row.createdAt.toISOString(),
@@ -545,7 +552,7 @@ export async function getCase(actor: Actor, caseId: string): Promise<CaseDetail>
     id: row.id,
     status: row.status,
     trigger: row.trigger,
-    entry: caseEntry(row.trigger, ruleFindings.length, aiDetail?.findings.length ?? 0),
+    entry: caseEntry(row.trigger, ruleFindings.length, aiDetail?.findings.length ?? 0, row.reportCount),
     priority: row.priority,
     reportCount: row.reportCount,
     createdAt: row.createdAt.toISOString(),

@@ -23,7 +23,6 @@ import {
   PolicyVersionTag,
   SeverityTag,
 } from '../../components/ModerationTags';
-import { confidenceLabel } from '../../components/ConfidenceMeter';
 import { Dot, Tag } from '../../components/Tag';
 import { layout, m3, monoSx } from '../../theme/theme';
 import { relativeTime } from '../feed/format';
@@ -285,7 +284,7 @@ export function FindingsCard({ detail }: { detail: CaseDetail }) {
         {confirmed.map(item)}
       </FindingGroup>
       <FindingGroup
-        title="AI interpretation - not verified evidence"
+        title="AI interpretation - a reading of context, not confirmed evidence"
         empty={ai ? 'No interpretations.' : `${AI_PENDING}.`}
       >
         {interpretations.map(item)}
@@ -355,12 +354,12 @@ export function RecommendationCard({ detail }: { detail: CaseDetail }) {
             </Typography>
           </Box>
         </Glance>
-        <Glance label="Confidence">
+        <Glance label="AI confidence in this result">
           <Typography variant="h3" component="span" sx={{ display: 'block' }}>
             {confidence === null ? 'None' : confidence.toFixed(2)}
           </Typography>
           <Typography variant="caption" component="span" color="text.secondary" sx={{ display: 'block' }}>
-            {confidence === null ? 'AI pending' : confidenceLabel(confidence)}
+            {confidence === null ? 'AI pending' : 'Overall, for the whole result'}
           </Typography>
           <Box
             aria-hidden

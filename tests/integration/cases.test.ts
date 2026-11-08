@@ -71,6 +71,9 @@ describe('queue', () => {
     expect(caseEntry('new_content', 1, 2)).toBe('rules');
     expect(caseEntry('new_content', 0, 2)).toBe('ai');
     expect(caseEntry('new_content', 0, 0)).toBeNull();
+    // Found nothing, but reported later: the report is why it is in the queue.
+    expect(caseEntry('new_content', 0, 0, 1)).toBe('report');
+    expect(caseEntry('new_content', 1, 0, 1)).toBe('rules');
   });
 
   it('[Q-1] lists awaiting_review by default, ordered by priority then age, with filters and search', async () => {

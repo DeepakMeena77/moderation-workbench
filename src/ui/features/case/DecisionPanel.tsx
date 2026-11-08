@@ -202,7 +202,13 @@ export function DecisionPanel({ detail, onReload }: DecisionPanelProps) {
           label="Decision"
           options={DECISION_OPTIONS.map((o) =>
             o.value === 'approve'
-              ? { ...o, description: `${o.description} (${ACTION_LABEL[recommended].toLowerCase()})` }
+              ? {
+                  ...o,
+                  description:
+                    recommended === 'none'
+                      ? 'Agree: no action needed'
+                      : `${o.description} (${ACTION_LABEL[recommended].toLowerCase()})`,
+                }
               : o,
           )}
           value={choice}

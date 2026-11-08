@@ -349,13 +349,14 @@ The case page is the exception: its header (sec. 6.6) names the item instead.
        disclosure). Under each quote: a monospace source badge ("Rule - keyword", "Rule - pattern",
        "Rule - links", "AI") and the character range in 12/16 monospace ("chars 44-61"), so the moderator can check
        it against the text. Interpretations carry neither.
-     - "AI interpretation - not verified evidence"
+     - "AI interpretation - a reading of context, not confirmed evidence"
      - "Dropped by verification": invalid clauses and unverified quotes, shown for transparency
    - **Recommendation card** (supporting pane): an "AI + rules suggestion" label and the title, then:
      - **at a glance**, three labelled values side by side (label 12/16 in the secondary colour above, value in the
-       section style below): **Proposed action** (word), **Severity** (dot plus word), **Confidence** (two
-       decimals, the confidence word under it in meta text, and a 4 px accent bar on a hairline track; "None" and
-       "AI pending" without an AI result)
+       section style below): **Proposed action** (word), **Severity** (dot plus word), **AI confidence in this
+       result** (two decimals, "Overall, for the whole result" under it in meta text, and a 4 px accent bar on a
+       hairline track; "None" and "AI pending" without an AI result). The per-finding rubric words ("Explicit",
+       "Speculative") appear only on findings, so the overall number is never read as one finding's rating
      - the explanation: the AI state badge (and "Insufficient context" when it applies), the severity and
        confidence reasons, clause codes, and "**Why a human must decide**" as a nested list in the same order as
        the queue table (sec. 6.5)

@@ -109,7 +109,7 @@ describe('case page', () => {
     renderWithProviders(<CaseBody detail={makeDetail()} onReload={() => undefined} />);
     expect(screen.getByText(/AI review pending or unavailable\. Rule findings are shown/)).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Finding HAR-1' })).toBeInTheDocument();
-    expect(glance('Confidence')).toBe('NoneAI pending');
+    expect(glance('AI confidence in this result')).toBe('NoneAI pending');
     await user.click(screen.getByRole('button', { name: 'AI run details' }));
     expect(screen.getByText(/AI review pending or unavailable\. Rule findings are shown \(label/)).toBeInTheDocument();
   });
@@ -121,13 +121,15 @@ describe('case page', () => {
     const meters = meterLines();
     expect(meters).toContain('Confidence: 0.92, Explicit');
     expect(meters).toContain('Confidence: 1.00, Explicit');
-    expect(glance('Confidence')).toBe('0.90Explicit');
+    expect(glance('AI confidence in this result')).toBe('0.90Overall, for the whole result');
     expect(screen.getByText('Confidence: Clear insult.')).toBeInTheDocument();
     // Rule findings get reasons stated from the rule itself.
     expect(screen.getByText('Severity: Default severity of HAR-1 in policy v1.')).toBeInTheDocument();
     expect(screen.getByText('Deterministic match: the keyword rule found the exact text.')).toBeInTheDocument();
     // The three groups, with the interpretation and the dropped citation in their own groups.
-    expect(screen.getByRole('heading', { name: 'AI interpretation - not verified evidence' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'AI interpretation - a reading of context, not confirmed evidence' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Possibly part of a running feud.')).toBeInTheDocument();
     expect(screen.getByText('Removed: HAR-9 is not a clause of policy v1.')).toBeInTheDocument();
   });
@@ -156,7 +158,7 @@ describe('case page', () => {
     renderWithProviders(<CaseBody detail={withAi()} onReload={() => undefined} />);
     expect(glance('Proposed action')).toBe('Label');
     expect(glance('Severity')).toBe('Medium');
-    expect(glance('Confidence')).toBe('0.90Explicit');
+    expect(glance('AI confidence in this result')).toBe('0.90Overall, for the whole result');
     const summary = screen.getByRole('region', { name: 'Recommendation' });
     const text = summary.textContent ?? '';
     // The values come first, the explanation after them, and the policy version last.
